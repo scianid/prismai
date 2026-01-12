@@ -1,0 +1,577 @@
+/**
+ * PrismAI Widget Styles
+ * Scoped styles for the embeddable widget
+ */
+
+/* Container */
+.prismai-widget {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  width: 100%;
+  max-width: 800px;
+  margin: 40px auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+
+/* Collapsed View */
+.prismai-collapsed {
+  background: white;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  opacity: 1;
+}
+
+.prismai-collapsed:hover {
+  background: #fafafa;
+}
+
+.prismai-search-container-collapsed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+
+.prismai-search-container-collapsed:hover {
+  background: white;
+  border-color: #68E5FD;
+  box-shadow: 0 0 0 3px rgba(104, 229, 253, 0.1);
+}
+
+.prismai-icon-ai-collapsed,
+.prismai-icon-site-collapsed {
+  flex-shrink: 0;
+}
+
+.prismai-icon-ai-collapsed {
+  width: 20px;
+  height: 20px;
+  color: #A389E0;
+}
+
+.prismai-icon-site-collapsed {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+.prismai-search-input-collapsed {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: #1f2937;
+  font-family: inherit;
+}
+
+.prismai-search-input-collapsed::placeholder {
+  color: #9ca3af;
+}
+
+.prismai-send-icon-collapsed {
+  width: 20px;
+  height: 20px;
+  color: #A389E0;
+  flex-shrink: 0;
+}
+
+.prismai-header-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  color: #1f2937;
+}
+
+.prismai-typewriter {
+  font-weight: 400;
+  min-width: 250px;
+}
+
+.prismai-cursor-inline {
+  color: #68E5FD;
+  animation: prismai-blink 1s infinite;
+  font-weight: 300;
+}
+
+.prismai-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 20px 24px 12px 24px;
+}
+
+.prismai-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prismai-icon-ai,
+.prismai-icon-site {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prismai-icon-ai {
+  width: 20px;
+  height: 20px;
+  color: #A389E0;
+}
+
+.prismai-icon-site {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+.prismai-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1f2937;
+  flex: 1;
+}
+
+.prismai-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.prismai-close:hover {
+  background: #f3f4f6;
+}
+
+.prismai-ad-slot {
+  margin: 12px 0;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prismai-ad-placeholder {
+  background: linear-gradient(135deg, #A389E0 0%, #FD3C4F 100%);
+  color: white;
+  padding: 20px;
+  text-align: center;
+  border-radius: 8px;
+  width: 100%;
+  font-size: 14px;
+}
+
+.prismai-ad-placeholder small {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* Expanded View */
+.prismai-expanded {
+  background: white;
+  display: flex;
+  flex-direction: column;
+  max-height: 600px;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.prismai-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Suggestions */
+.prismai-suggestions {
+  animation: prismai-fade-in 0.3s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.prismai-suggestions-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.prismai-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prismai-suggestion {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 14px;
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: block;
+  width: 100%;
+}
+
+.prismai-suggestion:hover {
+  background: #e5e7eb;
+  border-color: #A389E0;
+  transform: translateY(-1px);
+}
+
+.prismai-loading {
+  padding: 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.prismai-shimmer-line {
+  height: 48px;
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 0%,
+    #e5e7eb 50%,
+    #f3f4f6 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 24px;
+  margin-bottom: 8px;
+  animation: prismai-shimmer 1.5s ease-in-out infinite;
+}
+
+.prismai-shimmer-line:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes prismai-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.prismai-error {
+  padding: 12px;
+  text-align: center;
+  color: #ef4444;
+  font-size: 14px;
+}
+
+/* Chat Messages */
+.prismai-chat {
+  flex: 1;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: opacity 0.4s ease-in-out, max-height 0.4s ease-in-out;
+  scroll-behavior: smooth;
+}
+
+.prismai-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 8px;
+}
+
+.prismai-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: prismai-fade-in 0.2s ease;
+  max-width: 85%;
+}
+
+.prismai-message-user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.prismai-message-ai {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.prismai-message-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 8px;
+}
+
+.prismai-message-content {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.prismai-message-user .prismai-message-content {
+  background: linear-gradient(135deg, #68E5FD 0%, #A389E0 100%);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.prismai-message-ai .prismai-message-content {
+  background: #f3f4f6;
+  color: #1f2937;
+  border-bottom-left-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+.prismai-cursor {
+  color: #68E5FD;
+  animation: prismai-blink 1s infinite;
+  margin-left: 2px;
+}
+
+/* Input - Search Box Style */
+.prismai-input-container {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+  position: relative;
+}
+
+.prismai-input {
+  flex: 1;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 12px 56px 12px 20px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  min-height: 48px;
+  max-height: 150px;
+  outline: none;
+  transition: all 0.2s;
+  background: #f9fafb;
+}
+
+.prismai-input:focus {
+  border-color: #68E5FD;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(104, 229, 253, 0.1);
+}
+
+.prismai-input::placeholder {
+  color: #9ca3af;
+}
+
+.prismai-send {
+  background: linear-gradient(135deg, #68E5FD 0%, #A389E0 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+  flex-shrink: 0;
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.prismai-send svg {
+  width: 18px;
+  height: 18px;
+  fill: white;
+}
+
+.prismai-send:hover {
+  transform: translateY(-50%) scale(1.05);
+  opacity: 0.9;
+}
+
+.prismai-send:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+/* Suggested Reads */
+.prismai-suggested-reads {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px;
+}
+
+.prismai-reads-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.prismai-reads-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prismai-article-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.prismai-article-card:hover {
+  background: white;
+  border-color: #A389E0;
+  box-shadow: 0 2px 8px rgba(163, 137, 224, 0.15);
+  transform: translateY(-1px);
+}
+
+.prismai-article-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.prismai-article-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.prismai-article-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.prismai-article-description {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Animations */
+@keyframes prismai-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes prismai-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes prismai-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Scrollbar styling */
+.prismai-content::-webkit-scrollbar,
+.prismai-chat::-webkit-scrollbar {
+  width: 8px;
+}
+
+.prismai-content::-webkit-scrollbar-track,
+.prismai-chat::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.prismai-content::-webkit-scrollbar-thumb,
+.prismai-chat::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.prismai-content::-webkit-scrollbar-thumb:hover,
+.prismai-chat::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .prismai-expanded {
+    max-height: 70vh;
+  }
+  
+  .prismai-widget {
+    margin: 20px;
+    border-radius: 8px;
+  }
+}
