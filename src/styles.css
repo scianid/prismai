@@ -278,9 +278,8 @@
 }
 
 .prismai-suggestion {
-  background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #68E5FD, #A389E0) border-box;
-  border: 2px solid transparent;
+  background: #f3f4f6;
+  border: 2px solid #e5e7eb;
   padding: 12px 20px;
   border-radius: 40px;
   text-align: left;
@@ -310,7 +309,6 @@
   background: linear-gradient(white, white) padding-box,
               linear-gradient(135deg, #68E5FD, #FD3C4F) border-box;
   border: 2px solid transparent;
-  transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(104, 229, 253, 0.15),
               0 2px 4px rgba(163, 137, 224, 0.08);
 }
