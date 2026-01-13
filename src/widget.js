@@ -136,7 +136,7 @@
       view.innerHTML = `
         <div class="prismai-search-container-collapsed">
           <img class="prismai-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
-          <img class="prismai-icon-site-collapsed" src="https://play-lh.googleusercontent.com/ai7BrYERYPD7A9fxMtaQePQWagxAYXd2eBH3kgtBuahYLxJWFM-ekRQoA5BxGpr8Wg=w240-h480-rw" alt="Site icon" />
+          <img class="prismai-icon-site-collapsed" src="https://images.icon-icons.com/167/PNG/512/cnn_23166.png" alt="Site icon" />
           <input type="text" class="prismai-search-input-collapsed" placeholder="" readonly />
           <svg class="prismai-send-icon-collapsed" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -214,7 +214,7 @@
         <div class="prismai-header">
           <div class="prismai-icons">
             <img class="prismai-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
-            <img class="prismai-icon-site" src="https://play-lh.googleusercontent.com/ai7BrYERYPD7A9fxMtaQePQWagxAYXd2eBH3kgtBuahYLxJWFM-ekRQoA5BxGpr8Wg=w240-h480-rw" alt="Site icon" />
+            <img class="prismai-icon-site" src="https://images.icon-icons.com/167/PNG/512/cnn_23166.png" alt="Site icon" />
           </div>
           <span class="prismai-title">Article Assistant</span>
           <button class="prismai-close" aria-label="Close">✕</button>
@@ -232,12 +232,15 @@
               class="prismai-input" 
               placeholder="Ask anything about this article..."
               rows="1"
+              maxlength="200"
             ></textarea>
             <button class="prismai-send" aria-label="Send">
               <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
               </svg>
             </button>
+            <div class="prismai-counter">0/200</div>
+            <div class="prismai-warning">This is an AI driven tool, results might not always be accurate.</div>
           </div>
           <div class="prismai-suggested-reads">
             <div class="prismai-reads-title">Suggested Reads:</div>
@@ -301,7 +304,10 @@
       // Text area focus
       const textarea = this.elements.expandedView.querySelector('.prismai-input');
       textarea.addEventListener('focus', () => this.onTextAreaFocus());
-      textarea.addEventListener('input', (e) => this.autoResizeTextarea(e.target));
+      textarea.addEventListener('input', (e) => {
+        this.autoResizeTextarea(e.target);
+        this.updateCharacterCounter(e.target);
+      });
 
       // Send button
       const sendButton = this.elements.expandedView.querySelector('.prismai-send');
@@ -433,6 +439,12 @@
       this.askQuestion(question, 'custom');
       textarea.value = '';
       textarea.style.height = 'auto';
+      
+      // Reset counter
+      const counter = this.elements.expandedView.querySelector('.prismai-counter');
+      if (counter) {
+        counter.textContent = '0/200';
+      }
     }
 
     async askQuestion(question, type) {
@@ -542,7 +554,7 @@
 
     async streamResponse(question, messageId) {
       // Mock streaming response
-      const response = `Here are the key insights about "${question}":\n\n1. This is a detailed explanation based on the article content.\n\n2. The information is extracted from the context you provided.\n\n3. Citations would appear here linking back to specific paragraphs.`;
+      const response = `Here are the key insights about "${question}":\n1. This is a detailed explanation based on the article content.\n2. The information is extracted from the context you provided.\n3. Citations would appear here linking back to specific paragraphs.`;
       
       // Simulate streaming character by character
       for (let i = 0; i < response.length; i++) {
@@ -559,6 +571,14 @@
     autoResizeTextarea(textarea) {
       textarea.style.height = 'auto';
       textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+    }
+
+    updateCharacterCounter(textarea) {
+      const counter = this.elements.expandedView.querySelector('.prismai-counter');
+      if (counter) {
+        const length = textarea.value.length;
+        counter.textContent = `${length}/200`;
+      }
     }
 
     trackEvent(eventName, data) {

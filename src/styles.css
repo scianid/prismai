@@ -242,6 +242,7 @@
   display: flex;
   flex-direction: column;
   max-height: 600px;
+  overflow: hidden;
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
   opacity: 1;
   transform: translateY(0);
@@ -249,6 +250,7 @@
 
 .prismai-content {
   flex: 1;
+  min-height: 0;
   overflow: visible;
   padding: 16px 24px;
   display: flex;
@@ -287,6 +289,20 @@
   transition: all 0.2s;
   display: block;
   width: 100%;
+  animation: prismai-slide-in-right 0.5s ease forwards;
+  opacity: 0;
+}
+
+.prismai-suggestion:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.prismai-suggestion:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.prismai-suggestion:nth-child(3) {
+  animation-delay: 0.3s;
 }
 
 .prismai-suggestion:hover {
@@ -338,21 +354,20 @@
 
 /* Chat Messages */
 .prismai-chat {
-  flex-shrink: 0;
-  min-height: 200px;
-  max-height: 400px;
-  overflow-y: auto;
+  height: 300px;
+  overflow-y: scroll !important;
   overflow-x: hidden;
-  transition: opacity 0.4s ease-in-out, max-height 0.4s ease-in-out;
   scroll-behavior: smooth;
   margin-bottom: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
 }
 
 .prismai-messages {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-right: 8px;
 }
 
 .prismai-message {
@@ -414,10 +429,30 @@
 /* Input - Search Box Style */
 .prismai-input-container {
   display: flex;
-  align-items: center;
-  padding: 20px 24px;
+  align-items: flex-start;
+  padding: 10px 24px;
   background: white;
   position: relative;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.prismai-warning {
+  width: 100%;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.prismai-counter {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-left: auto;
+  margin-top: 4px;
+  flex-basis: 100%;
+  text-align: right;
+  padding-right: 4px;
 }
 
 .prismai-input {
@@ -426,7 +461,7 @@
               linear-gradient(135deg, #68E5FD, #A389E0) border-box;
   border: 2px solid transparent;
   border-radius: 40px;
-  padding: 14px 56px 14px 22px;
+  padding: 10px 22px;
   font-size: 14px;
   font-family: inherit;
   resize: none;
@@ -434,6 +469,7 @@
   max-height: 150px;
   outline: none;
   transition: all 0.3s;
+  overflow: hidden;
 }
 
 .prismai-input:focus {
@@ -461,10 +497,7 @@
   cursor: pointer;
   transition: all 0.3s;
   flex-shrink: 0;
-  position: absolute;
-  right: 30px;
-  top: 50%;
-  transform: translateY(-50%);
+  margin-top: 4px;
   box-shadow: 0 2px 6px rgba(104, 229, 253, 0.3);
 }
 
@@ -475,7 +508,7 @@
 }
 
 .prismai-send:hover {
-  transform: translateY(-50%) scale(1.1);
+  transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(104, 229, 253, 0.4);
 }
 
@@ -584,6 +617,19 @@
   }
 }
 
+@keyframes prismai-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
 @keyframes prismai-blink {
   0%, 50% {
     opacity: 1;
@@ -596,23 +642,24 @@
 /* Scrollbar styling */
 .prismai-content::-webkit-scrollbar,
 .prismai-chat::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 
 .prismai-content::-webkit-scrollbar-track,
 .prismai-chat::-webkit-scrollbar-track {
   background: #f3f4f6;
+  border-radius: 8px;
 }
 
 .prismai-content::-webkit-scrollbar-thumb,
 .prismai-chat::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
+  background: #A389E0;
+  border-radius: 8px;
 }
 
 .prismai-content::-webkit-scrollbar-thumb:hover,
 .prismai-chat::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #8B6BC9;
 }
 
 /* Responsive adjustments */
