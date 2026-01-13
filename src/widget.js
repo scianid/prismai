@@ -155,12 +155,12 @@
         const input = view.querySelector('.prismai-search-input-collapsed');
         if (input) {
           this.typewriterEffect(input, [
-            'Let me help you with this article! ✨',
+            'Let me help you with this article!',
             'Ask me anything about this content...',
-            'What would you like to know? 💭',
+            'What would you like to know?',
             'I can explain, summarize, or answer questions...',
-            'Click to start our conversation! 🚀',
-            'Curious about something? Just ask! 💡'
+            'Click to start our conversation!',
+            'Curious about something? Just ask!'
           ]);
         }
       }, 500);
@@ -169,6 +169,8 @@
     }
 
     typewriterEffect(input, phrases) {
+      if (!input || !phrases || phrases.length === 0) return;
+      
       let phraseIndex = 0;
       let charIndex = 0;
       const typeSpeed = 50;
@@ -176,19 +178,10 @@
       const pauseAfterType = 2000;
       const pauseAfterDelete = 500;
       
-      // Add cursor element
-      let cursor = document.createElement('span');
-      cursor.className = 'prismai-typewriter-cursor';
-      cursor.textContent = '|';
-      
-      const updatePlaceholder = (text) => {
-        input.placeholder = text;
-      };
-      
       const type = () => {
-        const currentPhrase = phrases[phraseIndex];
+        const currentPhrase = String(phrases[phraseIndex] || '');
         if (charIndex < currentPhrase.length) {
-          updatePlaceholder(currentPhrase.substring(0, charIndex + 1));
+          input.placeholder = currentPhrase.substring(0, charIndex + 1);
           charIndex++;
           setTimeout(type, typeSpeed + Math.random() * 30);
         } else {
@@ -197,9 +190,9 @@
       };
       
       const erase = () => {
-        const currentPhrase = phrases[phraseIndex];
+        const currentPhrase = String(phrases[phraseIndex] || '');
         if (charIndex > 0) {
-          updatePlaceholder(currentPhrase.substring(0, charIndex - 1));
+          input.placeholder = currentPhrase.substring(0, charIndex - 1);
           charIndex--;
           setTimeout(erase, deleteSpeed);
         } else {
@@ -209,6 +202,7 @@
         }
       };
       
+      // Start typing
       type();
     }
 
@@ -266,21 +260,6 @@
         </div>
       `;
       return view;
-    }
-
-    typewriterEffect(input, text) {
-      let index = 0;
-      const speed = 80;
-      
-      const type = () => {
-        if (index < text.length) {
-          input.placeholder = text.substring(0, index + 1);
-          index++;
-          setTimeout(type, speed);
-        }
-      };
-      
-      type();
     }
 
     insertWidget(container) {
