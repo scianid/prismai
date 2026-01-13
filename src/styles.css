@@ -23,28 +23,41 @@
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   opacity: 1;
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.005); }
 }
 
 .prismai-collapsed:hover {
   background: #fafafa;
+  animation: none;
 }
 
 .prismai-search-container-collapsed {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 24px;
-  padding: 12px 20px;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #68E5FD, #A389E0) border-box;
+  border: 2px solid transparent;
+  border-radius: 40px;
+  padding: 14px 22px;
   margin-bottom: 16px;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  box-shadow: 0 2px 6px rgba(104, 229, 253, 0.08),
+              0 1px 2px rgba(163, 137, 224, 0.05);
 }
 
 .prismai-search-container-collapsed:hover {
-  background: white;
-  border-color: #68E5FD;
-  box-shadow: 0 0 0 3px rgba(104, 229, 253, 0.1);
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #68E5FD, #FD3C4F) border-box;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 12px rgba(104, 229, 253, 0.15),
+              0 2px 4px rgba(163, 137, 224, 0.08);
+  transform: translateY(-1px);
 }
 
 .prismai-icon-ai-collapsed,
@@ -53,17 +66,30 @@
 }
 
 .prismai-icon-ai-collapsed {
-  width: 25px;
-  height: 25px;
+  width: 32px;
+  height: 32px;
   color: #A389E0;
+  filter: drop-shadow(0 0 2px rgba(163, 137, 224, 0.2));
+  transition: all 0.3s;
+}
+
+.prismai-search-container-collapsed:hover .prismai-icon-ai-collapsed {
+  filter: drop-shadow(0 0 4px rgba(163, 137, 224, 0.3));
+  transform: rotate(5deg) scale(1.1);
 }
 
 .prismai-icon-site-collapsed {
-  width: 25px;
-  height: 25px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #e5e7eb;
+  transition: all 0.3s;
+}
+
+.prismai-search-container-collapsed:hover .prismai-icon-site-collapsed {
+  border-color: #FD3C4F;
+  box-shadow: 0 2px 6px rgba(253, 60, 79, 0.15);
+  transform: scale(1.1);
 }
 
 .prismai-search-input-collapsed {
@@ -98,10 +124,18 @@
 }
 
 .prismai-send-icon-collapsed {
-  width: 20px;
-  height: 20px;
-  color: #A389E0;
+  width: 28px;
+  height: 28px;
+  color: #68E5FD;
   flex-shrink: 0;
+  filter: drop-shadow(0 0 2px rgba(104, 229, 253, 0.2));
+  transition: all 0.3s;
+}
+
+.prismai-search-container-collapsed:hover .prismai-send-icon-collapsed {
+  color: #FD3C4F;
+  filter: drop-shadow(0 0 4px rgba(253, 60, 79, 0.25));
+  transform: translateX(2px) scale(1.15);
 }
 
 .prismai-header-inline {

@@ -135,11 +135,7 @@
       view.className = 'prismai-collapsed';
       view.innerHTML = `
         <div class="prismai-search-container-collapsed">
-          <svg class="prismai-icon-ai-collapsed" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C12 2 12.5 5.5 13.5 7C14.5 8.5 18 9 18 9C18 9 14.5 9.5 13.5 11C12.5 12.5 12 16 12 16C12 16 11.5 12.5 10.5 11C9.5 9.5 6 9 6 9C6 9 9.5 8.5 10.5 7C11.5 5.5 12 2 12 2Z"/>
-            <path d="M19 4C19 4 19.3 5.7 19.8 6.3C20.3 6.9 22 7.2 22 7.2C22 7.2 20.3 7.5 19.8 8.1C19.3 8.7 19 10.4 19 10.4C19 10.4 18.7 8.7 18.2 8.1C17.7 7.5 16 7.2 16 7.2C16 7.2 17.7 6.9 18.2 6.3C18.7 5.7 19 4 19 4Z"/>
-            <path d="M19 13.6C19 13.6 19.3 15.3 19.8 15.9C20.3 16.5 22 16.8 22 16.8C22 16.8 20.3 17.1 19.8 17.7C19.3 18.3 19 20 19 20C19 20 18.7 18.3 18.2 17.7C17.7 17.1 16 16.8 16 16.8C16 16.8 17.7 16.5 18.2 15.9C18.7 15.3 19 13.6 19 13.6Z"/>
-          </svg>
+          <img class="prismai-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
           <img class="prismai-icon-site-collapsed" src="https://play-lh.googleusercontent.com/ai7BrYERYPD7A9fxMtaQePQWagxAYXd2eBH3kgtBuahYLxJWFM-ekRQoA5BxGpr8Wg=w240-h480-rw" alt="Site icon" />
           <input type="text" class="prismai-search-input-collapsed" placeholder="" readonly />
           <svg class="prismai-send-icon-collapsed" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -201,11 +197,7 @@
       view.innerHTML = `
         <div class="prismai-header">
           <div class="prismai-icons">
-            <svg class="prismai-icon-ai" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C12 2 12.5 5.5 13.5 7C14.5 8.5 18 9 18 9C18 9 14.5 9.5 13.5 11C12.5 12.5 12 16 12 16C12 16 11.5 12.5 10.5 11C9.5 9.5 6 9 6 9C6 9 9.5 8.5 10.5 7C11.5 5.5 12 2 12 2Z"/>
-              <path d="M19 4C19 4 19.3 5.7 19.8 6.3C20.3 6.9 22 7.2 22 7.2C22 7.2 20.3 7.5 19.8 8.1C19.3 8.7 19 10.4 19 10.4C19 10.4 18.7 8.7 18.2 8.1C17.7 7.5 16 7.2 16 7.2C16 7.2 17.7 6.9 18.2 6.3C18.7 5.7 19 4 19 4Z"/>
-              <path d="M19 13.6C19 13.6 19.3 15.3 19.8 15.9C20.3 16.5 22 16.8 22 16.8C22 16.8 20.3 17.1 19.8 17.7C19.3 18.3 19 20 19 20C19 20 18.7 18.3 18.2 17.7C17.7 17.1 16 16.8 16 16.8C16 16.8 17.7 16.5 18.2 15.9C18.7 15.3 19 13.6 19 13.6Z"/>
-            </svg>
+            <img class="prismai-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
             <img class="prismai-icon-site" src="https://play-lh.googleusercontent.com/ai7BrYERYPD7A9fxMtaQePQWagxAYXd2eBH3kgtBuahYLxJWFM-ekRQoA5BxGpr8Wg=w240-h480-rw" alt="Site icon" />
           </div>
           <span class="prismai-title">Article Assistant</span>
