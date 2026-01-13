@@ -156,10 +156,11 @@
         if (input) {
           this.typewriterEffect(input, [
             'Let me help you with this article! ✨',
-            'Ask AI about this article...',
+            'Ask me anything about this content...',
             'What would you like to know? 💭',
-            'I can summarize or answer questions...',
-            'Click to start chatting! 🚀'
+            'I can explain, summarize, or answer questions...',
+            'Click to start our conversation! 🚀',
+            'Curious about something? Just ask! 💡'
           ]);
         }
       }, 500);
@@ -170,12 +171,16 @@
     typewriterEffect(input, phrases) {
       let phraseIndex = 0;
       let charIndex = 0;
-      const typeSpeed = 70;
-      const deleteSpeed = 40;
-      const pauseAfterType = 2500;
-      const pauseAfterDelete = 800;
+      const typeSpeed = 50;
+      const deleteSpeed = 30;
+      const pauseAfterType = 2000;
+      const pauseAfterDelete = 500;
       
-      // Add a wrapper span for character fade effect
+      // Add cursor element
+      let cursor = document.createElement('span');
+      cursor.className = 'prismai-typewriter-cursor';
+      cursor.textContent = '|';
+      
       const updatePlaceholder = (text) => {
         input.placeholder = text;
       };
@@ -185,7 +190,7 @@
         if (charIndex < currentPhrase.length) {
           updatePlaceholder(currentPhrase.substring(0, charIndex + 1));
           charIndex++;
-          setTimeout(type, typeSpeed);
+          setTimeout(type, typeSpeed + Math.random() * 30);
         } else {
           setTimeout(erase, pauseAfterType);
         }
