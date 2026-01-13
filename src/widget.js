@@ -154,24 +154,37 @@
       setTimeout(() => {
         const input = view.querySelector('.prismai-search-input-collapsed');
         if (input) {
-          this.typewriterEffect(input, 'Ask AI about this article...');
+          this.typewriterEffect(input, [
+            'Let me help you with this article! ✨',
+            'Ask AI about this article...',
+            'What would you like to know? 💭',
+            'I can summarize or answer questions...',
+            'Click to start chatting! 🚀'
+          ]);
         }
       }, 500);
       
       return view;
     }
 
-    typewriterEffect(input, text) {
-      let index = 0;
-      const typeSpeed = 80;
-      const deleteSpeed = 50;
-      const pauseAfterType = 2000;
-      const pauseAfterDelete = 500;
+    typewriterEffect(input, phrases) {
+      let phraseIndex = 0;
+      let charIndex = 0;
+      const typeSpeed = 70;
+      const deleteSpeed = 40;
+      const pauseAfterType = 2500;
+      const pauseAfterDelete = 800;
+      
+      // Add a wrapper span for character fade effect
+      const updatePlaceholder = (text) => {
+        input.placeholder = text;
+      };
       
       const type = () => {
-        if (index < text.length) {
-          input.placeholder = text.substring(0, index + 1);
-          index++;
+        const currentPhrase = phrases[phraseIndex];
+        if (charIndex < currentPhrase.length) {
+          updatePlaceholder(currentPhrase.substring(0, charIndex + 1));
+          charIndex++;
           setTimeout(type, typeSpeed);
         } else {
           setTimeout(erase, pauseAfterType);
@@ -179,11 +192,14 @@
       };
       
       const erase = () => {
-        if (index > 0) {
-          input.placeholder = text.substring(0, index - 1);
-          index--;
+        const currentPhrase = phrases[phraseIndex];
+        if (charIndex > 0) {
+          updatePlaceholder(currentPhrase.substring(0, charIndex - 1));
+          charIndex--;
           setTimeout(erase, deleteSpeed);
         } else {
+          // Move to next phrase
+          phraseIndex = (phraseIndex + 1) % phrases.length;
           setTimeout(type, pauseAfterDelete);
         }
       };
@@ -396,7 +412,7 @@
     }
 
     async fetchSuggestions() {
-      // Mock API call with 3 second delay
+      // Mock API call with 0.5 second delay
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve([
@@ -404,7 +420,7 @@
             'What are the main arguments presented?',
             'What are the practical implications?'
           ]);
-        }, 3000);
+        }, 500);
       });
     }
 

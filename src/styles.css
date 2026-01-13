@@ -23,17 +23,10 @@
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   opacity: 1;
-  animation: subtle-pulse 3s ease-in-out infinite;
-}
-
-@keyframes subtle-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.005); }
 }
 
 .prismai-collapsed:hover {
   background: #fafafa;
-  animation: none;
 }
 
 .prismai-search-container-collapsed {
@@ -69,7 +62,6 @@
   width: 32px;
   height: 32px;
   color: #A389E0;
-  filter: drop-shadow(0 0 2px rgba(163, 137, 224, 0.2));
   transition: all 0.3s;
 }
 
@@ -126,15 +118,13 @@
 .prismai-send-icon-collapsed {
   width: 28px;
   height: 28px;
-  color: #68E5FD;
+  color: #4b5563;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 2px rgba(104, 229, 253, 0.2));
   transition: all 0.3s;
 }
 
 .prismai-search-container-collapsed:hover .prismai-send-icon-collapsed {
-  color: #FD3C4F;
-  filter: drop-shadow(0 0 4px rgba(253, 60, 79, 0.25));
+  filter: drop-shadow(0 0 4px rgba(75, 85, 99, 0.25));
   transform: translateX(2px) scale(1.15);
 }
 
@@ -161,15 +151,21 @@
 .prismai-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 12px;
   padding: 20px 24px 12px 24px;
+  border-bottom: 2px solid transparent;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #68E5FD, #A389E0) border-box;
+  border-bottom: 2px solid transparent;
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
 }
 
 .prismai-icons {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .prismai-icon-ai,
@@ -181,17 +177,17 @@
 }
 
 .prismai-icon-ai {
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
   color: #A389E0;
 }
 
 .prismai-icon-site {
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #e5e7eb;
+  border: 2px solid #68E5FD;
 }
 
 .prismai-title {
@@ -253,7 +249,7 @@
 
 .prismai-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: visible;
   padding: 16px 24px;
   display: flex;
   flex-direction: column;
@@ -282,8 +278,8 @@
 .prismai-suggestion {
   background: #f3f4f6;
   border: 1px solid #e5e7eb;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 12px 20px;
+  border-radius: 40px;
   text-align: left;
   font-size: 14px;
   color: #1f2937;
@@ -315,7 +311,7 @@
     #f3f4f6 100%
   );
   background-size: 200% 100%;
-  border-radius: 24px;
+  border-radius: 40px;
   margin-bottom: 8px;
   animation: prismai-shimmer 1.5s ease-in-out infinite;
 }
@@ -342,13 +338,14 @@
 
 /* Chat Messages */
 .prismai-chat {
-  flex: 1;
+  flex-shrink: 0;
   min-height: 200px;
   max-height: 400px;
   overflow-y: auto;
   overflow-x: hidden;
   transition: opacity 0.4s ease-in-out, max-height 0.4s ease-in-out;
   scroll-behavior: smooth;
+  margin-bottom: 16px;
 }
 
 .prismai-messages {
@@ -418,31 +415,33 @@
 .prismai-input-container {
   display: flex;
   align-items: center;
-  padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
+  padding: 20px 24px;
   background: white;
   position: relative;
 }
 
 .prismai-input {
   flex: 1;
-  border: 1px solid #e5e7eb;
-  border-radius: 24px;
-  padding: 12px 56px 12px 20px;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #68E5FD, #A389E0) border-box;
+  border: 2px solid transparent;
+  border-radius: 40px;
+  padding: 14px 56px 14px 22px;
   font-size: 14px;
   font-family: inherit;
   resize: none;
   min-height: 48px;
   max-height: 150px;
   outline: none;
-  transition: all 0.2s;
-  background: #f9fafb;
+  transition: all 0.3s;
 }
 
 .prismai-input:focus {
-  border-color: #68E5FD;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(104, 229, 253, 0.1);
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #68E5FD, #FD3C4F) border-box;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 12px rgba(104, 229, 253, 0.15),
+              0 2px 4px rgba(163, 137, 224, 0.08);
 }
 
 .prismai-input::placeholder {
@@ -454,29 +453,30 @@
   color: white;
   border: none;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s, opacity 0.2s;
+  transition: all 0.3s;
   flex-shrink: 0;
   position: absolute;
-  right: 28px;
+  right: 30px;
   top: 50%;
   transform: translateY(-50%);
+  box-shadow: 0 2px 6px rgba(104, 229, 253, 0.3);
 }
 
 .prismai-send svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   fill: white;
 }
 
 .prismai-send:hover {
-  transform: translateY(-50%) scale(1.05);
-  opacity: 0.9;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 12px rgba(104, 229, 253, 0.4);
 }
 
 .prismai-send:disabled {
