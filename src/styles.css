@@ -434,7 +434,7 @@
 .prismai-input-container {
   display: flex;
   align-items: flex-start;
-  padding: 10px 24px;
+  padding: 10px 0;
   background: white;
   position: relative;
   flex-wrap: wrap;
