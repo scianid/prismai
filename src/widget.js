@@ -141,7 +141,7 @@
             <path d="M19 13.6C19 13.6 19.3 15.3 19.8 15.9C20.3 16.5 22 16.8 22 16.8C22 16.8 20.3 17.1 19.8 17.7C19.3 18.3 19 20 19 20C19 20 18.7 18.3 18.2 17.7C17.7 17.1 16 16.8 16 16.8C16 16.8 17.7 16.5 18.2 15.9C18.7 15.3 19 13.6 19 13.6Z"/>
           </svg>
           <img class="prismai-icon-site-collapsed" src="https://play-lh.googleusercontent.com/ai7BrYERYPD7A9fxMtaQePQWagxAYXd2eBH3kgtBuahYLxJWFM-ekRQoA5BxGpr8Wg=w240-h480-rw" alt="Site icon" />
-          <input type="text" class="prismai-search-input-collapsed" placeholder="Ask AI about this article..." readonly />
+          <input type="text" class="prismai-search-input-collapsed" placeholder="" readonly />
           <svg class="prismai-send-icon-collapsed" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
@@ -154,7 +154,45 @@
         </div>
       `;
       
+      // Add typewriter effect
+      setTimeout(() => {
+        const input = view.querySelector('.prismai-search-input-collapsed');
+        if (input) {
+          this.typewriterEffect(input, 'Ask AI about this article...');
+        }
+      }, 500);
+      
       return view;
+    }
+
+    typewriterEffect(input, text) {
+      let index = 0;
+      const typeSpeed = 80;
+      const deleteSpeed = 50;
+      const pauseAfterType = 2000;
+      const pauseAfterDelete = 500;
+      
+      const type = () => {
+        if (index < text.length) {
+          input.placeholder = text.substring(0, index + 1);
+          index++;
+          setTimeout(type, typeSpeed);
+        } else {
+          setTimeout(erase, pauseAfterType);
+        }
+      };
+      
+      const erase = () => {
+        if (index > 0) {
+          input.placeholder = text.substring(0, index - 1);
+          index--;
+          setTimeout(erase, deleteSpeed);
+        } else {
+          setTimeout(type, pauseAfterDelete);
+        }
+      };
+      
+      type();
     }
 
     createExpandedView() {
@@ -210,6 +248,21 @@
         </div>
       `;
       return view;
+    }
+
+    typewriterEffect(input, text) {
+      let index = 0;
+      const speed = 80;
+      
+      const type = () => {
+        if (index < text.length) {
+          input.placeholder = text.substring(0, index + 1);
+          index++;
+          setTimeout(type, speed);
+        }
+      };
+      
+      type();
     }
 
     insertWidget(container) {

@@ -53,14 +53,14 @@
 }
 
 .prismai-icon-ai-collapsed {
-  width: 20px;
-  height: 20px;
+  width: 25px;
+  height: 25px;
   color: #A389E0;
 }
 
 .prismai-icon-site-collapsed {
-  width: 20px;
-  height: 20px;
+  width: 25px;
+  height: 25px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid #e5e7eb;
@@ -78,6 +78,23 @@
 
 .prismai-search-input-collapsed::placeholder {
   color: #9ca3af;
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink {
+  50% { border-color: transparent; }
+}
+
+.prismai-search-input-collapsed.typewriter-active {
+  border-right: 2px solid #A389E0;
+  animation: blink 0.7s step-end infinite;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .prismai-send-icon-collapsed {
