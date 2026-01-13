@@ -278,15 +278,16 @@
 }
 
 .prismai-suggestion {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #68E5FD, #A389E0) border-box;
+  border: 2px solid transparent;
   padding: 12px 20px;
   border-radius: 40px;
   text-align: left;
   font-size: 14px;
   color: #1f2937;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
   display: block;
   width: 100%;
   animation: prismai-slide-in-right 0.5s ease forwards;
@@ -306,9 +307,12 @@
 }
 
 .prismai-suggestion:hover {
-  background: #e5e7eb;
-  border-color: #A389E0;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #68E5FD, #FD3C4F) border-box;
+  border: 2px solid transparent;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(104, 229, 253, 0.15),
+              0 2px 4px rgba(163, 137, 224, 0.08);
 }
 
 .prismai-loading {
@@ -319,7 +323,7 @@
 }
 
 .prismai-shimmer-line {
-  height: 48px;
+  height: 44px;
   background: linear-gradient(
     90deg,
     #f3f4f6 0%,
@@ -437,22 +441,24 @@
   gap: 10px;
 }
 
-.prismai-warning {
+.prismai-input-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
+  margin-top: 0;
+}
+
+.prismai-warning {
   font-size: 11px;
   color: #9ca3af;
-  margin-top: 6px;
-  text-align: center;
+  text-align: left;
 }
 
 .prismai-counter {
   font-size: 11px;
   color: #9ca3af;
-  margin-left: auto;
-  margin-top: 4px;
-  flex-basis: 100%;
   text-align: right;
-  padding-right: 4px;
 }
 
 .prismai-input {

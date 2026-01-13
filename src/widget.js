@@ -239,8 +239,10 @@
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
               </svg>
             </button>
-            <div class="prismai-counter">0/200</div>
-            <div class="prismai-warning">This is an AI driven tool, results might not always be accurate.</div>
+            <div class="prismai-input-footer">
+              <div class="prismai-warning">This is an AI driven tool, results might not always be accurate.</div>
+              <div class="prismai-counter">0/200</div>
+            </div>
           </div>
           <div class="prismai-suggested-reads">
             <div class="prismai-reads-title">Suggested Reads:</div>
@@ -393,18 +395,31 @@
         const suggestions = await this.fetchSuggestions();
         this.state.suggestions = suggestions;
         
-        // Display suggestions
-        suggestionsList.innerHTML = suggestions.map((q, idx) => 
-          `<button class="prismai-suggestion" data-index="${idx}">${q}</button>`
-        ).join('');
-        
-        // Attach click handlers
-        suggestionsList.querySelectorAll('.prismai-suggestion').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const question = e.target.textContent;
-            this.askQuestion(question, 'suggestion');
-          });
+        // Fade out shimmer first
+        const shimmerLines = suggestionsList.querySelectorAll('.prismai-shimmer-line');
+        shimmerLines.forEach(line => {
+          line.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+          line.style.opacity = '0';
+          line.style.transform = 'translateX(-30px)';
         });
+        
+        // Wait for shimmer to fade out, then show suggestions
+        setTimeout(() => {
+          suggestionsList.innerHTML = '';
+          
+          // Add suggestions with animation
+          suggestions.forEach((q, idx) => {
+            const button = document.createElement('button');
+            button.className = 'prismai-suggestion';
+            button.setAttribute('data-index', idx);
+            button.textContent = q;
+            button.addEventListener('click', (e) => {
+              const question = e.target.textContent;
+              this.askQuestion(question, 'suggestion');
+            });
+            suggestionsList.appendChild(button);
+          });
+        }, 300);
         
         this.trackEvent('suggestions_fetched', {
           article_id: this.config.articleId,
