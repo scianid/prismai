@@ -743,3 +743,12 @@
     border-radius: 8px;
   }
 }
+
+/* RTL Support for Collapsed View */
+.prismai-widget[dir="rtl"] .prismai-send-icon-collapsed {
+  transform: scaleX(-1);
+}
+
+.prismai-widget[dir="rtl"] .prismai-search-container-collapsed:hover .prismai-send-icon-collapsed {
+  transform: scaleX(-1) translateX(-2px) scale(1.15);
+}
