@@ -16,6 +16,68 @@
   border: 1px solid #e5e7eb;
 }
 
+/* RTL Support */
+.prismai-widget[dir="rtl"] {
+  direction: rtl;
+}
+
+.prismai-widget[dir="rtl"] .prismai-search-container-collapsed,
+.prismai-widget[dir="rtl"] .prismai-icons,
+.prismai-widget[dir="rtl"] .prismai-input-container,
+.prismai-widget[dir="rtl"] .prismai-input-footer {
+  flex-direction: row-reverse;
+}
+
+.prismai-widget[dir="rtl"] .prismai-send {
+  order: -1;
+}
+
+.prismai-widget[dir="rtl"] .prismai-send svg,
+.prismai-widget[dir="rtl"] .prismai-send-icon-collapsed {
+  transform: scaleX(-1);
+}
+
+.prismai-widget[dir="rtl"] .prismai-input {
+  order: 0;
+}
+
+.prismai-widget[dir="rtl"] .prismai-message-user {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.prismai-widget[dir="rtl"] .prismai-message-ai {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.prismai-widget[dir="rtl"] .prismai-message-user .prismai-message-content {
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 16px;
+}
+
+.prismai-widget[dir="rtl"] .prismai-message-ai .prismai-message-content {
+  border-bottom-right-radius: 4px;
+  border-bottom-left-radius: 16px;
+}
+
+.prismai-widget[dir="rtl"] .prismai-warning {
+  text-align: right;
+}
+
+.prismai-widget[dir="rtl"] .prismai-counter {
+  text-align: left;
+}
+
+.prismai-widget[dir="rtl"] .prismai-cursor {
+  margin-right: 2px;
+  margin-left: 0;
+}
+
+.prismai-widget[dir="rtl"] .prismai-article-card {
+  flex-direction: row-reverse;
+}
+
 /* Collapsed View */
 .prismai-collapsed {
   background: white;
