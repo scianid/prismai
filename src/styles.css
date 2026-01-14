@@ -21,7 +21,6 @@
   direction: rtl;
 }
 
-.prismai-widget[dir="rtl"] .prismai-search-container-collapsed,
 .prismai-widget[dir="rtl"] .prismai-icons,
 .prismai-widget[dir="rtl"] .prismai-input-container,
 .prismai-widget[dir="rtl"] .prismai-input-footer {
@@ -744,7 +743,12 @@
   }
 }
 
-/* RTL Support for Collapsed View */
+
+.prismai-widget[dir="rtl"] .prismai-search-input-collapsed {
+  text-align: right;
+  direction: rtl;
+}
+
 .prismai-widget[dir="rtl"] .prismai-send-icon-collapsed {
   transform: scaleX(-1);
 }
