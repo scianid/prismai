@@ -1,4 +1,4 @@
-# Product Presentation
+# PrismAI: Article Assistant Widget
 
 ## The Problem
 
@@ -14,13 +14,17 @@
 
 ## The Solution
 
-### [Product Name]: The Conversational Layer
+### PrismAI: The Conversational Layer
 
 We transform articles from monologues into dialogues. Our embedded AI widget acts as a real-time subject matter expert sitting right inside your content.
 
 - **Context-Aware:** It doesn't just know the web; it knows your specific article.
 
 - **Zero-Friction:** No new tabs, no external searches. Just instant clarity.
+
+- **Multi-Language Support:** Full RTL support for Hebrew, Arabic, and other right-to-left languages with customizable direction and language settings.
+
+- **Fully Customizable:** Brand colors, messaging, positioning, and behavior all configurable per client.
 
 ---
 
@@ -32,7 +36,18 @@ We transform articles from monologues into dialogues. Our embedded AI widget act
 
 - **In-Text Citations:** Every answer includes direct references back to the article text to ensure accuracy and trust.
 
-- **Smart Suggestions:** Predictive "Suggested Questions" that prompt the reader to engage before they even think to ask.
+- **Smart Suggestions:** Context-aware suggested questions generated based on article content that prompt the reader to engage before they even think to ask.
+
+- **Streaming Responses:** Real-time AI responses with typewriter effect for natural, engaging interaction.
+
+- **Intelligent UI/UX:**
+  - Animated typewriter placeholders with rotating suggestion text
+  - Smooth expand/collapse transitions
+  - Suggested article recommendations
+  - Character counter and input validation
+  - Mobile-responsive design
+
+- **Advertisement Integration:** Built-in ad slots for monetization without compromising user experience.
 
 ---
 
@@ -41,9 +56,75 @@ We transform articles from monologues into dialogues. Our embedded AI widget act
 ### Turning Curiosity into Currency
 
 - **Boost Time-on-Site:** Interactive readers stay 3x longer than passive readers.
+:
+  ```html
+  <script src="https://cdn.prismai.com/widget.js" 
+          data-project-id="your-project-id"
+          data-article-id="unique-article-id"></script>
+  ```
 
-- **First-Party Data:** Capture the "Intent Gap." See exactly what your audience is confused about or interested in through their questions.
+- **Brand-Safe:** Tuned to stay within the guardrails of the publisher's voice and the specific content provided.
 
+---
+
+## Technical Architecture
+
+### Modern, Scalable Infrastructure
+
+- **Supabase Backend:** PostgreSQL database with Row Level Security (RLS) for secure data isolation
+- **Edge Functions:** Serverless API endpoints deployed globally for low latency
+- **RESTful APIs:**
+  - `GET /functions/v1/get-config` - Fetch widget configuration per project
+  - `POST /functions/v1/suggestions` - Generate contextual questions
+  - Future: `/chat`, `/analytics`, `/feedback` endpoints
+
+### Security First
+
+- **No Direct Database Access:** All client requests routed through Edge Functions
+- **Service Role Authorization:** Backend operations use secure service keys
+- **CORS-Enabled:** Safe cross-origin requests from publisher domains
+
+### Database Schema
+
+**`project` Table:**
+- Widget configuration per client (colors, text, positioning)
+- Customizable greetings and placeholder messages
+- API endpoint configuration
+- Automatic timestamp tracking
+
+---
+
+## Integration Guide
+
+### Quick Start
+
+1. **Sign Up:** Get your unique project ID
+2. **Customize:** Configure colors, messages, and behavior in the dashboard
+3. **Embed:** Add one script tag to your article pages
+4. **Deploy:** Widget automatically initializes and connects to your configuration
+
+### Configuration Options
+
+```javascript
+{
+  projectId: 'your-unique-id',
+  position: 'bottom',           // Widget placement
+  maxHeight: 600,               // Max expanded height
+  autoExpand: false,            // Auto-expand on page load
+  apiBaseUrl: 'custom-api-url'  // Optional custom API endpoint
+}
+```
+
+---
+
+## Analytics & Insights
+
+Track reader engagement:
+- Questions asked (custom vs. suggested)
+- Time spent interacting
+- Most common queries per article
+- Bounce rate reduction
+- Session duration increase
 - **SEO & Authority:** Keep the entire "search journey" on your domain rather than sending users back to Google.
 
 ---
