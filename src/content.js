@@ -135,10 +135,6 @@ function getContent(articleClass) {
   }
 
   const content = paragraphs.join("\n\n");
-  console.log("Extracted length:", content.length);
-  console.log("Paragraphs:", paragraphs.length);
-  console.log("Filtered stats:", stats);
-  console.log(content);
   return content;
 }
 
