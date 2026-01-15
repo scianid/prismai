@@ -556,30 +556,33 @@
         async fetchSuggestions() {
             // Send cached content to server for suggestions
             const payload = {
-                project_id: this.config.projectId,
-                article_id: this.config.articleId,
+                projectId: this.config.projectId,
+                articleId: this.config.articleId,
                 title: this.contentCache.title,
                 url: this.contentCache.url,
                 content: this.contentCache.content
             };
-            
-            console.log('[PrismAI] Fetching suggestions with cached content:', {
-                title: payload.title,
-                url: payload.url,
-                content_length: payload.content?.length || 0
-            });
-            
-            // Mock API call with 0.5 second delay
-            // In production: const response = await fetch(`${this.config.apiBaseUrl}/suggestions`, { method: 'POST', body: JSON.stringify(payload) });
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve([
-                        'Summarize this article in 3 key points',
-                        'What are the main arguments presented?',
-                        'What are the practical implications?'
-                    ]);
-                }, 500);
-            });
+
+            try {
+                const response = await fetch(`${this.config.apiBaseUrl}/suggestions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Suggestions request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (Array.isArray(data?.suggestions)) {
+                    return data.suggestions;
+                }
+            } catch (error) {
+                console.error('[PrismAI] Suggestions request failed:', error);
+            }
+
+            return [];
         }
 
         sendQuestion() {
