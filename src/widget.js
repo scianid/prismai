@@ -616,7 +616,7 @@
         addMessage(role, content, streaming = false) {
             const messagesContainer = this.elements.expandedView.querySelector('.divee-messages');
             const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
-            const messageId = `msg-${Date.now()}`;
+            const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
             const messageDiv = document.createElement('div');
             messageDiv.className = `divee-message divee-message-${role}`;
@@ -628,7 +628,7 @@
                 label.textContent = 'You';
             } else {
                 const config = this.state.serverConfig || this.getDefaultConfig();
-                label.innerHTML = `<img class="divee-message-icon" src="${config.icon_url}" alt="AI" /><span>AI</span>`;
+                label.innerHTML = `<img class="divee-message-icon" src="${config.icon_url}" alt="AI" />`;
             }
 
             const contentDiv = document.createElement('div');

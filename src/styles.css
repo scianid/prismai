@@ -47,7 +47,8 @@
 
 .divee-widget[dir="rtl"] .divee-message-ai {
   align-self: flex-end;
-  align-items: flex-end;
+  align-items: flex-start;
+  flex-direction: row-reverse;
 }
 
 .divee-widget[dir="rtl"] .divee-message-user .divee-message-content {
@@ -501,7 +502,9 @@
 
 .divee-message-ai {
   align-self: flex-start;
+  flex-direction: row;
   align-items: flex-start;
+  gap: 8px;
 }
 
 .divee-message-label {
@@ -514,11 +517,17 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+.divee-message-ai .divee-message-label {
+    padding: 0;
+    margin-top: 0;
 }
 
 .divee-message-icon {
-  width: 16px;
-  height: 16px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   object-fit: cover;
   border: 1px solid rgba(148, 163, 184, 0.4);
