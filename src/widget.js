@@ -330,7 +330,6 @@
                 </div>
                 <div class="divee-content">
                     <div class="divee-suggestions" style="display: none;">
-                        <div class="divee-suggestions-title">Suggested Questions:</div>
                         <div class="divee-suggestions-list"></div>
           </div>
                     <div class="divee-chat" style="display: none;">
