@@ -501,14 +501,18 @@
                     suggestionsList.innerHTML = '';
 
                     // Add suggestions with animation
-                    suggestions.forEach((q, idx) => {
+                    suggestions.forEach((item, idx) => {
+                        const questionText = typeof item === 'string' ? item : item.question;
+                        const questionId = typeof item === 'string' ? null : item.id;
                         const button = document.createElement('button');
                         button.className = 'divee-suggestion';
                         button.setAttribute('data-index', idx);
-                        button.textContent = q;
+                        if (questionId) button.setAttribute('data-id', questionId);
+                        button.textContent = questionText;
                         button.addEventListener('click', (e) => {
                             const question = e.target.textContent;
-                            this.askQuestion(question, 'suggestion');
+                            const id = e.target.getAttribute('data-id');
+                            this.askQuestion(question, 'suggestion', id);
                         });
                         suggestionsList.appendChild(button);
                     });
@@ -563,7 +567,7 @@
 
             if (!question) return;
 
-            this.askQuestion(question, 'custom');
+            this.askQuestion(question, 'custom', null);
             textarea.value = '';
             textarea.style.height = 'auto';
 
@@ -574,7 +578,7 @@
             }
         }
 
-        async askQuestion(question, type) {
+        async askQuestion(question, type, questionId) {
             // Hide suggestions after selecting one
             const suggestionsContainer = this.elements.expandedView.querySelector('.divee-suggestions');
             if (suggestionsContainer) {
@@ -603,14 +607,14 @@
             // Add user message
             this.addMessage('user', question);
 
-            this.trackEvent('question_asked', { type, question });
+            this.trackEvent('question_asked', { type, question, question_id: questionId });
 
             // Start streaming response
             this.state.isStreaming = true;
             const messageId = this.addMessage('ai', '', true);
 
             try {
-                await this.streamResponse(question, messageId);
+                await this.streamResponse(question, messageId, questionId);
             } catch (error) {
                 console.error('[Divee] Failed to get answer:', error);
                 this.updateMessage(messageId, 'Sorry, I encountered an error. Please try again.');
@@ -679,35 +683,64 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        async streamResponse(question, messageId) {
-            // Send question with cached content to server
+        async streamResponse(question, messageId, questionId) {
             const payload = {
-                project_id: this.config.projectId,
-                article_id: this.config.articleId,
+                projectId: this.config.projectId,
+                questionId: questionId || `q-${Date.now()}`,
                 question: question,
                 title: this.contentCache.title,
                 url: this.contentCache.url,
                 content: this.contentCache.content
             };
-            
-            console.log('[Divee] Sending question with cached content:', {
-                question,
-                title: payload.title,
-                url: payload.url,
-                content_length: payload.content?.length || 0
-            });
-            
-            // In production: const response = await fetch(`${this.config.apiBaseUrl}/chat`, { method: 'POST', body: JSON.stringify(payload) });
-            // Mock streaming response
-            const response = `Here are the key insights about "${question}":\n1. This is a detailed explanation based on the article content.\n2. The information is extracted from the context you provided.\n3. Citations would appear here linking back to specific paragraphs.`;
 
-            // Simulate streaming character by character
-            for (let i = 0; i < response.length; i++) {
-                await new Promise(resolve => setTimeout(resolve, 20));
-                this.updateMessage(messageId, response[i], true);
+            const response = await fetch(`${this.config.apiBaseUrl}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Chat request failed: ${response.status}`);
             }
 
-            // Remove cursor
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await response.json();
+                if (data?.answer) {
+                    this.updateMessage(messageId, data.answer, true);
+                }
+            } else if (response.body) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop() || '';
+
+                    for (const part of parts) {
+                        const lines = part.split('\n');
+                        for (const line of lines) {
+                            const trimmed = line.trim();
+                            if (!trimmed.startsWith('data:')) continue;
+                            const data = trimmed.replace(/^data:\s*/, '');
+                            if (data === '[DONE]') continue;
+                            try {
+                                const json = JSON.parse(data);
+                                const delta = json?.choices?.[0]?.delta?.content;
+                                if (delta) this.updateMessage(messageId, delta, true);
+                            } catch {
+                                // ignore parse errors
+                            }
+                        }
+                    }
+                }
+            }
+
             const messageDiv = this.elements.expandedView.querySelector(`[data-message-id="${messageId}"]`);
             const cursor = messageDiv?.querySelector('.divee-cursor');
             if (cursor) cursor.remove();

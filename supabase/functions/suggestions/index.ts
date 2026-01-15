@@ -1,20 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
+import { generateSuggestions } from '../_shared/ai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function generateSuggestions(title: string, content: string): string[] {
-  // TODO: Replace with AI-generated suggestions based on title/content
-  return [
-    'Summarize this article in 3 key points',
-    'What are the main arguments presented?',
-    'What are the practical implications?'
-  ];
-}
 
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
@@ -63,7 +56,7 @@ Deno.serve(async (req: Request) => {
     // Verify origin against allowed URLs
     const { data: project, error: projectError } = await supabase
       .from('project')
-      .select('allowed_urls')
+      .select('allowed_urls, language')
       .eq('project_id', projectId)
       .single();
 
@@ -115,7 +108,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Return cached suggestions if available
-    const cachedSuggestions = (article?.cache as { suggestions?: string[] } | null)?.suggestions;
+    const cachedSuggestions = (article?.cache as { suggestions?: { id: string; question: string; answer: string | null }[] } | null)?.suggestions;
     if (Array.isArray(cachedSuggestions) && cachedSuggestions.length > 0) {
       return new Response(
         JSON.stringify({ suggestions: cachedSuggestions }),
@@ -131,7 +124,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Fallback: generate hard-coded suggestions
-    const suggestions = generateSuggestions(title, content);
+    const suggestions = await generateSuggestions(title, content, project?.language || 'en');
 
     // Cache suggestions on the article
     await supabase
