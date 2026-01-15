@@ -410,6 +410,11 @@
               0 2px 4px rgba(163, 137, 224, 0.08);
 }
 
+.divee-widget[dir="rtl"] .divee-suggestion {
+  text-align: right;
+  direction: rtl;
+}
+
 .divee-loading {
   padding: 12px;
   text-align: center;
@@ -494,6 +499,17 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.divee-message-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(148, 163, 184, 0.4);
 }
 
 .divee-message-content {

@@ -95,6 +95,12 @@ Deno.serve(async (req: Request) => {
     const { projectId, questionId, question, title, content, url } = await req.json();
 
     if (!projectId || !questionId || !question || !url) {
+      console.error('chat: missing fields', {
+        hasProjectId: !!projectId,
+        hasQuestionId: !!questionId,
+        hasQuestion: !!question,
+        hasUrl: !!url
+      });
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -113,11 +119,13 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (projectError) {
+      console.error('chat: project lookup error', projectError);
       throw projectError;
     }
 
     const requestUrl = getRequestOriginUrl(req);
     if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
+      console.error('chat: origin not allowed', { requestUrl, allowedUrls: project?.allowed_urls });
       return new Response(
         JSON.stringify({ error: 'Origin not allowed' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -131,6 +139,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (articleError) {
+      console.error('chat: article lookup error', articleError);
       throw articleError;
     }
 
@@ -146,12 +155,14 @@ Deno.serve(async (req: Request) => {
         });
 
       if (insertError) {
+        console.error('chat: article insert error', insertError);
         throw insertError;
       }
     }
 
     const cacheSuggestions = (article?.cache as { suggestions?: SuggestionItem[] } | null)?.suggestions;
     if (!Array.isArray(cacheSuggestions) || cacheSuggestions.length === 0) {
+      console.error('chat: no cached suggestions', { url });
       return new Response(
         JSON.stringify({ error: 'No cached suggestions' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -160,6 +171,7 @@ Deno.serve(async (req: Request) => {
 
     const cachedItem = cacheSuggestions.find((s) => s.id === questionId);
     if (!cachedItem) {
+      console.error('chat: question id not found in cache', { questionId, url });
       return new Response(
         JSON.stringify({ error: 'Question not allowed' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -177,6 +189,7 @@ Deno.serve(async (req: Request) => {
 
     const apiKey = Deno.env.get('DEEPSEEK_API');
     if (!apiKey) {
+      console.error('chat: missing DEEPSEEK_API secret');
       return new Response(
         JSON.stringify({ error: 'AI not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -204,6 +217,7 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!aiResponse.ok || !aiResponse.body) {
+      console.error('chat: AI request failed', { status: aiResponse.status });
       return new Response(
         JSON.stringify({ error: 'AI request failed' }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -227,6 +241,7 @@ Deno.serve(async (req: Request) => {
       }
     });
   } catch (error) {
+    console.error('chat: unhandled error', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

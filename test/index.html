@@ -12,58 +12,40 @@
     }
 
     body {
-      font-family: Georgia, 'Times New Roman', serif;
-      line-height: 1.8;
-      color: #1f2937;
-      background: #f9fafb;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.7;
+      color: #0f172a;
+      background: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 45%, #ffffff 100%);
     }
 
-    header {
-      background: white;
-      border-bottom: 1px solid #e5e7eb;
-      padding: 20px 0;
-      margin-bottom: 40px;
-    }
-
-    .site-header {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 0 20px;
-    }
-
-    .site-name {
-      font-size: 24px;
-      font-weight: bold;
-      color: #FF6B35;
-    }
-
-    .tagline {
-      font-size: 14px;
-      color: #6b7280;
-      margin-top: 4px;
-    }
 
     article {
-      max-width: 800px;
-      margin: 0 auto 100px;
-      padding: 40px 20px;
+      max-width: 900px;
+      margin: 20px auto 100px;
+      padding: 48px 32px;
       background: white;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border-radius: 28px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+      border: 1px solid rgba(148, 163, 184, 0.15);
     }
 
     h1 {
-      font-size: 42px;
+      font-size: 40px;
       line-height: 1.2;
       margin-bottom: 16px;
-      color: #111827;
+      color: #0f172a;
+      letter-spacing: -0.02em;
     }
 
     .meta {
       font-size: 14px;
-      color: #6b7280;
-      margin-bottom: 32px;
+      color: #64748b;
+      margin-bottom: 28px;
       padding-bottom: 16px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
     }
 
     .meta span {
@@ -72,52 +54,61 @@
 
     p {
       margin-bottom: 20px;
-      font-size: 18px;
+      font-size: 17px;
+      color: #0f172a;
     }
 
     h2 {
-      font-size: 28px;
-      margin: 40px 0 16px;
-      color: #111827;
+      font-size: 26px;
+      margin: 36px 0 16px;
+      color: #0f172a;
     }
 
     .highlight {
       background: #fef3c7;
-      padding: 2px 4px;
+      padding: 2px 6px;
+      border-radius: 6px;
     }
 
     blockquote {
-      border-left: 4px solid #FF6B35;
+      border-left: 4px solid #6366f1;
       padding-left: 20px;
       margin: 32px 0;
       font-style: italic;
-      color: #4b5563;
+      color: #475569;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+
+    .article-cover {
+      width: 100%;
+      border-radius: 16px;
+      margin: 20px 0 24px;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+      opacity: 0.9;
     }
 
     footer {
       text-align: center;
       padding: 40px 20px;
-      color: #6b7280;
+      color: #64748b;
       font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="site-header">
-      <div class="site-name">🌐 TechNews Daily</div>
-      <div class="tagline">Your source for technology insights</div>
-    </div>
-  </header>
-
-  <article class="technews-daily-article">
+  <article id="article" class="technews-daily-article">
     <h1>How Interactive Content is Revolutionizing Digital Publishing</h1>
     
     <div class="meta">
       <span>📅 January 12, 2026</span>
       <span>✍️ By Sarah Chen</span>
       <span>⏱️ 5 min read</span>
+      <span>📊 Verified insights</span>
     </div>
+
+    <img class="article-cover" src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1600&h=900&fit=crop" alt="Futuristic newsroom" />
 
     <p>
       In an era where attention spans are shrinking and content overload is the norm, publishers are discovering a powerful solution: <span class="highlight">interactive content that turns passive readers into active participants</span>. The latest research from the Digital Publishing Institute shows that interactive elements can increase reader engagement by up to 300%.

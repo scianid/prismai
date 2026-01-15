@@ -579,15 +579,7 @@
         }
 
         async askQuestion(question, type, questionId) {
-            // Hide suggestions after selecting one
-            const suggestionsContainer = this.elements.expandedView.querySelector('.divee-suggestions');
-            if (suggestionsContainer) {
-                suggestionsContainer.style.opacity = '0';
-                suggestionsContainer.style.transform = 'translateY(-10px)';
-                setTimeout(() => {
-                    suggestionsContainer.style.display = 'none';
-                }, 300);
-            }
+            // Keep suggestions visible so users can ask more questions
 
             // Show chat container if first message
             const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
@@ -634,7 +626,12 @@
 
             const label = document.createElement('div');
             label.className = 'divee-message-label';
-            label.textContent = role === 'user' ? 'You' : 'AI';
+            if (role === 'user') {
+                label.textContent = 'You';
+            } else {
+                const config = this.state.serverConfig || this.getDefaultConfig();
+                label.innerHTML = `<img class="divee-message-icon" src="${config.icon_url}" alt="AI" /><span>AI</span>`;
+            }
 
             const contentDiv = document.createElement('div');
             contentDiv.className = 'divee-message-content';
@@ -700,6 +697,13 @@
             });
 
             if (!response.ok) {
+                if (response.status === 403) {
+                    this.updateMessage(messageId, 'Free form questions are currently not supported.');
+                    const messageDiv = this.elements.expandedView.querySelector(`[data-message-id="${messageId}"]`);
+                    const cursor = messageDiv?.querySelector('.divee-cursor');
+                    if (cursor) cursor.remove();
+                    return;
+                }
                 throw new Error(`Chat request failed: ${response.status}`);
             }
 
