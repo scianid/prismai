@@ -141,6 +141,8 @@
                 ]
             }
 
+            
+
             const enConfig = {
                 direction: 'ltr',
                 language: 'en',
