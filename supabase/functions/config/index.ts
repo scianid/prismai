@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { isAllowedOrigin } from '../_shared/origin.ts';
+import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +15,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { projectId, client_id, url } = await req.json();
+    const { projectId, client_id } = await req.json();
 
     // Use projectId or client_id
     const projectKey = projectId || client_id;
@@ -40,6 +40,15 @@ Deno.serve(async (req: Request) => {
       .eq('project_id', projectKey)
       .single();
 
+
+    const requestUrl = getRequestOriginUrl(req);
+    if (!isAllowedOrigin(requestUrl, data.allowed_urls)) {
+      return new Response(
+        JSON.stringify({ error: 'Origin not allowed' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (error) {
       console.error('Database error:', error);
       
@@ -58,20 +67,13 @@ Deno.serve(async (req: Request) => {
               'Ask anything about this article...'
             ]
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       throw error;
     }
-
-    if (!isAllowedOrigin(url, data.allowed_urls)) {
-      return new Response(
-        JSON.stringify({ error: 'Origin not allowed' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
+    
     // Map database fields to widget config format
     const config = {
       direction: data.direction || 'ltr',

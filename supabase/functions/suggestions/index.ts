@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { isAllowedOrigin } from '../_shared/origin.ts';
+import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,7 +71,8 @@ Deno.serve(async (req: Request) => {
       throw projectError;
     }
 
-    if (!isAllowedOrigin(url, project?.allowed_urls)) {
+    const requestUrl = getRequestOriginUrl(req);
+    if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
       return new Response(
         JSON.stringify({ suggestions: [] }),
         { 
