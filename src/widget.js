@@ -678,6 +678,15 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
+        async simulateStreaming(messageId, text) {
+            const chunkSize = 4;
+            for (let i = 0; i < text.length; i += chunkSize) {
+                const chunk = text.slice(i, i + chunkSize);
+                this.updateMessage(messageId, chunk, true);
+                await new Promise(resolve => setTimeout(resolve, 15));
+            }
+        }
+
         async streamResponse(question, messageId, questionId) {
             const payload = {
                 projectId: this.config.projectId,
@@ -709,7 +718,7 @@
             if (contentType.includes('application/json')) {
                 const data = await response.json();
                 if (data?.answer) {
-                    this.updateMessage(messageId, data.answer, true);
+                    await this.simulateStreaming(messageId, data.answer);
                 }
             } else if (response.body) {
                 const reader = response.body.getReader();

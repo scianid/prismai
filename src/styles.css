@@ -436,7 +436,7 @@
 }
 
 .divee-shimmer-line {
-  height: 44px;
+  height: 38px;
   background: linear-gradient(
     90deg,
     #f3f4f6 0%,
@@ -444,7 +444,7 @@
     #f3f4f6 100%
   );
   background-size: 200% 100%;
-  border-radius: 40px;
+  border-radius: 8px;
   margin-bottom: 8px;
   animation: divee-shimmer 1.5s ease-in-out infinite;
 }
