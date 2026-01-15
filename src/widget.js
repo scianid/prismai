@@ -26,27 +26,7 @@
                 isStreaming: false,
                 suggestions: [],
                 messages: [],
-                serverConfig: null,
-                suggestedArticles: [
-                    {
-                        image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=300&h=200&fit=crop',
-                        title: '10 Ways to Boost Article Engagement',
-                        description: 'Learn proven strategies to keep readers on your site longer and increase interaction rates.',
-                        url: '#'
-                    },
-                    {
-                        image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=300&h=200&fit=crop',
-                        title: 'The Future of Digital Publishing',
-                        description: 'Explore emerging trends and technologies shaping the future of online content.',
-                        url: '#'
-                    },
-                    {
-                        image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&h=200&fit=crop',
-                        title: 'Understanding Reader Analytics',
-                        description: 'Deep dive into metrics that matter for content creators and publishers.',
-                        url: '#'
-                    }
-                ]
+                serverConfig: null
             };
 
             this.elements = {};
@@ -313,6 +293,9 @@
             view.className = 'divee-expanded';
 
             const config = this.state.serverConfig || this.getDefaultConfig();
+            const placeholder = (config.input_text_placeholders && config.input_text_placeholders.length > 0) 
+                ? config.input_text_placeholders[0] 
+                : 'Ask anything about this article...';
 
             view.innerHTML = `
                 <div class="divee-header">
@@ -330,15 +313,19 @@
                 </div>
                 <div class="divee-content">
                     <div class="divee-suggestions" style="display: none;">
+                        <button class="divee-suggestions-toggle" type="button" aria-expanded="false">Suggested questions</button>
                         <div class="divee-suggestions-list"></div>
           </div>
-                    <div class="divee-chat" style="display: none;">
+                    <div class="divee-chat">
                         <div class="divee-messages"></div>
           </div>
                     <div class="divee-input-container">
+                        <div class="divee-suggestions-input" style="display: none;">
+                            <div class="divee-suggestions-list"></div>
+                        </div>
             <textarea 
                             class="divee-input" 
-              placeholder="Ask anything about this article..."
+              placeholder="${placeholder}"
               rows="1"
               maxlength="200"
             ></textarea>
@@ -352,22 +339,17 @@
                             <div class="divee-counter">0/200</div>
             </div>
           </div>
-                    <div class="divee-suggested-reads">
-                        <div class="divee-reads-title">Suggested Reads:</div>
-                        <div class="divee-reads-list">
-              ${this.state.suggestedArticles.map(article => `
-                                <a href="${article.url}" class="divee-article-card">
-                                    <img src="${article.image}" alt="${article.title}" class="divee-article-image" />
-                                    <div class="divee-article-content">
-                                        <div class="divee-article-title">${article.title}</div>
-                                        <div class="divee-article-description">${article.description}</div>
-                  </div>
-                </a>
-              `).join('')}
-            </div>
-          </div>
         </div>
       `;
+
+            // Add typewriter effect
+            setTimeout(() => {
+                const input = view.querySelector('.divee-input');
+                if (input && config.input_text_placeholders) {
+                    this.typewriterEffect(input, config.input_text_placeholders);
+                }
+            }, 500);
+
             return view;
         }
 
@@ -399,9 +381,22 @@
             // Text area focus
             const textarea = this.elements.expandedView.querySelector('.divee-input');
             textarea.addEventListener('focus', () => this.onTextAreaFocus());
+            textarea.addEventListener('click', () => this.onTextAreaFocus()); // Also open on click
             textarea.addEventListener('input', (e) => {
                 this.autoResizeTextarea(e.target);
                 this.updateCharacterCounter(e.target);
+            });
+
+            // Close suggestions on click outside
+            document.addEventListener('click', (e) => {
+                const suggestionsInput = this.elements.expandedView.querySelector('.divee-suggestions-input');
+                const inputContainer = this.elements.expandedView.querySelector('.divee-input-container');
+                
+                if (suggestionsInput && 
+                    suggestionsInput.classList.contains('is-open') && 
+                    !inputContainer.contains(e.target)) {
+                    suggestionsInput.classList.remove('is-open');
+                }
             });
 
             // Send button
@@ -468,28 +463,39 @@
         }
 
         async onTextAreaFocus() {
-            // Only fetch suggestions once
-            if (this.state.suggestions.length > 0) return;
+            const suggestionsContainer = this.elements.expandedView.querySelector('.divee-suggestions-input');
+            
+            // If we already have suggestions, just show them
+            if (this.state.suggestions.length > 0) {
+                if (suggestionsContainer && !suggestionsContainer.classList.contains('is-open')) {
+                    suggestionsContainer.style.display = 'block';
+                    suggestionsContainer.classList.add('is-open');
+                    this.trackEvent('suggestions_reopened', { count: this.state.suggestions.length });
+                }
+                return;
+            }
 
             this.trackEvent('textarea_focused', { timestamp: Date.now() });
 
-            const suggestionsContainer = this.elements.expandedView.querySelector('.divee-suggestions');
-            const suggestionsList = this.elements.expandedView.querySelector('.divee-suggestions-list');
+            const suggestionsList = suggestionsContainer?.querySelector('.divee-suggestions-list');
 
             // Show shimmer loading state
-            suggestionsContainer.style.display = 'block';
-            suggestionsList.innerHTML = `
+            if (suggestionsContainer && suggestionsList) {
+                suggestionsContainer.style.display = 'block';
+                suggestionsContainer.classList.add('is-open');
+                suggestionsList.innerHTML = `
         <div class="divee-shimmer-line"></div>
         <div class="divee-shimmer-line"></div>
         <div class="divee-shimmer-line"></div>
       `;
+            }
 
             try {
                 const suggestions = await this.fetchSuggestions();
                 this.state.suggestions = suggestions;
 
                 // Fade out shimmer first
-                const shimmerLines = suggestionsList.querySelectorAll('.divee-shimmer-line');
+                const shimmerLines = suggestionsList?.querySelectorAll('.divee-shimmer-line') || [];
                 shimmerLines.forEach(line => {
                     line.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                     line.style.opacity = '0';
@@ -498,6 +504,7 @@
 
                 // Wait for shimmer to fade out, then show suggestions
                 setTimeout(() => {
+                    if (!suggestionsList) return;
                     suggestionsList.innerHTML = '';
 
                     // Add suggestions with animation
@@ -525,7 +532,9 @@
                 });
             } catch (error) {
                 console.error('[Divee] Failed to fetch suggestions:', error);
-                suggestionsList.innerHTML = '<div class="divee-error">Could not load suggestions</div>';
+                if (suggestionsList) {
+                    suggestionsList.innerHTML = '<div class="divee-error">Could not load suggestions</div>';
+                }
             }
         }
 
@@ -579,21 +588,10 @@
         }
 
         async askQuestion(question, type, questionId) {
-            // Keep suggestions visible so users can ask more questions
-
-            // Show chat container if first message
-            const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
-            if (chatContainer.style.display === 'none') {
-                chatContainer.style.display = 'block';
-                chatContainer.style.opacity = '0';
-                chatContainer.style.maxHeight = '0';
-                chatContainer.style.overflow = 'hidden';
-
-                // Animate unfold
-                setTimeout(() => {
-                    chatContainer.style.opacity = '1';
-                    chatContainer.style.maxHeight = '400px';
-                }, 50);
+            // Close suggestions overlay so user can see the chat
+            const suggestionsContainer = this.elements.expandedView.querySelector('.divee-suggestions-input');
+            if (suggestionsContainer) {
+                suggestionsContainer.classList.remove('is-open');
             }
 
             // Add user message
