@@ -190,6 +190,12 @@
   transform: translateX(2px) scale(1.15);
 }
 
+.divee-powered-by-collapsed {
+  padding: 0 24px 6px 24px;
+  text-align: left;
+  direction: ltr;
+}
+
 .divee-header-inline {
   display: flex;
   align-items: center;
@@ -212,8 +218,8 @@
 
 .divee-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 12px;
   padding: 20px 24px 12px 24px;
   border-bottom: 2px solid transparent;
@@ -224,11 +230,25 @@
   background-origin: padding-box, border-box;
 }
 
+.divee-header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.divee-powered-by-wrapper {
+  padding: 3px 24px 6px 24px;
+  margin-top: 3px;
+  text-align: left;
+  direction: ltr;
+}
+
 .divee-powered-by {
   font-size: 11px;
   color: #9ca3af;
   text-decoration: none;
-  margin-right: auto;
+  padding: 0 4px;
+  display: inline-block;
 }
 
 .divee-powered-by:hover {

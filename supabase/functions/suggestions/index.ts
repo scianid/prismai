@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { isAllowedOrigin } from '../_shared/origin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +25,20 @@ Deno.serve(async (req: Request) => {
   try {
     const { projectId, articleId, title, content, url } = await req.json();
 
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ suggestions: [] }),
+        { 
+          status: 400, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Connection': 'keep-alive'
+          } 
+        }
+      );
+    }
+
     // Validate required fields
     if (!url || !title || !content) {
       return new Response(
@@ -44,6 +59,31 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Verify origin against allowed URLs
+    const { data: project, error: projectError } = await supabase
+      .from('project')
+      .select('allowed_urls')
+      .eq('project_id', projectId)
+      .single();
+
+    if (projectError) {
+      throw projectError;
+    }
+
+    if (!isAllowedOrigin(url, project?.allowed_urls)) {
+      return new Response(
+        JSON.stringify({ suggestions: [] }),
+        { 
+          status: 403, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Connection': 'keep-alive'
+          } 
+        }
+      );
+    }
 
     // Look for article by URL
     const { data: article, error: articleError } = await supabase

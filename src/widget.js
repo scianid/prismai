@@ -240,6 +240,9 @@
             const showAd = config.show_ad ? '' : 'style="display: none;"';
 
             view.innerHTML = `
+                <div class="divee-powered-by-collapsed">
+                    <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
+                </div>
                 <div class="divee-search-container-collapsed">
                     <img class="divee-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
                     <img class="divee-icon-site-collapsed" src="${config.icon_url}" alt="Site icon" />
@@ -313,14 +316,18 @@
 
             view.innerHTML = `
                 <div class="divee-header">
+                    <div class="divee-header-top">
+                        <div class="divee-icons">
+                            <img class="divee-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
+                            <img class="divee-icon-site" src="${config.icon_url}" alt="Site icon" />
+                        </div>
+                        <span class="divee-title">${config.client_name}</span>
+                        <button class="divee-close" aria-label="Close">✕</button>
+                    </div>
+                </div>
+                <div class="divee-powered-by-wrapper">
                     <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
-                    <div class="divee-icons">
-                        <img class="divee-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
-                        <img class="divee-icon-site" src="${config.icon_url}" alt="Site icon" />
-          </div>
-                    <span class="divee-title">${config.client_name}</span>
-                    <button class="divee-close" aria-label="Close">✕</button>
-        </div>
+                </div>
                 <div class="divee-content">
                     <div class="divee-suggestions" style="display: none;">
                         <div class="divee-suggestions-title">Suggested Questions:</div>

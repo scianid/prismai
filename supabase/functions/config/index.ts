@@ -1,10 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { isAllowedOrigin } from '../_shared/origin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
 
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
@@ -13,7 +15,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { projectId, client_id } = await req.json();
+    const { projectId, client_id, url } = await req.json();
 
     // Use projectId or client_id
     const projectKey = projectId || client_id;
@@ -61,6 +63,13 @@ Deno.serve(async (req: Request) => {
       }
       
       throw error;
+    }
+
+    if (!isAllowedOrigin(url, data.allowed_urls)) {
+      return new Response(
+        JSON.stringify({ error: 'Origin not allowed' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Map database fields to widget config format
