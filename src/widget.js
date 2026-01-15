@@ -1,5 +1,5 @@
 /**
- * PrismAI Article Assistant Widget
+ * Divee Article Assistant Widget
  * Embeddable AI chat widget for articles
  * 
  * Requires: content.js (for getContent, getContentTitle, getContentUrl functions)
@@ -9,7 +9,7 @@
 (function () {
     'use strict';
 
-    class PrismAIWidget {
+    class DiveeWidget {
         constructor(config) {
             this.config = {
                 projectId: config.projectId,
@@ -63,7 +63,7 @@
         }
 
         async init() {
-            console.log('[PrismAI] Initializing widget...', this.config);
+            console.log('[Divee] Initializing widget...', this.config);
 
             // Load server configuration
             await this.loadServerConfig();
@@ -97,7 +97,7 @@
                 });
 
                 this.state.serverConfig = mockResponse;
-                console.log('[PrismAI] Server config loaded:', this.state.serverConfig);
+                console.log('[Divee] Server config loaded:', this.state.serverConfig);
 
                 // Apply direction and language
                 if (mockResponse.direction) {
@@ -107,7 +107,7 @@
                     this.elements.container?.setAttribute('lang', mockResponse.language);
                 }
             } catch (error) {
-                console.error('[PrismAI] Failed to load config:', error);
+                console.error('[Divee] Failed to load config:', error);
                 // Fallback to default config
                 this.state.serverConfig = this.getDefaultConfig();
             }
@@ -115,7 +115,7 @@
 
         async fetchMockServerConfig(payload) {
             // Log the payload being sent (includes cached content)
-            console.log('[PrismAI] Sending to server:', {
+            console.log('[Divee] Sending to server:', {
                 client_id: payload.client_id,
                 title: payload.title,
                 url: this.contentCache.url || this.articleUrl,
@@ -182,7 +182,7 @@
         extractArticleContent() {
             // Check if content is already cached
             if (this.contentCache.extracted) {
-                console.log('[PrismAI] Using cached content');
+                console.log('[Divee] Using cached content');
                 this.articleTitle = this.contentCache.title;
                 this.articleContent = this.contentCache.content;
                 return;
@@ -223,13 +223,13 @@
                     extracted: true
                 };
 
-                console.log('[PrismAI] Article extracted and cached:', {
+                console.log('[Divee] Article extracted and cached:', {
                     title: this.articleTitle,
                     url: this.articleUrl,
                     contentLength: this.articleContent.length
                 });
             } catch (error) {
-                console.error('[PrismAI] Error extracting content:', error);
+                console.error('[Divee] Error extracting content:', error);
                 // Fallback to basic extraction
                 this.articleTitle = document.title || 'Untitled Article';
                 this.articleContent = document.body.textContent.trim();
@@ -240,7 +240,7 @@
         createWidget() {
             // Create container
             const container = document.createElement('div');
-            container.className = 'prismai-widget';
+            container.className = 'divee-widget';
             container.setAttribute('data-state', 'collapsed');
 
             // Apply direction from config
@@ -269,22 +269,22 @@
 
         createCollapsedView() {
             const view = document.createElement('div');
-            view.className = 'prismai-collapsed';
+            view.className = 'divee-collapsed';
 
             const config = this.state.serverConfig || this.getDefaultConfig();
             const showAd = config.show_ad ? '' : 'style="display: none;"';
 
             view.innerHTML = `
-        <div class="prismai-search-container-collapsed">
-          <img class="prismai-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
-          <img class="prismai-icon-site-collapsed" src="${config.icon_url}" alt="Site icon" />
-          <input type="text" class="prismai-search-input-collapsed" placeholder="" readonly />
-          <svg class="prismai-send-icon-collapsed" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <div class="divee-search-container-collapsed">
+                    <img class="divee-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
+                    <img class="divee-icon-site-collapsed" src="${config.icon_url}" alt="Site icon" />
+                    <input type="text" class="divee-search-input-collapsed" placeholder="" readonly />
+                    <svg class="divee-send-icon-collapsed" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
         </div>
-        <div class="prismai-ad-slot" ${showAd}>
-          <div class="prismai-ad-placeholder">
+                <div class="divee-ad-slot" ${showAd}>
+                    <div class="divee-ad-placeholder">
             [Advertisement Space]<br>
             <small>Sponsored Content</small>
           </div>
@@ -293,7 +293,7 @@
 
             // Add typewriter effect
             setTimeout(() => {
-                const input = view.querySelector('.prismai-search-input-collapsed');
+                const input = view.querySelector('.divee-search-input-collapsed');
                 if (input && config.input_text_placeholders) {
                     this.typewriterEffect(input, config.input_text_placeholders);
                 }
@@ -342,53 +342,53 @@
 
         createExpandedView() {
             const view = document.createElement('div');
-            view.className = 'prismai-expanded';
+            view.className = 'divee-expanded';
 
             const config = this.state.serverConfig || this.getDefaultConfig();
 
             view.innerHTML = `
-        <div class="prismai-header">
-          <div class="prismai-icons">
-            <img class="prismai-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
-            <img class="prismai-icon-site" src="${config.icon_url}" alt="Site icon" />
+                <div class="divee-header">
+                    <div class="divee-icons">
+                        <img class="divee-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
+                        <img class="divee-icon-site" src="${config.icon_url}" alt="Site icon" />
           </div>
-          <span class="prismai-title">${config.client_name}</span>
-          <button class="prismai-close" aria-label="Close">✕</button>
+                    <span class="divee-title">${config.client_name}</span>
+                    <button class="divee-close" aria-label="Close">✕</button>
         </div>
-        <div class="prismai-content">
-          <div class="prismai-suggestions" style="display: none;">
-            <div class="prismai-suggestions-title">Suggested Questions:</div>
-            <div class="prismai-suggestions-list"></div>
+                <div class="divee-content">
+                    <div class="divee-suggestions" style="display: none;">
+                        <div class="divee-suggestions-title">Suggested Questions:</div>
+                        <div class="divee-suggestions-list"></div>
           </div>
-          <div class="prismai-chat" style="display: none;">
-            <div class="prismai-messages"></div>
+                    <div class="divee-chat" style="display: none;">
+                        <div class="divee-messages"></div>
           </div>
-          <div class="prismai-input-container">
+                    <div class="divee-input-container">
             <textarea 
-              class="prismai-input" 
+                            class="divee-input" 
               placeholder="Ask anything about this article..."
               rows="1"
               maxlength="200"
             ></textarea>
-            <button class="prismai-send" aria-label="Send">
+                        <button class="divee-send" aria-label="Send">
               <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
               </svg>
             </button>
-            <div class="prismai-input-footer">
-              <div class="prismai-warning">This is an AI driven tool, results might not always be accurate.</div>
-              <div class="prismai-counter">0/200</div>
+                        <div class="divee-input-footer">
+                            <div class="divee-warning">This is an AI driven tool, results might not always be accurate.</div>
+                            <div class="divee-counter">0/200</div>
             </div>
           </div>
-          <div class="prismai-suggested-reads">
-            <div class="prismai-reads-title">Suggested Reads:</div>
-            <div class="prismai-reads-list">
+                    <div class="divee-suggested-reads">
+                        <div class="divee-reads-title">Suggested Reads:</div>
+                        <div class="divee-reads-list">
               ${this.state.suggestedArticles.map(article => `
-                <a href="${article.url}" class="prismai-article-card">
-                  <img src="${article.image}" alt="${article.title}" class="prismai-article-image" />
-                  <div class="prismai-article-content">
-                    <div class="prismai-article-title">${article.title}</div>
-                    <div class="prismai-article-description">${article.description}</div>
+                                <a href="${article.url}" class="divee-article-card">
+                                    <img src="${article.image}" alt="${article.title}" class="divee-article-image" />
+                                    <div class="divee-article-content">
+                                        <div class="divee-article-title">${article.title}</div>
+                                        <div class="divee-article-description">${article.description}</div>
                   </div>
                 </a>
               `).join('')}
@@ -418,14 +418,14 @@
             this.elements.collapsedView.addEventListener('click', () => this.expand());
 
             // Close button
-            const closeButton = this.elements.expandedView.querySelector('.prismai-close');
+            const closeButton = this.elements.expandedView.querySelector('.divee-close');
             closeButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.collapse();
             });
 
             // Text area focus
-            const textarea = this.elements.expandedView.querySelector('.prismai-input');
+            const textarea = this.elements.expandedView.querySelector('.divee-input');
             textarea.addEventListener('focus', () => this.onTextAreaFocus());
             textarea.addEventListener('input', (e) => {
                 this.autoResizeTextarea(e.target);
@@ -433,7 +433,7 @@
             });
 
             // Send button
-            const sendButton = this.elements.expandedView.querySelector('.prismai-send');
+            const sendButton = this.elements.expandedView.querySelector('.divee-send');
             sendButton.addEventListener('click', () => this.sendQuestion());
 
             // Enter key to send
@@ -467,7 +467,7 @@
 
             // Focus on input after animation
             setTimeout(() => {
-                this.elements.expandedView.querySelector('.prismai-input').focus();
+                this.elements.expandedView.querySelector('.divee-input').focus();
             }, 300);
         }
 
@@ -501,15 +501,15 @@
 
             this.trackEvent('textarea_focused', { timestamp: Date.now() });
 
-            const suggestionsContainer = this.elements.expandedView.querySelector('.prismai-suggestions');
-            const suggestionsList = this.elements.expandedView.querySelector('.prismai-suggestions-list');
+            const suggestionsContainer = this.elements.expandedView.querySelector('.divee-suggestions');
+            const suggestionsList = this.elements.expandedView.querySelector('.divee-suggestions-list');
 
             // Show shimmer loading state
             suggestionsContainer.style.display = 'block';
             suggestionsList.innerHTML = `
-        <div class="prismai-shimmer-line"></div>
-        <div class="prismai-shimmer-line"></div>
-        <div class="prismai-shimmer-line"></div>
+        <div class="divee-shimmer-line"></div>
+        <div class="divee-shimmer-line"></div>
+        <div class="divee-shimmer-line"></div>
       `;
 
             try {
@@ -517,7 +517,7 @@
                 this.state.suggestions = suggestions;
 
                 // Fade out shimmer first
-                const shimmerLines = suggestionsList.querySelectorAll('.prismai-shimmer-line');
+                const shimmerLines = suggestionsList.querySelectorAll('.divee-shimmer-line');
                 shimmerLines.forEach(line => {
                     line.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                     line.style.opacity = '0';
@@ -531,7 +531,7 @@
                     // Add suggestions with animation
                     suggestions.forEach((q, idx) => {
                         const button = document.createElement('button');
-                        button.className = 'prismai-suggestion';
+                        button.className = 'divee-suggestion';
                         button.setAttribute('data-index', idx);
                         button.textContent = q;
                         button.addEventListener('click', (e) => {
@@ -548,8 +548,8 @@
                     load_time: 0
                 });
             } catch (error) {
-                console.error('[PrismAI] Failed to fetch suggestions:', error);
-                suggestionsList.innerHTML = '<div class="prismai-error">Could not load suggestions</div>';
+                console.error('[Divee] Failed to fetch suggestions:', error);
+                suggestionsList.innerHTML = '<div class="divee-error">Could not load suggestions</div>';
             }
         }
 
@@ -579,14 +579,14 @@
                     return data.suggestions;
                 }
             } catch (error) {
-                console.error('[PrismAI] Suggestions request failed:', error);
+                console.error('[Divee] Suggestions request failed:', error);
             }
 
             return [];
         }
 
         sendQuestion() {
-            const textarea = this.elements.expandedView.querySelector('.prismai-input');
+            const textarea = this.elements.expandedView.querySelector('.divee-input');
             const question = textarea.value.trim();
 
             if (!question) return;
@@ -596,7 +596,7 @@
             textarea.style.height = 'auto';
 
             // Reset counter
-            const counter = this.elements.expandedView.querySelector('.prismai-counter');
+            const counter = this.elements.expandedView.querySelector('.divee-counter');
             if (counter) {
                 counter.textContent = '0/200';
             }
@@ -604,7 +604,7 @@
 
         async askQuestion(question, type) {
             // Hide suggestions after selecting one
-            const suggestionsContainer = this.elements.expandedView.querySelector('.prismai-suggestions');
+            const suggestionsContainer = this.elements.expandedView.querySelector('.divee-suggestions');
             if (suggestionsContainer) {
                 suggestionsContainer.style.opacity = '0';
                 suggestionsContainer.style.transform = 'translateY(-10px)';
@@ -614,7 +614,7 @@
             }
 
             // Show chat container if first message
-            const chatContainer = this.elements.expandedView.querySelector('.prismai-chat');
+            const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
             if (chatContainer.style.display === 'none') {
                 chatContainer.style.display = 'block';
                 chatContainer.style.opacity = '0';
@@ -640,7 +640,7 @@
             try {
                 await this.streamResponse(question, messageId);
             } catch (error) {
-                console.error('[PrismAI] Failed to get answer:', error);
+                console.error('[Divee] Failed to get answer:', error);
                 this.updateMessage(messageId, 'Sorry, I encountered an error. Please try again.');
             } finally {
                 this.state.isStreaming = false;
@@ -648,25 +648,25 @@
         }
 
         addMessage(role, content, streaming = false) {
-            const messagesContainer = this.elements.expandedView.querySelector('.prismai-messages');
-            const chatContainer = this.elements.expandedView.querySelector('.prismai-chat');
+            const messagesContainer = this.elements.expandedView.querySelector('.divee-messages');
+            const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
             const messageId = `msg-${Date.now()}`;
 
             const messageDiv = document.createElement('div');
-            messageDiv.className = `prismai-message prismai-message-${role}`;
+            messageDiv.className = `divee-message divee-message-${role}`;
             messageDiv.setAttribute('data-message-id', messageId);
 
             const label = document.createElement('div');
-            label.className = 'prismai-message-label';
+            label.className = 'divee-message-label';
             label.textContent = role === 'user' ? 'You' : 'AI';
 
             const contentDiv = document.createElement('div');
-            contentDiv.className = 'prismai-message-content';
+            contentDiv.className = 'divee-message-content';
             contentDiv.textContent = content;
 
             if (streaming) {
                 const cursor = document.createElement('span');
-                cursor.className = 'prismai-cursor';
+                cursor.className = 'divee-cursor';
                 cursor.textContent = '▊';
                 contentDiv.appendChild(cursor);
             }
@@ -687,8 +687,8 @@
             const messageDiv = this.elements.expandedView.querySelector(`[data-message-id="${messageId}"]`);
             if (!messageDiv) return;
 
-            const contentDiv = messageDiv.querySelector('.prismai-message-content');
-            const cursor = contentDiv.querySelector('.prismai-cursor');
+            const contentDiv = messageDiv.querySelector('.divee-message-content');
+            const cursor = contentDiv.querySelector('.divee-cursor');
 
             if (append) {
                 const textNode = document.createTextNode(content);
@@ -703,7 +703,7 @@
             }
 
             // Scroll to bottom of chat container
-            const chatContainer = this.elements.expandedView.querySelector('.prismai-chat');
+            const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
@@ -718,7 +718,7 @@
                 content: this.contentCache.content
             };
             
-            console.log('[PrismAI] Sending question with cached content:', {
+            console.log('[Divee] Sending question with cached content:', {
                 question,
                 title: payload.title,
                 url: payload.url,
@@ -737,7 +737,7 @@
 
             // Remove cursor
             const messageDiv = this.elements.expandedView.querySelector(`[data-message-id="${messageId}"]`);
-            const cursor = messageDiv?.querySelector('.prismai-cursor');
+            const cursor = messageDiv?.querySelector('.divee-cursor');
             if (cursor) cursor.remove();
         }
 
@@ -747,7 +747,7 @@
         }
 
         updateCharacterCounter(textarea) {
-            const counter = this.elements.expandedView.querySelector('.prismai-counter');
+            const counter = this.elements.expandedView.querySelector('.divee-counter');
             if (counter) {
                 const length = textarea.value.length;
                 counter.textContent = `${length}/200`;
@@ -755,7 +755,7 @@
         }
 
         trackEvent(eventName, data) {
-            console.log('[PrismAI Analytics]', eventName, data);
+            console.log('[Divee Analytics]', eventName, data);
             // TODO: Send to analytics endpoint
         }
     }
@@ -772,7 +772,7 @@
                 articleClass: script.getAttribute('data-article-class')
             };
 
-            new PrismAIWidget(config);
+            new DiveeWidget(config);
         });
     }
 
@@ -784,6 +784,6 @@
     }
 
     // Expose for manual initialization
-    window.PrismAIWidget = PrismAIWidget;
+    window.DiveeWidget = DiveeWidget;
 
 })();
