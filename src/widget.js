@@ -484,9 +484,9 @@
                 suggestionsContainer.style.display = 'block';
                 suggestionsContainer.classList.add('is-open');
                 suggestionsList.innerHTML = `
-        <div class="divee-shimmer-line"></div>
-        <div class="divee-shimmer-line"></div>
-        <div class="divee-shimmer-line"></div>
+        <div class="divee-suggestion divee-loading-item"><div class="divee-shimmer-line"></div></div>
+        <div class="divee-suggestion divee-loading-item"><div class="divee-shimmer-line"></div></div>
+        <div class="divee-suggestion divee-loading-item"><div class="divee-shimmer-line"></div></div>
       `;
             }
 
@@ -495,20 +495,12 @@
                 this.state.suggestions = suggestions;
 
                 // Fade out shimmer first
-                const shimmerLines = suggestionsList?.querySelectorAll('.divee-shimmer-line') || [];
-                shimmerLines.forEach(line => {
-                    line.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                    line.style.opacity = '0';
-                    line.style.transform = 'translateX(-30px)';
-                });
-
-                // Wait for shimmer to fade out, then show suggestions
-                setTimeout(() => {
-                    if (!suggestionsList) return;
-                    suggestionsList.innerHTML = '';
-
-                    // Add suggestions with animation
-                    suggestions.forEach((item, idx) => {
+                // No complex fade needed, just swap content as structure matches
+                if (!suggestionsList) return;
+                suggestionsList.innerHTML = '';
+                    
+                // Add suggestions with animation
+                suggestions.forEach((item, idx) => {
                         const questionText = typeof item === 'string' ? item : item.question;
                         const questionId = typeof item === 'string' ? null : item.id;
                         const button = document.createElement('button');
@@ -523,7 +515,6 @@
                         });
                         suggestionsList.appendChild(button);
                     });
-                }, 300);
 
                 this.trackEvent('suggestions_fetched', {
                     article_id: this.config.articleId,

@@ -436,7 +436,7 @@
 }
 
 .divee-shimmer-line {
-  height: 38px;
+  height: 14px;
   background: linear-gradient(
     90deg,
     #f3f4f6 0%,
@@ -444,9 +444,23 @@
     #f3f4f6 100%
   );
   background-size: 200% 100%;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  border-radius: 4px;
   animation: divee-shimmer 1.5s ease-in-out infinite;
+  width: 85%;
+}
+
+.divee-loading-item {
+  pointer-events: none;
+  cursor: default;
+  margin-bottom: 4px;
+}
+
+.divee-loading-item:nth-child(2) .divee-shimmer-line {
+    width: 92%;
+}
+
+.divee-loading-item:nth-child(3) .divee-shimmer-line {
+    width: 78%;
 }
 
 .divee-shimmer-line:last-child {
