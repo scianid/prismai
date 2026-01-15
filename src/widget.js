@@ -1,6 +1,9 @@
 /**
  * PrismAI Article Assistant Widget
  * Embeddable AI chat widget for articles
+ * 
+ * Requires: content.js (for getContent, getContentTitle, getContentUrl functions)
+ * These functions should be loaded before this widget or available globally.
  */
 
 (function () {
@@ -46,6 +49,15 @@
             };
 
             this.elements = {};
+            
+            // Cache for article content (extracted once)
+            this.contentCache = {
+                content: null,
+                title: null,
+                url: null,
+                extracted: false
+            };
+            
             this.init();
         }
 
@@ -78,8 +90,9 @@
                 // In production, this would be: fetch(`${this.config.apiBaseUrl}/config`, {...})
                 const mockResponse = await this.fetchMockServerConfig({
                     client_id: this.config.projectId,
-                    title: this.articleTitle,
-                    article_content: this.articleContent
+                    title: this.contentCache.title || this.articleTitle,
+                    url: this.contentCache.url || this.articleUrl,
+                    article_content: this.contentCache.content || this.articleContent
                 });
 
                 this.state.serverConfig = mockResponse;
@@ -100,6 +113,14 @@
         }
 
         async fetchMockServerConfig(payload) {
+            // Log the payload being sent (includes cached content)
+            console.log('[PrismAI] Sending to server:', {
+                client_id: payload.client_id,
+                title: payload.title,
+                url: this.contentCache.url || this.articleUrl,
+                content_length: payload.article_content?.length || 0
+            });
+            
             // Simulate API delay
             await new Promise(resolve => setTimeout(resolve, 300));
 
@@ -158,18 +179,61 @@
         }
 
         extractArticleContent() {
-            // Try to find article content
-            const article = document.querySelector('article') ||
-                document.querySelector('[role="article"]') ||
-                document.querySelector('main');
+            // Check if content is already cached
+            if (this.contentCache.extracted) {
+                console.log('[PrismAI] Using cached content');
+                this.articleTitle = this.contentCache.title;
+                this.articleContent = this.contentCache.content;
+                return;
+            }
 
-            this.articleTitle = document.title || document.querySelector('h1')?.textContent || 'Untitled Article';
-            this.articleContent = article ? article.textContent.trim() : document.body.textContent.trim();
+            // Extract content using functions from content.js
+            try {
+                // Use getContentTitle() if available
+                if (typeof getContentTitle === 'function') {
+                    this.articleTitle = getContentTitle();
+                } else {
+                    this.articleTitle = document.title || document.querySelector('h1')?.textContent || 'Untitled Article';
+                }
 
-            console.log('[PrismAI] Article extracted:', {
-                title: this.articleTitle,
-                contentLength: this.articleContent.length
-            });
+                // Use getContent() if available
+                if (typeof getContent === 'function') {
+                    this.articleContent = getContent();
+                } else {
+                    // Fallback to simple extraction
+                    const article = document.querySelector('article') ||
+                        document.querySelector('[role="article"]') ||
+                        document.querySelector('main');
+                    this.articleContent = article ? article.textContent.trim() : document.body.textContent.trim();
+                }
+
+                // Use getContentUrl() if available
+                if (typeof getContentUrl === 'function') {
+                    this.articleUrl = getContentUrl();
+                } else {
+                    this.articleUrl = window.location.href;
+                }
+
+                // Cache the extracted content
+                this.contentCache = {
+                    content: this.articleContent,
+                    title: this.articleTitle,
+                    url: this.articleUrl,
+                    extracted: true
+                };
+
+                console.log('[PrismAI] Article extracted and cached:', {
+                    title: this.articleTitle,
+                    url: this.articleUrl,
+                    contentLength: this.articleContent.length
+                });
+            } catch (error) {
+                console.error('[PrismAI] Error extracting content:', error);
+                // Fallback to basic extraction
+                this.articleTitle = document.title || 'Untitled Article';
+                this.articleContent = document.body.textContent.trim();
+                this.articleUrl = window.location.href;
+            }
         }
 
         createWidget() {
@@ -489,7 +553,23 @@
         }
 
         async fetchSuggestions() {
+            // Send cached content to server for suggestions
+            const payload = {
+                project_id: this.config.projectId,
+                article_id: this.config.articleId,
+                title: this.contentCache.title,
+                url: this.contentCache.url,
+                content: this.contentCache.content
+            };
+            
+            console.log('[PrismAI] Fetching suggestions with cached content:', {
+                title: payload.title,
+                url: payload.url,
+                content_length: payload.content?.length || 0
+            });
+            
             // Mock API call with 0.5 second delay
+            // In production: const response = await fetch(`${this.config.apiBaseUrl}/suggestions`, { method: 'POST', body: JSON.stringify(payload) });
             return new Promise((resolve) => {
                 setTimeout(() => {
                     resolve([
@@ -624,6 +704,24 @@
         }
 
         async streamResponse(question, messageId) {
+            // Send question with cached content to server
+            const payload = {
+                project_id: this.config.projectId,
+                article_id: this.config.articleId,
+                question: question,
+                title: this.contentCache.title,
+                url: this.contentCache.url,
+                content: this.contentCache.content
+            };
+            
+            console.log('[PrismAI] Sending question with cached content:', {
+                question,
+                title: payload.title,
+                url: payload.url,
+                content_length: payload.content?.length || 0
+            });
+            
+            // In production: const response = await fetch(`${this.config.apiBaseUrl}/chat`, { method: 'POST', body: JSON.stringify(payload) });
             // Mock streaming response
             const response = `Here are the key insights about "${question}":\n1. This is a detailed explanation based on the article content.\n2. The information is extracted from the context you provided.\n3. Citations would appear here linking back to specific paragraphs.`;
 
