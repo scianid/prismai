@@ -13,7 +13,7 @@
         constructor(config) {
             this.config = {
                 projectId: config.projectId,
-                articleId: config.articleId,
+                articleId: config.articleId || null,
                 position: config.position || 'bottom',
                 maxHeight: config.maxHeight || 600,
                 autoExpand: config.autoExpand || false,
@@ -313,6 +313,7 @@
 
             view.innerHTML = `
                 <div class="divee-header">
+                    <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
                     <div class="divee-icons">
                         <img class="divee-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
                         <img class="divee-icon-site" src="${config.icon_url}" alt="Site icon" />
@@ -341,7 +342,7 @@
               </svg>
             </button>
                         <div class="divee-input-footer">
-                            <div class="divee-warning">This is an AI driven tool, results might not always be accurate.</div>
+                            <div class="divee-warning">This is an AI driven tool, results might not always be accurate</div>
                             <div class="divee-counter">0/200</div>
             </div>
           </div>
@@ -731,9 +732,8 @@
         scripts.forEach(script => {
             const config = {
                 projectId: script.getAttribute('data-project-id'),
-                articleId: script.getAttribute('data-article-id') || 'auto-' + Date.now(),
                 position: script.getAttribute('data-position') || 'bottom',
-                apiBaseUrl: script.getAttribute('data-api-url'),
+                apiBaseUrl: "https://vdbmhqlogqrxozaibntq.supabase.co/functions/v1",
                 articleClass: script.getAttribute('data-article-class')
             };
 
