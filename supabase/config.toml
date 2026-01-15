@@ -1,0 +1,7 @@
+project_id = "vdbmhqlogqrxozaibntq"
+
+[functions.config]
+verify_jwt = false
+
+[functions.suggestions]
+verify_jwt = false

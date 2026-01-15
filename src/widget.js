@@ -87,24 +87,22 @@
 
         async loadServerConfig() {
             try {
-                // Mock server config API call
-                // In production, this would be: fetch(`${this.config.apiBaseUrl}/config`, {...})
-                const mockResponse = await this.fetchMockServerConfig({
+                const serverConfig = await this.fetchServerConfig({
                     client_id: this.config.projectId,
                     title: this.contentCache.title || this.articleTitle,
                     url: this.contentCache.url || this.articleUrl,
                     article_content: this.contentCache.content || this.articleContent
                 });
 
-                this.state.serverConfig = mockResponse;
+                this.state.serverConfig = serverConfig;
                 console.log('[Divee] Server config loaded:', this.state.serverConfig);
 
                 // Apply direction and language
-                if (mockResponse.direction) {
-                    this.elements.container?.setAttribute('dir', mockResponse.direction);
+                if (serverConfig.direction) {
+                    this.elements.container?.setAttribute('dir', serverConfig.direction);
                 }
-                if (mockResponse.language) {
-                    this.elements.container?.setAttribute('lang', mockResponse.language);
+                if (serverConfig.language) {
+                    this.elements.container?.setAttribute('lang', serverConfig.language);
                 }
             } catch (error) {
                 console.error('[Divee] Failed to load config:', error);
@@ -113,57 +111,22 @@
             }
         }
 
-        async fetchMockServerConfig(payload) {
-            // Log the payload being sent (includes cached content)
-            console.log('[Divee] Sending to server:', {
-                client_id: payload.client_id,
-                title: payload.title,
-                url: this.contentCache.url || this.articleUrl,
-                content_length: payload.article_content?.length || 0
+        async fetchServerConfig(payload) {
+            if (!this.config.apiBaseUrl) {
+                throw new Error('Missing apiBaseUrl');
+            }
+
+            const response = await fetch(`${this.config.apiBaseUrl}/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
-            
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 300));
 
-            const hebConfig = {
-                direction: 'rtl',
-                language: 'he',
-                icon_url: 'https://images.icon-icons.com/167/PNG/512/cnn_23166.png',
-                client_name: 'וואלה חדשות',
-                client_description: 'ערוץ החדשות המוביל בישראל',
-                highlight_color: ['#68E5FD', '#A389E0'],
-                show_ad: true,
-                input_text_placeholders: [
-                    "סכם לי את המאמר בנקודות עיקריות",
-                    "אני יכול לעזור לך עם המאמר הזה!",
-                    "שאל אותי כל דבר על התוכן הזה...",
-                    "מה תרצה לדעת?",
-                ]
+            if (!response.ok) {
+                throw new Error(`Config request failed: ${response.status}`);
             }
 
-            
-
-            const enConfig = {
-                direction: 'ltr',
-                language: 'en',
-                icon_url: 'https://images.icon-icons.com/167/PNG/512/cnn_23166.png',
-                client_name: 'TechNews Daily',
-                client_description: 'Your source for technology insights',
-                highlight_color: ['#68E5FD', '#A389E0'],
-                show_ad: true,
-                input_text_placeholders: [
-                    'Let me help you with this article!',
-                    'Ask me anything about this content...',
-                    'What would you like to know?',
-                    'I can explain, summarize, or answer questions...',
-                    'Click to start our conversation!',
-                    'Curious about something? Just ask!'
-                ]
-            }
-
-            // Mock server response
-            return hebConfig;
-            return enConfig
+            return response.json();
         }
 
         getDefaultConfig() {

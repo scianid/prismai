@@ -20,5 +20,6 @@ CREATE TABLE public.project (
   highlight_color ARRAY,
   show_ad boolean NOT NULL,
   input_text_placeholders ARRAY NOT NULL,
+  project_id text DEFAULT gen_random_uuid(),
   CONSTRAINT project_pkey PRIMARY KEY (id)
 );
