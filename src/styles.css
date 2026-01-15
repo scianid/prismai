@@ -224,6 +224,18 @@
   background-origin: padding-box, border-box;
 }
 
+.divee-powered-by {
+  font-size: 11px;
+  color: #9ca3af;
+  text-decoration: none;
+  margin-right: auto;
+}
+
+.divee-powered-by:hover {
+  color: #6b7280;
+  text-decoration: underline;
+}
+
 .divee-icons {
   display: flex;
   align-items: center;

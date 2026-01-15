@@ -13,12 +13,12 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { projectId, client_id, title, article_content } = await req.json();
-    
+    const { projectId, client_id } = await req.json();
+
     // Use projectId or client_id
-    const widgetId = projectId || client_id;
-    
-    if (!widgetId) {
+    const projectKey = projectId || client_id;
+
+    if (!projectKey) {
       return new Response(
         JSON.stringify({ error: 'Missing projectId or client_id' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -28,14 +28,14 @@ Deno.serve(async (req: Request) => {
     // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     // Fetch project config from database
     const { data, error } = await supabase
       .from('project')
       .select('*')
-      .eq('widget_id', widgetId)
+      .eq('project_id', projectKey)
       .single();
 
     if (error) {
@@ -65,20 +65,16 @@ Deno.serve(async (req: Request) => {
 
     // Map database fields to widget config format
     const config = {
-      direction: 'ltr', // Could be added to DB schema
-      language: 'en', // Could be added to DB schema
-      icon_url: 'https://images.icon-icons.com/167/PNG/512/cnn_23166.png', // Could be added to DB
-      client_name: data.button_text || 'Demo Site',
-      client_description: data.greeting_message || 'Article Assistant',
-      highlight_color: [data.primary_color || '#68E5FD', '#A389E0'],
-      show_ad: true, // Could be added to DB schema
-      input_text_placeholders: [
-        'Ask anything about this article...',
-        'What would you like to know?',
-        'I can explain, summarize, or answer questions...'
-      ],
-      position: data.position,
-      api_endpoint: data.api_endpoint
+      direction: data.direction || 'ltr',
+      language: data.language || 'en',
+      icon_url: data.icon_url || 'https://images.icon-icons.com/167/PNG/512/cnn_23166.png',
+      client_name: data.client_name || 'Demo Site',
+      client_description: data.client_description || 'Article Assistant',
+      highlight_color: data.highlight_color || ['#68E5FD', '#A389E0'],
+      show_ad: typeof data.show_ad === 'boolean' ? data.show_ad : true,
+      input_text_placeholders: data.input_text_placeholders || [
+        'Ask anything about this article...'
+      ]
     };
 
     return new Response(
