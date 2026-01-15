@@ -301,9 +301,6 @@
                 <div class="divee-empty-icon">
                     <img src="${config.icon_url}" alt="AI" />
                 </div>
-                <div class="divee-empty-text">
-                    ${text}
-                </div>
             `;
             return container;
         }
