@@ -14,6 +14,17 @@ export type SuggestionItem = {
 
 const fallbackQuestions: string[] = [];
 
+function stripCodeFences(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.startsWith('```')) {
+    return trimmed
+      .replace(/^```[a-zA-Z]*\n?/, '')
+      .replace(/```\s*$/, '')
+      .trim();
+  }
+  return trimmed;
+}
+
 function toSuggestionItems(questions: string[]): SuggestionItem[] {
   return questions.map((question) => ({
     id: crypto.randomUUID(),
@@ -49,25 +60,35 @@ export async function generateSuggestions(title: string, content: string, langua
     body: JSON.stringify({
       model: 'deepseek-chat',
       messages: [
-        { role: 'system', content: 'You are a helpful assistant that returns concise JSON only.' },
+        { role: 'system', content: 'You are a helpful assistant that returns concise JSON only. Example response: {"suggestions":["Question 1","Question 2","Question 3"]}' },
         { role: 'user', content: prompt }
       ],
+      response_format: { type: 'json_object' },
       temperature: 0.4
     })
   });
 
   if (!response.ok) {
+    console.error('ai: deepseek response not ok', { status: response.status });
     return toSuggestionItems(fallbackQuestions);
   }
 
   const data = await response.json() as DeepSeekChatResponse;
   const contentText = data?.choices?.[0]?.message?.content;
+  if (!contentText) {
+    console.error('ai: missing content in deepseek response', { data });
+  }
   try {
-    const parsed = JSON.parse(contentText || '');
+    const parsed = JSON.parse(stripCodeFences(contentText || ''));
     if (Array.isArray(parsed) && parsed.every((s) => typeof s === 'string')) {
       return toSuggestionItems(parsed.slice(0, 3));
     }
-  } catch {
+    if (parsed && Array.isArray(parsed.suggestions) && parsed.suggestions.every((s: unknown) => typeof s === 'string')) {
+      return toSuggestionItems(parsed.suggestions.slice(0, 3));
+    }
+    console.error('ai: parsed content is not string array', { parsed });
+  } catch (error) {
+    console.error('ai: failed to parse deepseek content', { contentText, error });
     // ignore parse errors and fall back
   }
 

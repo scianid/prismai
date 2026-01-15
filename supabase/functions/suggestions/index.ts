@@ -19,6 +19,7 @@ Deno.serve(async (req: Request) => {
     const { projectId, articleId, title, content, url } = await req.json();
 
     if (!projectId) {
+      console.error('suggestions: missing projectId');
       return new Response(
         JSON.stringify({ suggestions: [] }),
         { 
@@ -34,6 +35,11 @@ Deno.serve(async (req: Request) => {
 
     // Validate required fields
     if (!url || !title || !content) {
+      console.error('suggestions: missing fields', {
+        hasUrl: !!url,
+        hasTitle: !!title,
+        hasContent: !!content
+      });
       return new Response(
         JSON.stringify({ suggestions: [] }),
         { 
@@ -61,11 +67,13 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (projectError) {
+      console.error('suggestions: project lookup error', projectError);
       throw projectError;
     }
 
     const requestUrl = getRequestOriginUrl(req);
     if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
+      console.error('suggestions: origin not allowed', { requestUrl, allowedUrls: project?.allowed_urls });
       return new Response(
         JSON.stringify({ suggestions: [] }),
         { 
@@ -87,6 +95,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (articleError) {
+      console.error('suggestions: article lookup error', articleError);
       throw articleError;
     }
 
@@ -103,6 +112,7 @@ Deno.serve(async (req: Request) => {
         });
 
       if (insertError) {
+        console.error('suggestions: article insert error', insertError);
         throw insertError;
       }
     }
@@ -110,6 +120,7 @@ Deno.serve(async (req: Request) => {
     // Return cached suggestions if available
     const cachedSuggestions = (article?.cache as { suggestions?: { id: string; question: string; answer: string | null }[] } | null)?.suggestions;
     if (Array.isArray(cachedSuggestions) && cachedSuggestions.length > 0) {
+      console.log('suggestions: cache hit', { count: cachedSuggestions.length });
       return new Response(
         JSON.stringify({ suggestions: cachedSuggestions }),
         { 
@@ -124,13 +135,16 @@ Deno.serve(async (req: Request) => {
     }
 
     // Fallback: generate hard-coded suggestions
+    console.log('suggestions: cache miss, generating', { language: project?.language || 'en' });
     const suggestions = await generateSuggestions(title, content, project?.language || 'en');
+    console.log('suggestions: ai result', suggestions);
 
     // Cache suggestions on the article
     await supabase
       .from('article')
       .update({ cache: { suggestions } })
       .eq('url', url);
+    console.log('suggestions: cached', { count: suggestions.length });
 
     return new Response(
       JSON.stringify({ suggestions }),
@@ -144,6 +158,7 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
+    console.error('suggestions: unhandled error', error);
     console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
