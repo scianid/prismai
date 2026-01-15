@@ -288,6 +288,26 @@
             type();
         }
 
+        createEmptyState(config) {
+            const container = document.createElement('div');
+            container.className = 'divee-empty-state';
+            
+            const placeholders = config.input_text_placeholders || ['Ask anything about this article...'];
+            // Use the first one as primary, or all of them.
+            // Let's show the first one as a prompt.
+            const text = placeholders.length > 0 ? placeholders[0] : 'Ask me anything about this article';
+
+            container.innerHTML = `
+                <div class="divee-empty-icon">
+                    <img src="${config.icon_url}" alt="AI" />
+                </div>
+                <div class="divee-empty-text">
+                    ${text}
+                </div>
+            `;
+            return container;
+        }
+
         createExpandedView() {
             const view = document.createElement('div');
             view.className = 'divee-expanded';
@@ -349,6 +369,13 @@
                     this.typewriterEffect(input, config.input_text_placeholders);
                 }
             }, 500);
+
+            // Add empty state if no messages
+            const messagesContainer = view.querySelector('.divee-messages');
+            if (this.state.messages.length === 0) {
+                 const emptyState = this.createEmptyState(config);
+                 messagesContainer.appendChild(emptyState);
+            }
 
             return view;
         }
@@ -606,6 +633,11 @@
 
         addMessage(role, content, streaming = false) {
             const messagesContainer = this.elements.expandedView.querySelector('.divee-messages');
+            
+            // Remove empty state
+            const emptyState = messagesContainer.querySelector('.divee-empty-state');
+            if (emptyState) emptyState.remove();
+
             const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
             const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 

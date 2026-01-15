@@ -493,12 +493,56 @@
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 .divee-messages {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
+}
+
+/* Empty State */
+.divee-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6b7280;
+  text-align: center;
+  padding: 20px;
+  gap: 12px;
+  animation: divee-fade-in 0.3s ease;
+  margin: auto;
+}
+
+.divee-empty-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border-radius: 50%;
+  color: #A389E0;
+}
+
+.divee-empty-icon img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.divee-empty-text {
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 260px;
+  color: #6b7280;
 }
 
 .divee-message {
