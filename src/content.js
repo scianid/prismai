@@ -1,7 +1,6 @@
 // Paste in browser console. Uses Readability (if available) + code.js-style filtering.
-function getContent() {
+function getContent(articleClass) {
   const selectors = [
-    "#ArticleBodyComponent",
     "article",
     ".article-content",
     "[role='main']",
@@ -12,6 +11,13 @@ function getContent() {
   ];
 
   const pickContainer = () => {
+    // If articleClass is provided, try it first
+    if (articleClass) {
+      const el = document.querySelector(articleClass);
+      if (el) return el;
+    }
+    
+    // Fall back to default selectors
     for (const sel of selectors) {
       const el = document.querySelector(sel);
       if (el) return el;

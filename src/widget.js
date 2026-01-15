@@ -17,7 +17,8 @@
                 position: config.position || 'bottom',
                 maxHeight: config.maxHeight || 600,
                 autoExpand: config.autoExpand || false,
-                apiBaseUrl: config.apiBaseUrl || 'http://localhost:3000/api/v1'
+                apiBaseUrl: config.apiBaseUrl || 'http://localhost:3000/api/v1',
+                articleClass: config.articleClass || null
             };
 
             this.state = {
@@ -198,7 +199,7 @@
 
                 // Use getContent() if available
                 if (typeof getContent === 'function') {
-                    this.articleContent = getContent();
+                    this.articleContent = getContent(this.config.articleClass);
                 } else {
                     // Fallback to simple extraction
                     const article = document.querySelector('article') ||
@@ -764,7 +765,8 @@
                 projectId: script.getAttribute('data-project-id'),
                 articleId: script.getAttribute('data-article-id') || 'auto-' + Date.now(),
                 position: script.getAttribute('data-position') || 'bottom',
-                apiBaseUrl: script.getAttribute('data-api-url')
+                apiBaseUrl: script.getAttribute('data-api-url'),
+                articleClass: script.getAttribute('data-article-class')
             };
 
             new PrismAIWidget(config);
