@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
+import { logEvent } from '../_shared/analytics.ts';
 import type { SuggestionItem } from '../_shared/ai.ts';
 
 const corsHeaders = {
@@ -92,7 +93,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { projectId, questionId, question, title, content, url } = await req.json();
+    const { projectId, questionId, question, title, content, url, visitor_id, session_id } = await req.json();
 
     if (!projectId || !questionId || !question || !url) {
       console.error('chat: missing fields', {
@@ -122,6 +123,16 @@ Deno.serve(async (req: Request) => {
       console.error('chat: project lookup error', projectError);
       throw projectError;
     }
+
+    // Track Event (Async)
+    logEvent(supabase, {
+      projectId,
+      visitorId: visitor_id,
+      sessionId: session_id
+    }, 'ask_question', undefined, {
+      question_text: question,
+      question_id: questionId
+    });
 
     const requestUrl = getRequestOriginUrl(req);
     if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {

@@ -42,8 +42,42 @@
             this.init();
         }
 
+        generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        getAnalyticsIds() {
+            // Visitor ID (Persistent)
+            let visitorId = localStorage.getItem('divee_visitor_id');
+            if (!visitorId) {
+                visitorId = this.generateUUID();
+                localStorage.setItem('divee_visitor_id', visitorId);
+            }
+
+            // Session ID (Per Session)
+            let sessionId = sessionStorage.getItem('divee_session_id');
+            if (!sessionId) {
+                sessionId = this.generateUUID();
+                sessionStorage.setItem('divee_session_id', sessionId);
+            }
+
+            this.state.visitorId = visitorId;
+            this.state.sessionId = sessionId;
+
+            return { visitorId, sessionId };
+        }
+
         async init() {
             console.log('[Divee] Initializing widget...', this.config);
+
+            // Initialize Analytics IDs
+            this.getAnalyticsIds();
 
             // Load server configuration
             await this.loadServerConfig();
@@ -71,7 +105,11 @@
                     client_id: this.config.projectId,
                     title: this.contentCache.title || this.articleTitle,
                     url: this.contentCache.url || this.articleUrl,
-                    article_content: this.contentCache.content || this.articleContent
+                    article_content: this.contentCache.content || this.articleContent,
+                    visitor_id: this.state.visitorId,
+                    session_id: this.state.sessionId,
+                    referrer: document.referrer,
+                    user_agent: navigator.userAgent
                 });
 
                 this.state.serverConfig = serverConfig;
@@ -714,7 +752,9 @@
                 question: question,
                 title: this.contentCache.title,
                 url: this.contentCache.url,
-                content: this.contentCache.content
+                content: this.contentCache.content,
+                visitor_id: this.state.visitorId,
+                session_id: this.state.sessionId,
             };
 
             const response = await fetch(`${this.config.apiBaseUrl}/chat`, {

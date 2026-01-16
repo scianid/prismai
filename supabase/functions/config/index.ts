@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
+import { logImpression } from '../_shared/analytics.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +16,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { projectId, client_id } = await req.json();
+    const { projectId, client_id, visitor_id, session_id, url, referrer, user_agent } = await req.json();
 
     // Use projectId or client_id
     const projectKey = projectId || client_id;
@@ -32,6 +33,21 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Track Impression (Async)
+    logImpression(supabase, {
+      projectId: projectKey,
+      visitorId: visitor_id,
+      sessionId: session_id,
+      url: url || getRequestOriginUrl(req),
+      referrer: referrer || req.headers.get('referer'),
+      userAgent: user_agent || req.headers.get('user-agent'),
+      ip: req.headers.get('x-forwarded-for') || undefined,
+      geo: {
+        country: req.headers.get('x-vercel-ip-country') || undefined,
+        city: req.headers.get('x-vercel-ip-city') || undefined
+      }
+    });
 
     // Fetch project config from database
     const { data, error } = await supabase
