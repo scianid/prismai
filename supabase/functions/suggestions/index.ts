@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// @ts-ignore
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { generateSuggestions } from '../_shared/ai.ts';
@@ -9,11 +10,14 @@ import { extractCachedSuggestions, getArticleById, insertArticle, updateArticleC
 
 async function supabaseClient() {
   return createClient(
+    // @ts-ignore
     Deno.env.get('SUPABASE_URL') ?? '',
+    // @ts-ignore
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   );
 }
 
+// @ts-ignore
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
