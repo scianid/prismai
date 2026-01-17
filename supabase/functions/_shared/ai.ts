@@ -36,15 +36,15 @@ function toSuggestionItems(questions: string[]): SuggestionItem[] {
 }
 
 function getApiKey(): string {
-   const apiKey = Deno.env.get('DEEPSEEK_API');
-   if(!apiKey) 
+  const apiKey = Deno.env.get('DEEPSEEK_API');
+  if (!apiKey)
     throw new Error('DEEPSEEK_API key not set');
-   return apiKey;
+  return apiKey;
 }
 
 export async function generateSuggestions(title: string, content: string, language: string): Promise<SuggestionItem[]> {
   const apiKey = getApiKey();
-  
+
   const prompt = `You are generating ${TOTAL_SUGGESTIONS} short, helpful questions a reader might want to ask about the article below.
   Write the questions in this language: ${language}.
   Title: 
@@ -81,9 +81,9 @@ export async function generateSuggestions(title: string, content: string, langua
 
   const data = await response.json() as DeepSeekChatResponse;
   const contentText = data?.choices?.[0]?.message?.content;
-  if (!contentText) 
+  if (!contentText)
     console.error('ai: missing content in deepseek response', { data });
-  
+
   try {
     const parsed = JSON.parse(stripCodeFences(contentText || ''));
     if (Array.isArray(parsed) && parsed.every((s) => typeof s === 'string')) {
@@ -101,16 +101,16 @@ export async function generateSuggestions(title: string, content: string, langua
 
 
 export async function streamAnswer(title: string, content: string, question: string): Promise<Response> {
-    const apiKey = getApiKey();
+  const apiKey = getApiKey();
 
-    const systemPrompt = `You are a helpful assistant that answers questions about an article. 
+  const systemPrompt = `You are a helpful assistant that answers questions about an article. 
     Reply concisely but make sure you respond fully.
     Do not answer questions unrelated to the article. 
     under any circumstance, do not mention you are an AI model. 
     If the question is not related to the article, reply with 
     "I'm sorry, I can only answer questions related to the article."`;
 
-    const userPrompt = `Title: 
+  const userPrompt = `Title: 
     ${title || ''}
 
     Content:
@@ -119,27 +119,64 @@ export async function streamAnswer(title: string, content: string, question: str
     Question: 
     ${question}`;
 
-    const aiResponse = await fetch(AI_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.4,
-        stream: true
-      })
-    });
+  const aiResponse = await fetch(AI_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.4,
+      stream: true
+    })
+  });
 
-    if (!aiResponse.ok || !aiResponse.body) {
-      console.error('chat: AI request failed', { status: aiResponse.status });
-      throw new Error('AI request failed');
-    }
-
-    return aiResponse;
+  if (!aiResponse.ok || !aiResponse.body) {
+    console.error('chat: AI request failed', { status: aiResponse.status });
+    throw new Error('AI request failed');
   }
+
+  return aiResponse;
+}
+
+export async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let answer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() || '';
+
+    for (const part of parts) {
+      const lines = part.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const data = trimmed.replace(/^data:\s*/, '');
+        if (data === '[DONE]') {
+          return answer;
+        }
+        try {
+          const json = JSON.parse(data) as DeepSeekStreamChunk;
+          const delta = json?.choices?.[0]?.delta?.content;
+          if (delta) answer += delta;
+        } catch {
+          // ignore parse errors
+        }
+      }
+    }
+  }
+
+  return answer;
+}

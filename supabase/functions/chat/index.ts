@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { logEvent } from '../_shared/analytics.ts';
-import { streamAnswer } from '../_shared/ai.ts';
+import { readDeepSeekStreamAndCollectAnswer, streamAnswer } from '../_shared/ai.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
@@ -110,40 +110,3 @@ Deno.serve(async (req: Request) => {
     return errorResp('Internal server error', 500);
   }
 });
-
-async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let answer = '';
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    const parts = buffer.split('\n\n');
-    buffer = parts.pop() || '';
-
-    for (const part of parts) {
-      const lines = part.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
-        const data = trimmed.replace(/^data:\s*/, '');
-        if (data === '[DONE]') {
-          return answer;
-        }
-        try {
-          const json = JSON.parse(data) as DeepSeekStreamChunk;
-          const delta = json?.choices?.[0]?.delta?.content;
-          if (delta) answer += delta;
-        } catch {
-          // ignore parse errors
-        }
-      }
-    }
-  }
-
-  return answer;
-}
