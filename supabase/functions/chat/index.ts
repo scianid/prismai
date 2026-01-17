@@ -47,43 +47,6 @@ async function updateCacheAnswer(
     .eq('url', url);
 }
 
-async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let answer = '';
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    const parts = buffer.split('\n\n');
-    buffer = parts.pop() || '';
-
-    for (const part of parts) {
-      const lines = part.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
-        const data = trimmed.replace(/^data:\s*/, '');
-        if (data === '[DONE]') {
-          return answer;
-        }
-        try {
-          const json = JSON.parse(data) as DeepSeekStreamChunk;
-          const delta = json?.choices?.[0]?.delta?.content;
-          if (delta) answer += delta;
-        } catch {
-          // ignore parse errors
-        }
-      }
-    }
-  }
-
-  return answer;
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -256,3 +219,40 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let answer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() || '';
+
+    for (const part of parts) {
+      const lines = part.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const data = trimmed.replace(/^data:\s*/, '');
+        if (data === '[DONE]') {
+          return answer;
+        }
+        try {
+          const json = JSON.parse(data) as DeepSeekStreamChunk;
+          const delta = json?.choices?.[0]?.delta?.content;
+          if (delta) answer += delta;
+        } catch {
+          // ignore parse errors
+        }
+      }
+    }
+  }
+
+  return answer;
+}

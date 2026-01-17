@@ -7,7 +7,7 @@ import { errorResp, successResp } from '../_shared/responses.ts';
 import { getProjectById } from '../_shared/dao/projectDao.ts';
 import { extractCachedSuggestions, getArticleById, insertArticle, updateArticleCache } from '../_shared/dao/articleDao.ts';
 
-function supabaseClient() {
+async function supabaseClient() {
   return createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -31,7 +31,7 @@ Deno.serve(async (req: Request) => {
       return errorResp('suggestions: missing required fields:url,title,content', 400, { suggestions: [] });
 
     // Initialize Supabase client with service role key (bypasses RLS)
-    const supabase = supabaseClient();
+    const supabase = await supabaseClient();
 
     const project = await getProjectById(projectId, supabase);
     const requestUrl = getRequestOriginUrl(req);
