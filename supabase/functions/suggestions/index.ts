@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
     console.log('suggestions: ai result', suggestions);
 
     // Cache suggestions on the article
-    await updateArticleCache(url, { suggestions }, supabase);
+    await updateArticleCache(article, { suggestions }, supabase);
 
     return successResp({ suggestions });
 

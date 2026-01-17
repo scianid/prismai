@@ -46,13 +46,13 @@ export function extractCachedSuggestions(article: any) {
     }
 }
 
-export async function updateArticleCache(url: string,
+export async function updateArticleCache(article: any,
     cache: Record<string, any>,
     supabase: any) {
 
     await supabase
         .from('article')
         .update({ cache })
-        .eq('unique_id', url+cache.project_id);
+        .eq('unique_id', article.unique_id);
     console.log('suggestions: cached', { count: cache.suggestions?.length || 0 });
 }
