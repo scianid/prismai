@@ -1,9 +1,9 @@
-export async function getArticleById(url: string, supabase: any) {
+export async function getArticleById(url: string, projectId: string, supabase: any) {
     // Look for article by URL
     const { data: article, error: articleError } = await supabase
         .from('article')
-        .select('url, cache')
-        .eq('url', url)
+        .select('*')
+        .eq('unique_id', url+projectId)
         .maybeSingle();
 
     if (articleError) {
@@ -22,6 +22,7 @@ export async function insertArticle(url: string,
     const { error: insertError } = await supabase
         .from('article')
         .insert({
+            unique_id: url+projectId,
             url,
             title,
             content,
@@ -52,6 +53,6 @@ export async function updateArticleCache(url: string,
     await supabase
         .from('article')
         .update({ cache })
-        .eq('url', url);
+        .eq('unique_id', url+cache.project_id);
     console.log('suggestions: cached', { count: cache.suggestions?.length || 0 });
 }
