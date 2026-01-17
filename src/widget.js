@@ -598,7 +598,9 @@
                 articleId: this.config.articleId,
                 title: this.contentCache.title,
                 url: this.contentCache.url,
-                content: this.contentCache.content
+                content: this.contentCache.content,
+                visitor_id: this.state.visitorId,
+                session_id: this.state.sessionId
             };
 
             try {
