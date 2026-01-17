@@ -7,6 +7,7 @@ import { errorResp, successResp } from '../_shared/responses.ts';
 import { getProjectById } from '../_shared/dao/projectDao.ts';
 import { extractCachedSuggestions, getArticleById, insertArticle, updateArticleCache } from '../_shared/dao/articleDao.ts';
 import { supabaseClient } from '../_shared/supabaseClient.ts';
+import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH } from "../_shared/constants.ts";
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -16,7 +17,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { projectId, title, content, url, visitor_id, session_id } = await req.json();
+    let { projectId, title, content, url, visitor_id, session_id } = await req.json();
+
+    // Truncate inputs
+    if (title) title = title.substring(0, MAX_TITLE_LENGTH);
+    if (content) content = content.substring(0, MAX_CONTENT_LENGTH);
 
     if (!projectId) 
       return errorResp('suggestions: missing projectId', 400, { suggestions: [] });

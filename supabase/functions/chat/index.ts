@@ -7,6 +7,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
 import { extractCachedSuggestions, getArticleById, insertArticle, updateCacheAnswer } from "../_shared/dao/articleDao.ts";
+import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH } from "../_shared/constants.ts";
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -15,7 +16,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { projectId, questionId, question, title, content, url, visitor_id, session_id } = await req.json();
+    let { projectId, questionId, question, title, content, url, visitor_id, session_id } = await req.json();
+
+    // Truncate inputs
+    if (title) title = title.substring(0, MAX_TITLE_LENGTH);
+    if (content) content = content.substring(0, MAX_CONTENT_LENGTH);
 
     if (!projectId || !questionId || !question || !url) {
       console.error('chat: missing fields', {
