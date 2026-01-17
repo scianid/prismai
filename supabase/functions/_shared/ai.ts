@@ -114,7 +114,7 @@ export async function streamAnswer(title: string, content: string, question: str
     Do not answer questions unrelated to the article. 
     under any circumstance, do not mention you are an AI model. 
     If the question is not related to the article, reply with 
-    "I'm sorry, I can only answer questions related to the article."`;
+    "I'm sorry, I can only answer questions related to the article." but in the same language as the question.`;
 
   const userPrompt = `Title: 
     ${title || ''}

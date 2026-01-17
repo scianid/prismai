@@ -62,18 +62,24 @@ Deno.serve(async (req: Request) => {
 
     const cacheSuggestions = extractCachedSuggestions(article);
 
-    if (!cacheSuggestions)
+    // @ts-ignore
+    const allowFreeForm = Deno.env.get('ALLOW_FREEFORM_ASK') === 'true';
+
+    // If no cache and no freeform, we can't do anything
+    if (!cacheSuggestions && !allowFreeForm)
         return errorResp('No cached suggestions', 404);
       
 
-    const cachedItem = cacheSuggestions.find((s) => s.id === questionId);
-    if (!cachedItem)
+    const cachedItem = cacheSuggestions?.find((s) => s.id === questionId);
+    
+    // If request entails a specific question ID not in cache, and freeform is disabled
+    if (!cachedItem && !allowFreeForm)
         return errorResp('Question not allowed', 403);
 
-    if (cachedItem.answer)
+    if (cachedItem?.answer)
         return successResp({ answer: cachedItem.answer, cached: true });
 
-    const resolvedQuestion = cachedItem.question || question;
+    const resolvedQuestion = cachedItem?.question || question;
     const aiResponse = await streamAnswer(title, content, resolvedQuestion);
 
     if (!aiResponse.body)
@@ -81,10 +87,12 @@ Deno.serve(async (req: Request) => {
 
     const [clientStream, cacheStream] = aiResponse.body.tee();
 
-    // Cache the full answer after streaming completes
-    readDeepSeekStreamAndCollectAnswer(cacheStream)
-      .then((answer) => updateCacheAnswer(supabase, article.unique_id, questionId, resolvedQuestion, answer))
-      .catch(() => undefined);
+    // Cache the full answer after streaming completes ONLY if it was a suggestion
+    if (cachedItem) {
+        readDeepSeekStreamAndCollectAnswer(cacheStream)
+            .then((answer) => updateCacheAnswer(supabase, article.unique_id, questionId, resolvedQuestion, answer))
+            .catch(() => undefined);
+    }
 
     return new Response(clientStream, {
       status: 200,
