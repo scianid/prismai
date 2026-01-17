@@ -107,7 +107,7 @@ export async function streamAnswer(title: string, content: string, question: str
   const apiKey = getApiKey();
 
   const systemPrompt = `You are a helpful assistant that answers questions about an article. 
-    Reply concisely but make sure you respond fully.
+    Reply concisely in under 1000 characters but make sure you respond fully.
     Do not answer questions unrelated to the article. 
     under any circumstance, do not mention you are an AI model. 
     If the question is not related to the article, reply with 
@@ -135,6 +135,7 @@ export async function streamAnswer(title: string, content: string, question: str
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.4,
+      max_tokens: 4000,
       stream: true
     })
   });
