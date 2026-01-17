@@ -135,7 +135,7 @@ export async function streamAnswer(title: string, content: string, question: str
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.4,
-      max_tokens: 4000,
+      max_tokens: 2000,
       stream: true
     })
   });
