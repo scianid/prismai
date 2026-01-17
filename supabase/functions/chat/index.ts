@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// @ts-ignore
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { logEvent } from '../_shared/analytics.ts';
@@ -7,23 +8,17 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
 import { extractCachedSuggestions, getArticleById, insertArticle, updateCacheAnswer } from "../_shared/dao/articleDao.ts";
-
-
-type DeepSeekStreamChunk = {
-  choices?: Array<{
-    delta?: {
-      content?: string;
-    };
-  }>;
-};
-
+// @ts-ignore: Deno is available in the runtime environment
 function getSupabaseClient() {
   return createClient(
+    // @ts-ignore
     Deno.env.get('SUPABASE_URL') ?? '',
+    // @ts-ignore
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   );
 }
 
+// @ts-ignore
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });

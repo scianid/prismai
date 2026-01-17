@@ -36,6 +36,7 @@ function toSuggestionItems(questions: string[]): SuggestionItem[] {
 }
 
 function getApiKey(): string {
+  // @ts-ignore
   const apiKey = Deno.env.get('DEEPSEEK_API');
   if (!apiKey)
     throw new Error('DEEPSEEK_API key not set');
@@ -97,6 +98,8 @@ export async function generateSuggestions(title: string, content: string, langua
     console.error('ai: failed to parse deepseek content', { contentText, error });
     throw new Error(`ai: failed to parse deepseek response: ${error}`);
   }
+
+  throw new Error('ai: generateSuggestions did not produce suggestions');
 }
 
 
@@ -143,6 +146,14 @@ export async function streamAnswer(title: string, content: string, question: str
 
   return aiResponse;
 }
+
+type DeepSeekStreamChunk = {
+  choices?: Array<{
+    delta?: {
+      content?: string;
+    };
+  }>;
+};
 
 export async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<Uint8Array>): Promise<string> {
   const reader = stream.getReader();
