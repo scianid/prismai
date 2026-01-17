@@ -5,7 +5,7 @@ export async function getArticleById(url: string, projectId: string, supabase: a
     const { data: article, error: articleError } = await supabase
         .from('article')
         .select('*')
-        .eq('unique_id', url+projectId)
+        .eq('unique_id', url + projectId)
         .maybeSingle();
 
     if (articleError) {
@@ -21,13 +21,14 @@ export async function insertArticle(url: string,
     content: string,
     projectId: string,
     supabase: any) {
-        const article = {unique_id: url+projectId,
-            url,
-            title,
-            content,
-            cache: {},
-            project_id: projectId
-        };
+    const article = {
+        unique_id: url + projectId,
+        url,
+        title,
+        content,
+        cache: {},
+        project_id: projectId
+    };
 
     const { error: insertError } = await supabase
         .from('article')
@@ -62,34 +63,38 @@ export async function updateArticleCache(article: any,
 }
 
 export async function updateCacheAnswer(
-  supabase: any,
-  unique_id: any,
-  questionId: string,
-  question: string,
-  answer: string
+    supabase: any,
+    unique_id: any,
+    questionId: string,
+    question: string,
+    answer: string
 ) {
-  const { data: articleData, error } = await supabase
-    .from('article')
-    .select('cache')
-    .eq('unique_id', unique_id)
-    .maybeSingle();
+    console.log("updateCacheAnswer start");
 
-  if (error) {
-    return;
-  }
+    const { data: articleData, error } = await supabase
+        .from('article')
+        .select('cache')
+        .eq('unique_id', unique_id)
+        .maybeSingle();
 
-  const cache = (articleData?.cache ?? {}) as { suggestions?: SuggestionItem[] };
-  const suggestions = Array.isArray(cache.suggestions) ? cache.suggestions.slice() : [];
-  const idx = suggestions.findIndex((s) => s.id === questionId);
+    if (error) {
+        console.error('chat: failed to fetch article for caching answer', error);
+        return;
+    }
 
-  if (idx >= 0) {
-    suggestions[idx] = { ...suggestions[idx], question, answer };
-  } else {
-    suggestions.push({ id: questionId, question, answer });
-  }
+    const cache = (articleData?.cache ?? {}) as { suggestions?: SuggestionItem[] };
 
-  await supabase
-    .from('article')
-    .update({ cache: { ...cache, suggestions } })
-    .eq('unique_id', articleData.unique_id);
+    const suggestions = Array.isArray(cache.suggestions) ? cache.suggestions.slice() : [];
+    const idx = suggestions.findIndex((s) => s.id === questionId);
+
+    if (idx >= 0) {
+        suggestions[idx] = { ...suggestions[idx], question, answer };
+    } else {
+        suggestions.push({ id: questionId, question, answer });
+    }
+
+    await supabase
+        .from('article')
+        .update({ cache: { suggestions } })
+        .eq('unique_id', unique_id);
 }
