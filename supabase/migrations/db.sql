@@ -34,14 +34,17 @@ CREATE TABLE public.analytics_impressions (
   geo_lat double precision,
   geo_lng double precision,
   created_at timestamp with time zone DEFAULT now(),
+  ip text,
+  platform text,
   CONSTRAINT analytics_impressions_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.article (
-  url text NOT NULL UNIQUE,
+  url text NOT NULL,
   title text NOT NULL,
   content text,
   cache jsonb,
   project_id text NOT NULL UNIQUE,
+  unique_id text NOT NULL UNIQUE,
   CONSTRAINT article_pkey PRIMARY KEY (project_id)
 );
 CREATE TABLE public.project (

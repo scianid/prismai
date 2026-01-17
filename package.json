@@ -1,0 +1,29 @@
+{
+  "name": "divee-sdk",
+  "version": "1.0.0",
+  "description": "Interactive AI chat widget for articles and blog posts.",
+  "main": "server.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node build.js",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scianid/prismai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/scianid/prismai/issues"
+  },
+  "homepage": "https://github.com/scianid/prismai#readme",
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  }
+}
