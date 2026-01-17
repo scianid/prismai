@@ -2,8 +2,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { logEvent } from '../_shared/analytics.ts';
-import type { SuggestionItem } from '../_shared/ai.ts';
+import { streamAnswer, type SuggestionItem } from '../_shared/ai.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { getProjectById } from "../_shared/dao/projectDao.ts";
+import { errorResp, successResp } from "../_shared/responses.ts";
+import { extractCachedSuggestions, getArticleById, insertArticle, updateCacheAnswer } from "../_shared/dao/articleDao.ts";
 
 
 type DeepSeekStreamChunk = {
@@ -14,37 +17,11 @@ type DeepSeekStreamChunk = {
   }>;
 };
 
-async function updateCacheAnswer(
-  supabase: ReturnType<typeof createClient>,
-  url: string,
-  questionId: string,
-  question: string,
-  answer: string
-) {
-  const { data: article, error } = await supabase
-    .from('article')
-    .select('cache')
-    .eq('url', url)
-    .maybeSingle();
-
-  if (error) {
-    return;
-  }
-
-  const cache = (article?.cache ?? {}) as { suggestions?: SuggestionItem[] };
-  const suggestions = Array.isArray(cache.suggestions) ? cache.suggestions.slice() : [];
-  const idx = suggestions.findIndex((s) => s.id === questionId);
-
-  if (idx >= 0) {
-    suggestions[idx] = { ...suggestions[idx], question, answer };
-  } else {
-    suggestions.push({ id: questionId, question, answer });
-  }
-
-  await supabase
-    .from('article')
-    .update({ cache: { ...cache, suggestions } })
-    .eq('url', url);
+function getSupabaseClient() {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
 }
 
 Deno.serve(async (req: Request) => {
@@ -68,21 +45,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabase = getSupabaseClient();
+    const project = await getProjectById(projectId, supabase);
+    
 
-    const { data: project, error: projectError } = await supabase
-      .from('project')
-      .select('allowed_urls')
-      .eq('project_id', projectId)
-      .single();
+    // Verify origin
+    const requestUrl = getRequestOriginUrl(req);
 
-    if (projectError) {
-      console.error('chat: project lookup error', projectError);
-      throw projectError;
-    }
+    if (!isAllowedOrigin(requestUrl, project?.allowed_urls))
+        return errorResp('Origin not allowed', 403);
 
     // Track Event (Async)
     logEvent(supabase, {
@@ -94,112 +65,35 @@ Deno.serve(async (req: Request) => {
       question_id: questionId
     });
 
-    const requestUrl = getRequestOriginUrl(req);
-    if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
-      console.error('chat: origin not allowed', { requestUrl, allowedUrls: project?.allowed_urls });
-      return new Response(
-        JSON.stringify({ error: 'Origin not allowed' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const article = await getArticleById(url, projectId, supabase);
 
-    const { data: article, error: articleError } = await supabase
-      .from('article')
-      .select('url, cache')
-      .eq('url', url)
-      .maybeSingle();
+    if (!article)
+        await insertArticle(url, title, content, projectId, supabase);
 
-    if (articleError) {
-      console.error('chat: article lookup error', articleError);
-      throw articleError;
-    }
+    const cacheSuggestions = extractCachedSuggestions(article);
 
-    if (!article) {
-      const { error: insertError } = await supabase
-        .from('article')
-        .insert({
-          url,
-          title: title || '',
-          content: content || '',
-          cache: {},
-          project_id: projectId
-        });
-
-      if (insertError) {
-        console.error('chat: article insert error', insertError);
-        throw insertError;
-      }
-    }
-
-    const cacheSuggestions = (article?.cache as { suggestions?: SuggestionItem[] } | null)?.suggestions;
-    if (!Array.isArray(cacheSuggestions) || cacheSuggestions.length === 0) {
-      console.error('chat: no cached suggestions', { url });
-      return new Response(
-        JSON.stringify({ error: 'No cached suggestions' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    if (!cacheSuggestions)
+        return errorResp('No cached suggestions', 404);
+      
 
     const cachedItem = cacheSuggestions.find((s) => s.id === questionId);
-    if (!cachedItem) {
-      console.error('chat: question id not found in cache', { questionId, url });
-      return new Response(
-        JSON.stringify({ error: 'Question not allowed' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    if (!cachedItem)
+        return errorResp('Question not allowed', 403);
 
-    if (cachedItem.answer) {
-      return new Response(
-        JSON.stringify({ answer: cachedItem.answer, cached: true }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    if (cachedItem.answer)
+        return successResp({ answer: cachedItem.answer, cached: true });
 
     const resolvedQuestion = cachedItem.question || question;
+    const aiResponse = await streamAnswer(title, content, resolvedQuestion);
 
-    const apiKey = Deno.env.get('DEEPSEEK_API');
-    if (!apiKey) {
-      console.error('chat: missing DEEPSEEK_API secret');
-      return new Response(
-        JSON.stringify({ error: 'AI not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const systemPrompt = 'You are a helpful assistant that answers questions about an article. Reply concisely.';
-    const userPrompt = `Title: ${title || ''}\n\nContent:\n${content || ''}\n\nQuestion: ${resolvedQuestion}`;
-
-    const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.4,
-        stream: true
-      })
-    });
-
-    if (!aiResponse.ok || !aiResponse.body) {
-      console.error('chat: AI request failed', { status: aiResponse.status });
-      return new Response(
-        JSON.stringify({ error: 'AI request failed' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    if (!aiResponse.body)
+      return errorResp('AI response stream unavailable', 500);
 
     const [clientStream, cacheStream] = aiResponse.body.tee();
 
     // Cache the full answer after streaming completes
     readDeepSeekStreamAndCollectAnswer(cacheStream)
-      .then((answer) => updateCacheAnswer(supabase, url, questionId, resolvedQuestion, answer))
+      .then((answer) => updateCacheAnswer(supabase, article.unique_id, questionId, resolvedQuestion, answer))
       .catch(() => undefined);
 
     return new Response(clientStream, {
@@ -213,10 +107,7 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     console.error('chat: unhandled error', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResp('Internal server error', 500);
   }
 });
 

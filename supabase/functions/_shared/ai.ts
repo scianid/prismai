@@ -1,3 +1,7 @@
+const TOTAL_SUGGESTIONS = 5;
+const AI_MODEL = 'deepseek-chat';
+const AI_URL = 'https://api.deepseek.com/v1/chat/completions';
+
 type DeepSeekChatResponse = {
   choices?: Array<{
     message?: {
@@ -11,8 +15,6 @@ export type SuggestionItem = {
   question: string;
   answer: string | null;
 };
-
-const fallbackQuestions: string[] = [];
 
 function stripCodeFences(text: string): string {
   const trimmed = text.trim();
@@ -33,13 +35,17 @@ function toSuggestionItems(questions: string[]): SuggestionItem[] {
   }));
 }
 
-export async function generateSuggestions(title: string, content: string, language: string): Promise<SuggestionItem[]> {
-  const apiKey = Deno.env.get('DEEPSEEK_API');
-  if (!apiKey) {
-    return toSuggestionItems(fallbackQuestions);
-  }
+function getApiKey(): string {
+   const apiKey = Deno.env.get('DEEPSEEK_API');
+   if(!apiKey) 
+    throw new Error('DEEPSEEK_API key not set');
+   return apiKey;
+}
 
-  const prompt = `You are generating 3 short, helpful questions a reader might ask about the article below.
+export async function generateSuggestions(title: string, content: string, language: string): Promise<SuggestionItem[]> {
+  const apiKey = getApiKey();
+  
+  const prompt = `You are generating ${TOTAL_SUGGESTIONS} short, helpful questions a reader might want to ask about the article below.
   Write the questions in this language: ${language}.
   Title: 
   ${title}
@@ -47,18 +53,18 @@ export async function generateSuggestions(title: string, content: string, langua
   Content:
   ${content}
   
-  Return ONLY a JSON array of 3 strings in ${language} language.
+  Return ONLY a JSON array of ${TOTAL_SUGGESTIONS} strings in ${language} language.
    Do not include any additional text.
    First question should always be "Summarized the article in brief." make sure all questions are in the specified language: ${language}.`;
 
-  const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+  const response = await fetch(AI_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: AI_MODEL,
       messages: [
         { role: 'system', content: 'You are a helpful assistant that returns concise JSON only. Example response: {"suggestions":["Question 1","Question 2","Question 3"]}' },
         { role: 'user', content: prompt }
@@ -70,27 +76,70 @@ export async function generateSuggestions(title: string, content: string, langua
 
   if (!response.ok) {
     console.error('ai: deepseek response not ok', { status: response.status });
-    return toSuggestionItems(fallbackQuestions);
+    throw new Error(`ai: deepseek response not ok: ${response.status}`);
   }
 
   const data = await response.json() as DeepSeekChatResponse;
   const contentText = data?.choices?.[0]?.message?.content;
-  if (!contentText) {
+  if (!contentText) 
     console.error('ai: missing content in deepseek response', { data });
-  }
+  
   try {
     const parsed = JSON.parse(stripCodeFences(contentText || ''));
     if (Array.isArray(parsed) && parsed.every((s) => typeof s === 'string')) {
-      return toSuggestionItems(parsed.slice(0, 3));
+      return toSuggestionItems(parsed.slice(0, TOTAL_SUGGESTIONS));
     }
     if (parsed && Array.isArray(parsed.suggestions) && parsed.suggestions.every((s: unknown) => typeof s === 'string')) {
-      return toSuggestionItems(parsed.suggestions.slice(0, 3));
+      return toSuggestionItems(parsed.suggestions.slice(0, TOTAL_SUGGESTIONS));
     }
     console.error('ai: parsed content is not string array', { parsed });
   } catch (error) {
     console.error('ai: failed to parse deepseek content', { contentText, error });
-    // ignore parse errors and fall back
+    throw new Error(`ai: failed to parse deepseek response: ${error}`);
   }
-
-  return toSuggestionItems(fallbackQuestions);
 }
+
+
+export async function streamAnswer(title: string, content: string, question: string): Promise<Response> {
+    const apiKey = getApiKey();
+
+    const systemPrompt = `You are a helpful assistant that answers questions about an article. 
+    Reply concisely but make sure you respond fully.
+    Do not answer questions unrelated to the article. 
+    under any circumstance, do not mention you are an AI model. 
+    If the question is not related to the article, reply with 
+    "I'm sorry, I can only answer questions related to the article."`;
+
+    const userPrompt = `Title: 
+    ${title || ''}
+
+    Content:
+    ${content || ''}
+    
+    Question: 
+    ${question}`;
+
+    const aiResponse = await fetch(AI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.4,
+        stream: true
+      })
+    });
+
+    if (!aiResponse.ok || !aiResponse.body) {
+      console.error('chat: AI request failed', { status: aiResponse.status });
+      throw new Error('AI request failed');
+    }
+
+    return aiResponse;
+  }

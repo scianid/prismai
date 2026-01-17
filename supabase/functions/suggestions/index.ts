@@ -40,10 +40,10 @@ Deno.serve(async (req: Request) => {
       return errorResp('suggestions: origin not allowed', 403, { suggestions: [] });
 
 
-    const article = await getArticleById(url, projectId, supabase);
+    let article = await getArticleById(url, projectId, supabase);
 
-    if (!article) 
-      await insertArticle(url, title, content, projectId, supabase);
+    if (!article)
+      article = await insertArticle(url, title, content, projectId, supabase);
 
     // Return cached suggestions if available
     const cachedSuggestions = extractCachedSuggestions(article);
