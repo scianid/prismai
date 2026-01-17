@@ -1,6 +1,8 @@
 const TOTAL_SUGGESTIONS = 5;
 const AI_MODEL = 'deepseek-chat';
 const AI_URL = 'https://api.deepseek.com/v1/chat/completions';
+const MAX_TOKENS_CHAT = 4000;
+const MAX_TOKENS_SUGGESTIONS = 4000;
 
 type DeepSeekChatResponse = {
   choices?: Array<{
@@ -71,7 +73,8 @@ export async function generateSuggestions(title: string, content: string, langua
         { role: 'user', content: prompt }
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.4
+      temperature: 0.4,
+      max_tokens: MAX_TOKENS_SUGGESTIONS
     })
   });
 
@@ -135,7 +138,7 @@ export async function streamAnswer(title: string, content: string, question: str
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.4,
-      max_tokens: 2000,
+      max_tokens: MAX_TOKENS_CHAT,
       stream: true
     })
   });
