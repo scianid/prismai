@@ -82,6 +82,11 @@
             // Load server configuration
             await this.loadServerConfig();
 
+            if (!this.state.serverConfig) {
+                console.warn('[Divee] Widget disabled due to config load failure');
+                return;
+            }
+
             // Extract article content
             this.extractArticleContent();
 
@@ -124,8 +129,7 @@
                 }
             } catch (error) {
                 console.error('[Divee] Failed to load config:', error);
-                // Fallback to default config
-                this.state.serverConfig = this.getDefaultConfig();
+                this.state.serverConfig = null;
             }
         }
 
@@ -262,7 +266,7 @@
                     <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
                 </div>
                 <div class="divee-search-container-collapsed">
-                    <img class="divee-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
+                    <img class="divee-icon-site-collapsed" src="https://srv.divee.ai/storage/v1/object/public/public-files/ai.png" alt="AI icon" />
                     <img class="divee-icon-site-collapsed" src="${config.icon_url}" alt="Site icon" />
                     <input type="text" class="divee-search-input-collapsed" placeholder="" readonly />
                     <svg class="divee-send-icon-collapsed" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -356,7 +360,7 @@
                 <div class="divee-header">
                     <div class="divee-header-top">
                         <div class="divee-icons">
-                            <img class="divee-icon-site-collapsed" src="https://emvwmwdsaakdnweyhmki.supabase.co/storage/v1/object/public/public-files/newslatch/ai.png" alt="AI icon" />
+                            <img class="divee-icon-site-collapsed" src="https://srv.divee.ai/storage/v1/object/public/public-files/ai.png" alt="AI icon" />
                             <img class="divee-icon-site" src="${config.icon_url}" alt="Site icon" />
                         </div>
                         <span class="divee-title">${config.client_name}</span>
@@ -845,7 +849,7 @@
             const config = {
                 projectId: script.getAttribute('data-project-id'),
                 position: script.getAttribute('data-position') || 'bottom',
-                apiBaseUrl: "https://vdbmhqlogqrxozaibntq.supabase.co/functions/v1",
+                apiBaseUrl: "https://srv.divee.ai/functions/v1",
                 articleClass: script.getAttribute('data-article-class')
             };
 

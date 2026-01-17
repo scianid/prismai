@@ -63,7 +63,7 @@ ${widgetJs}
     fs.mkdirSync(distDir);
   }
 
-  const outputPath = path.join(distDir, 'divee.sdk.js');
+  const outputPath = path.join(distDir, 'divee.sdk.v1.js');
   fs.writeFileSync(outputPath, result.code);
   
   console.log(`Build complete: ${outputPath}`);
