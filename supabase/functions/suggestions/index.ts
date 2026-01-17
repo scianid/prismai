@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { generateSuggestions } from '../_shared/ai.ts';
+import { logEvent } from '../_shared/analytics.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { errorResp, successResp } from '../_shared/responses.ts';
 import { getProjectById } from '../_shared/dao/projectDao.ts';
@@ -15,7 +16,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { projectId, title, content, url } = await req.json();
+    const { projectId, title, content, url, visitor_id, session_id } = await req.json();
 
     if (!projectId) 
       return errorResp('suggestions: missing projectId', 400, { suggestions: [] });
@@ -33,6 +34,12 @@ Deno.serve(async (req: Request) => {
     if (!isAllowedOrigin(requestUrl, project?.allowed_urls))
       return errorResp('suggestions: origin not allowed', 403, { suggestions: [] });
 
+    // Track Event (Async)
+    logEvent(supabase, {
+      projectId,
+      visitorId: visitor_id,
+      sessionId: session_id
+    }, 'get_suggestions');
 
     let article = await getArticleById(url, projectId, supabase);
 
