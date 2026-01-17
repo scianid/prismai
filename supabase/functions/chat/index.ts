@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-// @ts-ignore
-import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { supabaseClient } from '../_shared/supabaseClient.ts';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { logEvent } from '../_shared/analytics.ts';
 import { readDeepSeekStreamAndCollectAnswer, streamAnswer } from '../_shared/ai.ts';
@@ -8,15 +7,6 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
 import { extractCachedSuggestions, getArticleById, insertArticle, updateCacheAnswer } from "../_shared/dao/articleDao.ts";
-// @ts-ignore: Deno is available in the runtime environment
-function getSupabaseClient() {
-  return createClient(
-    // @ts-ignore
-    Deno.env.get('SUPABASE_URL') ?? '',
-    // @ts-ignore
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-}
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -40,7 +30,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabase = getSupabaseClient();
+    const supabase = await supabaseClient();
     const project = await getProjectById(projectId, supabase);
     
 
