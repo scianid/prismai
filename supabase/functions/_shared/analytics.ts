@@ -20,6 +20,24 @@ export interface AnalyticsContext {
 export async function logImpression(supabase: ReturnType<typeof createClient>, ctx: AnalyticsContext) {
   if (!ctx.projectId) return;
 
+  // Enhance Geo data if missing and IP is available
+  if (ctx.ip && !ctx.geo?.country) {
+    try {
+        const geoRes = await fetch(`http://ip-api.com/json/${ctx.ip}?fields=countryCode,city,lat,lon,status`);
+        const geoData = await geoRes.json();
+        if (geoData.status === 'success') {
+            ctx.geo = {
+                country: geoData.countryCode,
+                city: geoData.city,
+                latitude: geoData.lat,
+                longitude: geoData.lon
+            };
+        }
+    } catch (e) {
+        console.error('Analytics: Failed to resolve geo from IP:', e);
+    }
+  }
+
   try {
     const { error } = await supabase.from('analytics_impressions').insert({
       project_id: ctx.projectId,
@@ -28,6 +46,7 @@ export async function logImpression(supabase: ReturnType<typeof createClient>, c
       url: ctx.url,
       referrer: ctx.referrer,
       user_agent: ctx.userAgent,
+      ip: ctx.ip,
       geo_country: ctx.geo?.country,
       geo_city: ctx.geo?.city,
       geo_lat: ctx.geo?.latitude,

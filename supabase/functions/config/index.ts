@@ -37,6 +37,15 @@ Deno.serve(async (req: Request) => {
     if (!isAllowedOrigin(requestUrl, project.allowed_urls)) 
       return errorResp('Origin not allowed', 403);
 
+    // Resolve IP and Geo
+    let ip = req.headers.get('cf-connecting-ip') || req.headers.get('x-forwarded-for') || null;
+    if (ip && ip.includes(',')) {
+        ip = ip.split(',')[0].trim();
+    }
+
+    let country = req.headers.get('cf-ipcountry') || req.headers.get('x-vercel-ip-country') || null;
+    let city = req.headers.get('cf-ipcity') || req.headers.get('x-vercel-ip-city') || null;
+
     // Track Impression (Async)
     logImpression(supabase, {
       projectId: projectKey,
@@ -45,10 +54,10 @@ Deno.serve(async (req: Request) => {
       url: url || getRequestOriginUrl(req),
       referrer: referrer || req.headers.get('referer'),
       userAgent: user_agent || req.headers.get('user-agent'),
-      ip: req.headers.get('x-forwarded-for') || undefined,
+      ip: ip || undefined,
       geo: {
-        country: req.headers.get('x-vercel-ip-country') || undefined,
-        city: req.headers.get('x-vercel-ip-city') || undefined
+        country: country || undefined,
+        city: city || undefined
       }
     });
     
