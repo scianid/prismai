@@ -665,8 +665,7 @@
   font-size: 14px;
   font-family: inherit;
   resize: none;
-  min-height: 48px;
-  max-height: 150px;
+  max-height: 100px;
   outline: none;
   transition: all 0.3s;
   overflow: hidden;
