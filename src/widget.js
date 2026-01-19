@@ -266,7 +266,7 @@
                     <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
                 </div>
                 <div class="divee-search-container-collapsed">
-                    <img class="divee-icon-site-collapsed" src="https://srv.divee.ai/storage/v1/object/public/public-files/ai.png" alt="AI icon" />
+                    <img class="divee-icon-ai-collapsed" src="https://srv.divee.ai/storage/v1/object/public/public-files/ai.png" alt="AI icon" />
                     <img class="divee-icon-site-collapsed" src="${config.icon_url}" alt="Site icon" />
                     <input type="text" class="divee-search-input-collapsed" placeholder="" readonly />
                     <svg class="divee-send-icon-collapsed" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
