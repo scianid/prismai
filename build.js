@@ -63,10 +63,25 @@ ${widgetJs}
     fs.mkdirSync(distDir);
   }
 
-  const outputPath = path.join(distDir, 'divee.sdk.v1.js');
-  fs.writeFileSync(outputPath, result.code);
-  
-  console.log(`Build complete: ${outputPath}`);
+  // Generate timestamp (DD-MM-YY-HHMMSS)
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = String(now.getFullYear()).slice(-2);
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const timestamp = `${day}-${month}-${year}-${hours}${minutes}${seconds}`;
+
+  // Write latest version
+  const latestPath = path.join(distDir, 'divee.sdk.latest.js');
+  fs.writeFileSync(latestPath, result.code);
+  console.log(`Build complete: ${latestPath}`);
+
+  // Write timestamped version
+  const versionedPath = path.join(distDir, `divee.sdk.${timestamp}.js`);
+  fs.writeFileSync(versionedPath, result.code);
+  console.log(`Build complete: ${versionedPath}`);
 }
 
 build().catch((err) => {
