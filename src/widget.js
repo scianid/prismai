@@ -484,9 +484,28 @@
                         self.log('[Divee] Ads display command pushed');
                         
                         // Listen for ad slot rendering
+                        let emptyAdCount = 0;
                         googletag.pubads().addEventListener('slotRenderEnded', function(event) {
+                            const slotId = event.slot.getSlotElementId();
+                            const adElement = document.getElementById(slotId);
+                            
+                            if (event.isEmpty && adElement) {
+                                adElement.style.display = 'none';
+                                emptyAdCount++;
+                                self.log('[Divee] Ad slot hidden (empty):', slotId);
+                                
+                                // If both ads are empty, hide the entire ad slot container
+                                if (emptyAdCount === 2) {
+                                    const adSlot = document.querySelector('.divee-ad-slot');
+                                    if (adSlot) {
+                                        adSlot.style.display = 'none';
+                                        self.log('[Divee] Ad slot container hidden (all ads empty)');
+                                    }
+                                }
+                            }
+                            
                             self.log('[Divee] Ad slot rendered:', {
-                                slot: event.slot.getSlotElementId(),
+                                slot: slotId,
                                 isEmpty: event.isEmpty,
                                 size: event.size,
                                 advertiserId: event.advertiserId

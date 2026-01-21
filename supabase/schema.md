@@ -33,6 +33,41 @@ Stores widget configuration for each client project.
 **Triggers:**
 - `update_project_updated_at` - Automatically updates `updated_at` timestamp on record modification
 
+---
+
+### `freeform_qa`
+Stores free-form questions and answers that are not part of the pre-generated suggestions.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | BIGINT | NO | `GENERATED ALWAYS AS IDENTITY` | Unique identifier for the Q&A record |
+| `project_id` | TEXT | NO | - | Project identifier |
+| `article_unique_id` | TEXT | NO | - | Reference to article unique_id |
+| `visitor_id` | UUID | YES | - | Visitor identifier for analytics |
+| `session_id` | UUID | YES | - | Session identifier for analytics |
+| `question` | TEXT | NO | - | User's free-form question |
+| `answer` | TEXT | YES | - | AI-generated answer |
+| `created_at` | TIMESTAMPTZ | YES | `NOW()` | Timestamp when question was asked |
+| `updated_at` | TIMESTAMPTZ | YES | `NOW()` | Timestamp when answer was saved |
+
+**Indexes:**
+- `idx_freeform_qa_project_id` on `project_id` - For filtering by project
+- `idx_freeform_qa_article_unique_id` on `article_unique_id` - For filtering by article
+- `idx_freeform_qa_visitor_id` on `visitor_id` - For visitor analytics
+- `idx_freeform_qa_session_id` on `session_id` - For session analytics
+- `idx_freeform_qa_created_at` on `created_at DESC` - For chronological queries
+
+**Constraints:**
+- Primary Key: `id`
+- Foreign Key: `article_unique_id` references `article(unique_id)` ON DELETE CASCADE
+
+**Row Level Security (RLS):**
+- ✅ Enabled
+- **Policies:**
+  - Allow all operations (configured for service role access through Edge Functions)
+
+---
+
 ## Future Enhancements
 
 Potential fields to add:

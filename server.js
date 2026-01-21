@@ -35,7 +35,9 @@ const server = http.createServer((req, res) => {
   }
 
   // Static file serving
-  let filePath = '.' + req.url;
+  // Remove query string from URL
+  const urlPath = req.url.split('?')[0];
+  let filePath = '.' + urlPath;
   if (filePath === './') {
     filePath = './test/index.html';
   }

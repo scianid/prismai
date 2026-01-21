@@ -7,6 +7,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
 import { extractCachedSuggestions, getArticleById, insertArticle, updateCacheAnswer } from "../_shared/dao/articleDao.ts";
+import { insertFreeformQuestion, updateFreeformAnswer } from "../_shared/dao/freeformQaDao.ts";
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH } from "../_shared/constants.ts";
 
 // @ts-ignore
@@ -87,10 +88,22 @@ Deno.serve(async (req: Request) => {
 
     const [clientStream, cacheStream] = aiResponse.body.tee();
 
-    // Cache the full answer after streaming completes ONLY if it was a suggestion
+    // Cache the full answer after streaming completes
     if (cachedItem) {
+        // If it's a suggestion, update the article cache
         readDeepSeekStreamAndCollectAnswer(cacheStream)
             .then((answer) => updateCacheAnswer(supabase, article.unique_id, questionId, resolvedQuestion, answer))
+            .catch(() => undefined);
+    } else {
+        // If it's a free-form question, save to freeform_qa table
+        insertFreeformQuestion(supabase, projectId, article.unique_id, resolvedQuestion, visitor_id, session_id)
+            .then((freeformId) => {
+                if (freeformId) {
+                    readDeepSeekStreamAndCollectAnswer(cacheStream)
+                        .then((answer) => updateFreeformAnswer(supabase, freeformId, answer))
+                        .catch(() => undefined);
+                }
+            })
             .catch(() => undefined);
     }
 
