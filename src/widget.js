@@ -42,6 +42,17 @@
             this.init();
         }
 
+        isDebugMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('diveeDebug') === 'true';
+        }
+
+        log(...args) {
+            if (this.isDebugMode()) {
+                console.log(...args);
+            }
+        }
+
         generateUUID() {
             if (typeof crypto !== 'undefined' && crypto.randomUUID) {
                 return crypto.randomUUID();
@@ -73,11 +84,34 @@
             return { visitorId, sessionId };
         }
 
+        initGoogleAds() {
+            if (window.googletag) return; // Already initialized
+            
+            const self = this; // Capture widget instance
+            window.googletag = window.googletag || {cmd: []};
+            const gptScript = document.createElement('script');
+            gptScript.async = true;
+            gptScript.src = 'https://securepubads.g.doubleclick.net/tag/js/gpt.js';
+            gptScript.crossOrigin = 'anonymous';
+            document.head.appendChild(gptScript);
+            
+            googletag.cmd.push(function() {
+                googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'divee-ad-desktop').addService(googletag.pubads());
+                googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'divee-ad-mobile').addService(googletag.pubads());
+                googletag.pubads().collapseEmptyDivs();
+                googletag.enableServices();
+                self.log('[Divee] Google Ads initialized');
+            });
+        }
+
         async init() {
-            console.log('[Divee] Initializing widget...', this.config);
+            this.log('[Divee] Initializing widget...', this.config);
 
             // Initialize Analytics IDs
             this.getAnalyticsIds();
+
+            // Initialize Google Ads
+            this.initGoogleAds();
 
             // Load server configuration
             await this.loadServerConfig();
@@ -118,7 +152,7 @@
                 });
 
                 this.state.serverConfig = serverConfig;
-                console.log('[Divee] Server config loaded:', this.state.serverConfig);
+                this.log('[Divee] Server config loaded:', this.state.serverConfig);
 
                 // Apply direction and language
                 if (serverConfig.direction) {
@@ -169,7 +203,7 @@
         extractArticleContent() {
             // Check if content is already cached
             if (this.contentCache.extracted) {
-                console.log('[Divee] Using cached content');
+                this.log('[Divee] Using cached content');
                 this.articleTitle = this.contentCache.title;
                 this.articleContent = this.contentCache.content;
                 return;
@@ -210,7 +244,7 @@
                     extracted: true
                 };
 
-                console.log('[Divee] Article extracted and cached:', {
+                this.log('[Divee] Article extracted and cached:', {
                     title: this.articleTitle,
                     url: this.articleUrl,
                     contentLength: this.articleContent.length
@@ -274,10 +308,10 @@
           </svg>
         </div>
                 <div class="divee-ad-slot" ${showAd}>
-                    <div class="divee-ad-placeholder">
-            [Advertisement Space]<br>
-            <small>Sponsored Content</small>
-          </div>
+                    <!-- Desktop Ad -->
+                    <div id='divee-ad-desktop' class='divee-ad-desktop' style='min-width: 650px; min-height: 90px;'></div>
+                    <!-- Mobile Ad -->
+                    <div id='divee-ad-mobile' class='divee-ad-mobile' style='min-width: 300px; min-height: 250px;'></div>
         </div>
       `;
 
@@ -430,6 +464,38 @@
             } else {
                 // Fallback: append to body if no article found
                 document.body.appendChild(container);
+            }
+
+            // Display ads after widget is in DOM
+            const config = this.state.serverConfig || this.getDefaultConfig();
+            this.log('[Divee] Checking ad conditions:', {
+                show_ad: config.show_ad,
+                googletag_available: !!window.googletag,
+                googletag_cmd: window.googletag?.cmd
+            });
+            
+            if (config.show_ad && window.googletag) {
+                const self = this; // Capture widget instance
+                setTimeout(() => {
+                    self.log('[Divee] Displaying ads...');
+                    googletag.cmd.push(function() {
+                        googletag.display('divee-ad-desktop');
+                        googletag.display('divee-ad-mobile');
+                        self.log('[Divee] Ads display command pushed');
+                        
+                        // Listen for ad slot rendering
+                        googletag.pubads().addEventListener('slotRenderEnded', function(event) {
+                            self.log('[Divee] Ad slot rendered:', {
+                                slot: event.slot.getSlotElementId(),
+                                isEmpty: event.isEmpty,
+                                size: event.size,
+                                advertiserId: event.advertiserId
+                            });
+                        });
+                    });
+                }, 1000);
+            } else {
+                this.log('[Divee] Ads not displayed:', config.show_ad ? 'googletag not available' : 'show_ad is false');
             }
         }
 
@@ -837,7 +903,7 @@
         }
 
         trackEvent(eventName, data) {
-            console.log('[Divee Analytics]', eventName, data);
+            this.log('[Divee Analytics]', eventName, data);
             // TODO: Send to analytics endpoint
         }
     }

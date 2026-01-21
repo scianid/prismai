@@ -319,6 +319,14 @@
   justify-content: center;
 }
 
+.divee-ad-desktop {
+  display: block;
+}
+
+.divee-ad-mobile {
+  display: none;
+}
+
 .divee-ad-placeholder {
   background: #f9fafb;
   color: #9ca3af;
@@ -796,6 +804,14 @@
   
   .divee-search-input-collapsed {
     font-size: 15px;
+  }
+  
+  .divee-ad-desktop {
+    display: none !important;
+  }
+  
+  .divee-ad-mobile {
+    display: block !important;
   }
 }
 

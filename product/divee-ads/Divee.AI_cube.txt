@@ -1,0 +1,6 @@
+<!-- /22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube -->
+<div id='div-gpt-ad-1768979511037-0' style='min-width: 300px; min-height: 250px;'>
+  <script>
+    googletag.cmd.push(function() { googletag.display('div-gpt-ad-1768979511037-0'); });
+  </script>
+</div>
