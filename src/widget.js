@@ -86,22 +86,54 @@
         }
 
         initGoogleAds() {
-            if (window.googletag) return; // Already initialized
+            if (window.googletag) {
+                this.log('[Divee] Google Ads already initialized, skipping');
+                return;
+            }
             
+            this.log('[Divee] Initializing Google Ads...');
             const self = this; // Capture widget instance
             window.googletag = window.googletag || {cmd: []};
             const gptScript = document.createElement('script');
             gptScript.async = true;
             gptScript.src = 'https://securepubads.g.doubleclick.net/tag/js/gpt.js';
             gptScript.crossOrigin = 'anonymous';
+            
+            gptScript.onload = function() {
+                self.log('[Divee] Google Ads script loaded successfully');
+            };
+            
+            gptScript.onerror = function() {
+                console.error('[Divee] Failed to load Google Ads script');
+            };
+            
             document.head.appendChild(gptScript);
+            this.log('[Divee] Google Ads script tag added to head');
             
             googletag.cmd.push(function() {
-                googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'divee-ad-desktop').addService(googletag.pubads());
-                googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'divee-ad-mobile').addService(googletag.pubads());
+                self.log('[Divee] Defining ad slots...');
+                
+                const desktopSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'div-gpt-ad-1768979426842-0');
+                if (desktopSlot) {
+                    desktopSlot.addService(googletag.pubads());
+                    self.log('[Divee] Desktop ad slot defined:', desktopSlot.getSlotElementId());
+                } else {
+                    console.error('[Divee] Failed to define desktop ad slot');
+                }
+                
+                const mobileSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'div-gpt-ad-1768979511037-0');
+                if (mobileSlot) {
+                    mobileSlot.addService(googletag.pubads());
+                    self.log('[Divee] Mobile ad slot defined:', mobileSlot.getSlotElementId());
+                } else {
+                    console.error('[Divee] Failed to define mobile ad slot');
+                }
+                
                 googletag.pubads().collapseEmptyDivs();
+                self.log('[Divee] Configured to collapse empty ad divs');
+                
                 googletag.enableServices();
-                self.log('[Divee] Google Ads initialized');
+                self.log('[Divee] Google Ads services enabled');
             });
         }
 
@@ -310,9 +342,9 @@
         </div>
                 <div class="divee-ad-slot" ${showAd}>
                     <!-- Desktop Ad -->
-                    <div id='divee-ad-desktop' class='divee-ad-desktop' style='min-width: 650px; min-height: 90px;'></div>
+                    <div id='div-gpt-ad-1768979426842-0' class='divee-ad-desktop' style='min-width: 650px; min-height: 90px;'></div>
                     <!-- Mobile Ad -->
-                    <div id='divee-ad-mobile' class='divee-ad-mobile' style='min-width: 300px; min-height: 250px;'></div>
+                    <div id='div-gpt-ad-1768979511037-0' class='divee-ad-mobile' style='min-width: 300px; min-height: 250px;'></div>
         </div>
       `;
 
@@ -500,20 +532,26 @@
 
             // Display ads after widget is in DOM
             const config = this.state.serverConfig || this.getDefaultConfig();
-            this.log('[Divee] Checking ad conditions:', {
-                show_ad: config.show_ad,
-                googletag_available: !!window.googletag,
-                googletag_cmd: window.googletag?.cmd
+            this.log('[Divee] Ad display check:', {
+                show_ad_config: config.show_ad,
+                googletag_defined: !!window.googletag,
+                googletag_cmd_length: window.googletag?.cmd?.length,
+                desktop_element: !!document.getElementById('div-gpt-ad-1768979426842-0'),
+                mobile_element: !!document.getElementById('div-gpt-ad-1768979511037-0')
             });
             
             if (config.show_ad && window.googletag) {
                 const self = this; // Capture widget instance
                 setTimeout(() => {
-                    self.log('[Divee] Displaying ads...');
+                    self.log('[Divee] Starting ad display in 1s timeout...');
                     googletag.cmd.push(function() {
-                        googletag.display('divee-ad-desktop');
-                        googletag.display('divee-ad-mobile');
-                        self.log('[Divee] Ads display command pushed');
+                        self.log('[Divee] Requesting ad display for slots...');
+                        
+                        googletag.display('div-gpt-ad-1768979426842-0');
+                        self.log('[Divee] Display called for div-gpt-ad-1768979426842-0 (desktop)');
+                        
+                        googletag.display('div-gpt-ad-1768979511037-0');
+                        self.log('[Divee] Display called for div-gpt-ad-1768979511037-0 (mobile)');
                         
                         // Listen for ad slot rendering
                         let emptyAdCount = 0;
@@ -521,10 +559,20 @@
                             const slotId = event.slot.getSlotElementId();
                             const adElement = document.getElementById(slotId);
                             
+                            self.log('[Divee] Ad slot render event:', {
+                                slot: slotId,
+                                isEmpty: event.isEmpty,
+                                size: event.size,
+                                advertiserId: event.advertiserId,
+                                lineItemId: event.lineItemId,
+                                creativeId: event.creativeId,
+                                element_exists: !!adElement
+                            });
+                            
                             if (event.isEmpty && adElement) {
                                 adElement.style.display = 'none';
                                 emptyAdCount++;
-                                self.log('[Divee] Ad slot hidden (empty):', slotId);
+                                self.log('[Divee] Ad slot hidden (empty):', slotId, `(${emptyAdCount}/2 empty)`);
                                 
                                 // If both ads are empty, hide the entire ad slot container
                                 if (emptyAdCount === 2) {
@@ -534,19 +582,29 @@
                                         self.log('[Divee] Ad slot container hidden (all ads empty)');
                                     }
                                 }
+                            } else if (!event.isEmpty) {
+                                self.log('[Divee] Ad successfully rendered:', slotId);
                             }
-                            
-                            self.log('[Divee] Ad slot rendered:', {
-                                slot: slotId,
-                                isEmpty: event.isEmpty,
-                                size: event.size,
-                                advertiserId: event.advertiserId
-                            });
+                        });
+                        
+                        // Listen for slot loaded
+                        googletag.pubads().addEventListener('slotOnload', function(event) {
+                            self.log('[Divee] Ad slot loaded:', event.slot.getSlotElementId());
+                        });
+                        
+                        // Listen for slot requested
+                        googletag.pubads().addEventListener('slotRequested', function(event) {
+                            self.log('[Divee] Ad slot requested:', event.slot.getSlotElementId());
+                        });
+                        
+                        // Listen for slot response received
+                        googletag.pubads().addEventListener('slotResponseReceived', function(event) {
+                            self.log('[Divee] Ad slot response received:', event.slot.getSlotElementId());
                         });
                     });
                 }, 1000);
             } else {
-                this.log('[Divee] Ads not displayed:', config.show_ad ? 'googletag not available' : 'show_ad is false');
+                this.log('[Divee] Ads not displayed:', !config.show_ad ? 'show_ad is false in config' : 'googletag not available');
             }
         }
 
