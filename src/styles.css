@@ -3,17 +3,31 @@
  * Scoped styles for the embeddable widget
  */
 
-/* Container */
+/* Container - Reset all styles to prevent inheritance */
 .divee-widget {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  width: 100%;
-  max-width: 800px;
-  margin: 40px auto;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  overflow: hidden;
-  background: white;
-  border: 1px solid #e5e7eb;
+  all: initial;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  width: 100% !important;
+  max-width: 800px !important;
+  margin: 40px auto !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  display: block !important;
+  box-sizing: border-box !important;
+}
+
+/* Reset all children */
+.divee-widget * {
+  box-sizing: border-box !important;
+}
+
+.divee-widget input,
+.divee-widget textarea,
+.divee-widget button {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
 }
 
 /* RTL Support */
@@ -146,23 +160,31 @@
   transform: scale(1.1);
 }
 
-.divee-search-input-collapsed {
-
-  flex: 1;
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 18px;
-  color: #1f2937;
-  font-family: inherit;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+.divee-widget .divee-search-input-collapsed {
+  flex: 1 !important;
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  font-size: 18px !important;
+  color: #1f2937 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  height: auto !important;
+  line-height: 1.5 !important;
+  box-shadow: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  border-radius: 0 !important;
 }
 
-.divee-search-input-collapsed::placeholder {
-  color: #6b7280;
+.divee-widget .divee-search-input-collapsed::placeholder {
+  color: #6b7280 !important;
 }
 
 @keyframes typewriter {
@@ -663,32 +685,40 @@
   text-align: right;
 }
 
-.divee-input {
-  flex: 1;
+.divee-widget .divee-input {
+  flex: 1 !important;
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #68E5FD, #A389E0) border-box;
-  border: 2px solid transparent;
-  border-radius: 40px;
-  padding: 10px 22px;
-  font-size: 14px;
-  font-family: inherit;
-  resize: none;
-  max-height: 100px;
-  outline: none;
-  transition: all 0.3s;
-  overflow: hidden;
+              linear-gradient(135deg, #68E5FD, #A389E0) border-box !important;
+  border: 2px solid transparent !important;
+  border-radius: 40px !important;
+  padding: 10px 22px !important;
+  font-size: 14px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  resize: none !important;
+  max-height: 100px !important;
+  min-height: auto !important;
+  outline: none !important;
+  transition: all 0.3s !important;
+  overflow: hidden !important;
+  height: auto !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  line-height: 1.5 !important;
 }
 
-.divee-input:focus {
+.divee-widget .divee-input:focus {
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #68E5FD, #FD3C4F) border-box;
-  border: 2px solid transparent;
+              linear-gradient(135deg, #68E5FD, #FD3C4F) border-box !important;
+  border: 2px solid transparent !important;
   box-shadow: 0 4px 12px rgba(104, 229, 253, 0.15),
-              0 2px 4px rgba(163, 137, 224, 0.08);
+              0 2px 4px rgba(163, 137, 224, 0.08) !important;
 }
 
-.divee-input::placeholder {
-  color: #9ca3af;
+.divee-widget .divee-input::placeholder {
+  color: #9ca3af !important;
 }
 
 .divee-send {
