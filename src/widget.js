@@ -18,7 +18,8 @@
                 maxHeight: config.maxHeight || 600,
                 autoExpand: config.autoExpand || false,
                 apiBaseUrl: config.apiBaseUrl || 'http://localhost:3000/api/v1',
-                articleClass: config.articleClass || null
+                articleClass: config.articleClass || null,
+                containerSelector: config.containerSelector || null
             };
 
             this.state = {
@@ -454,17 +455,48 @@
         }
 
         insertWidget(container) {
-            // Insert at the end of the article
-            const article = document.querySelector('article') ||
-                document.querySelector('[role="article"]') ||
-                document.querySelector('main');
+            this.log('[Divee] insertWidget called');
+            this.log('[Divee] Config containerSelector:', this.config.containerSelector);
+            
+            let targetElement = null;
 
-            if (article) {
-                article.appendChild(container);
+            // First, try custom container selector if provided
+            if (this.config.containerSelector) {
+                this.log('[Divee] Attempting to find custom container:', this.config.containerSelector);
+                targetElement = document.querySelector(this.config.containerSelector);
+                if (targetElement) {
+                    this.log('[Divee] ✓ Found custom container:', this.config.containerSelector, targetElement);
+                } else {
+                    console.warn(`[Divee] ✗ Container selector "${this.config.containerSelector}" not found, falling back to default behavior`);
+                }
             } else {
-                // Fallback: append to body if no article found
+                this.log('[Divee] No custom containerSelector provided, using default behavior');
+            }
+
+            // Fallback to default behavior
+            if (!targetElement) {
+                this.log('[Divee] Looking for default containers (article, [role="article"], main)');
+                targetElement = document.querySelector('article') ||
+                    document.querySelector('[role="article"]') ||
+                    document.querySelector('main');
+                if (targetElement) {
+                    this.log('[Divee] ✓ Found default container:', targetElement.tagName, targetElement.className);
+                } else {
+                    this.log('[Divee] ✗ No default container found, will append to body');
+                }
+            }
+
+            // Insert widget
+            if (targetElement) {
+                this.log('[Divee] Appending widget to:', targetElement);
+                targetElement.appendChild(container);
+            } else {
+                // Final fallback: append to body if nothing found
+                console.warn('[Divee] No suitable container found, appending to body as fallback');
                 document.body.appendChild(container);
             }
+            
+            this.log('[Divee] Widget inserted successfully');
 
             // Display ads after widget is in DOM
             const config = this.state.serverConfig || this.getDefaultConfig();
@@ -930,14 +962,17 @@
     // Auto-initialize from script tag
     function autoInit() {
         const scripts = document.querySelectorAll('script[data-project-id]');
-        scripts.forEach(script => {
+        console.log('[Divee] Found', scripts.length, 'widget script(s)');
+        scripts.forEach((script, index) => {
             const config = {
                 projectId: script.getAttribute('data-project-id'),
                 position: script.getAttribute('data-position') || 'bottom',
                 apiBaseUrl: "https://srv.divee.ai/functions/v1",
-                articleClass: script.getAttribute('data-article-class')
+                articleClass: script.getAttribute('data-article-class'),
+                containerSelector: script.getAttribute('data-container-selector')
             };
-
+            
+            console.log(`[Divee] Auto-init config [${index}]:`, config);
             new DiveeWidget(config);
         });
     }
