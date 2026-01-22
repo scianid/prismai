@@ -467,7 +467,7 @@
                 if (targetElement) {
                     this.log('[Divee] ✓ Found custom container:', this.config.containerSelector, targetElement);
                 } else {
-                    console.warn(`[Divee] ✗ Container selector "${this.config.containerSelector}" not found, falling back to default behavior`);
+                    this.log(`[Divee] ✗ Container selector "${this.config.containerSelector}" not found, falling back to default behavior`);
                 }
             } else {
                 this.log('[Divee] No custom containerSelector provided, using default behavior');
@@ -492,7 +492,7 @@
                 targetElement.appendChild(container);
             } else {
                 // Final fallback: append to body if nothing found
-                console.warn('[Divee] No suitable container found, appending to body as fallback');
+                this.log('[Divee] No suitable container found, appending to body as fallback');
                 document.body.appendChild(container);
             }
             
@@ -962,7 +962,13 @@
     // Auto-initialize from script tag
     function autoInit() {
         const scripts = document.querySelectorAll('script[data-project-id]');
-        console.log('[Divee] Found', scripts.length, 'widget script(s)');
+        const urlParams = new URLSearchParams(window.location.search);
+        const isDebug = urlParams.get('diveeDebug') === 'true';
+        
+        if (isDebug) {
+            console.log('[Divee] Found', scripts.length, 'widget script(s)');
+        }
+        
         scripts.forEach((script, index) => {
             const config = {
                 projectId: script.getAttribute('data-project-id'),
@@ -972,7 +978,9 @@
                 containerSelector: script.getAttribute('data-container-selector')
             };
             
-            console.log(`[Divee] Auto-init config [${index}]:`, config);
+            if (isDebug) {
+                console.log(`[Divee] Auto-init config [${index}]:`, config);
+            }
             new DiveeWidget(config);
         });
     }
