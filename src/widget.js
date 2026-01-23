@@ -499,11 +499,11 @@
             </div>
             
             <!-- Ad Slot in Expanded View -->
-            <div class="divee-ad-slot-expanded" style="margin-top: 12px; text-align: center;">
+            <div class="divee-ad-slot-expanded" style="margin-top: 5px; display: flex; justify-content: center;">
                 <!-- Desktop Ad -->
-                <div id='div-gpt-ad-expanded-desktop' class='divee-ad-desktop' style='min-width: 650px; min-height: 90px;'></div>
+                <div id='div-gpt-ad-expanded-desktop' class='divee-ad-desktop' style='min-width: 650px; min-height: 90px; margin: 0 !important;'></div>
                 <!-- Mobile Ad -->
-                <div id='div-gpt-ad-expanded-mobile' class='divee-ad-mobile' style='min-width: 300px; min-height: 250px;'></div>
+                <div id='div-gpt-ad-expanded-mobile' class='divee-ad-mobile' style='min-width: 300px; min-height: 250px;  margin: 0 !important;'></div>
             </div>
           </div>
         </div>
