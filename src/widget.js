@@ -631,6 +631,21 @@
                                 }
                             } else if (!event.isEmpty) {
                                 self.log('[Divee DEBUG] Ad successfully rendered:', slotId);
+                                
+                                // Track ad impression
+                                self.trackEvent('ad_impression', {
+                                    ad_unit: slotId,
+                                    position: slotId.includes('expanded') ? 'expanded' : 'collapsed',
+                                    size: event.size ? `${event.size[0]}x${event.size[1]}` : 'unknown',
+                                    advertiser_id: event.advertiserId || null,
+                                    creative_id: event.creativeId || null,
+                                    line_item_id: event.lineItemId || null
+                                });
+                                
+                                // Add click tracking to the ad element
+                                if (adElement) {
+                                    self.setupAdClickTracking(adElement, slotId, event);
+                                }
                             }
                         });
 
@@ -1092,9 +1107,89 @@
             }
         }
 
-        trackEvent(eventName, data) {
+        setupAdClickTracking(adElement, slotId, eventData) {
+            const self = this;
+            
+            // Track clicks on the ad container
+            adElement.addEventListener('click', function(e) {
+                self.log('[Divee DEBUG] Ad clicked:', slotId);
+                
+                self.trackEvent('ad_click', {
+                    ad_unit: slotId,
+                    position: slotId.includes('expanded') ? 'expanded' : 'collapsed',
+                    size: eventData.size ? `${eventData.size[0]}x${eventData.size[1]}` : 'unknown',
+                    advertiser_id: eventData.advertiserId || null,
+                    creative_id: eventData.creativeId || null,
+                    line_item_id: eventData.lineItemId || null,
+                    click_x: e.clientX,
+                    click_y: e.clientY,
+                    timestamp: Date.now()
+                });
+            });
+            
+            // Also track clicks on any links inside the ad (for additional granularity)
+            setTimeout(() => {
+                const iframe = adElement.querySelector('iframe');
+                if (iframe) {
+                    try {
+                        // Note: Due to cross-origin restrictions, we can't directly access iframe content
+                        // But we can detect when the iframe loses focus (indicating a click)
+                        iframe.addEventListener('load', function() {
+                            self.log('[Divee DEBUG] Ad iframe loaded:', slotId);
+                        });
+                    } catch (e) {
+                        // Expected for cross-origin iframes
+                        self.log('[Divee DEBUG] Cannot access iframe content (cross-origin)');
+                    }
+                }
+            }, 100);
+        }
+
+        async trackEvent(eventName, data = {}) {
             this.log('[Divee Analytics]', eventName, data);
-            // TODO: Send to analytics endpoint
+            
+            // Get visitor and session IDs from state (already initialized in init())
+            const visitorId = this.state.visitorId;
+            const sessionId = this.state.sessionId;
+            const projectId = this.config.projectId;
+            
+            if (!projectId) {
+                console.warn('[Divee Analytics] No project ID available for tracking');
+                return;
+            }
+            
+            if (!visitorId || !sessionId) {
+                console.warn('[Divee Analytics] Missing visitor or session IDs');
+                return;
+            }
+            
+            // Prepare event payload
+            const payload = {
+                project_id: projectId,
+                visitor_id: visitorId,
+                session_id: sessionId,
+                event_type: eventName,
+                event_label: data.label || null,
+                event_data: data
+            };
+            
+            try {
+                // Use fetch with keepalive for cross-origin reliability
+                const endpoint = `${this.config.apiBaseUrl}/analytics`;
+                
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload),
+                    keepalive: true
+                }).catch(err => {
+                    console.error('[Divee Analytics] Failed to send event:', err);
+                });
+            } catch (err) {
+                console.error('[Divee Analytics] Error tracking event:', err);
+            }
         }
     }
 
