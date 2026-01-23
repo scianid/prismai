@@ -60,9 +60,9 @@
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
               </svg>
             </button>
-                        <div class="divee-input-footer">
-                            <div class="divee-warning">This is an AI driven tool, results might not always be accurate</div>
-                            <div class="divee-counter">0/200</div>
+            <div class="divee-input-footer">
+                <div class="divee-warning">This is an AI driven tool, results might not always be accurate</div>
+                <div class="divee-counter">0/200</div>
             </div>
           </div>
         </div>

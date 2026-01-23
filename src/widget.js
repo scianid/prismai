@@ -31,7 +31,7 @@
             };
 
             this.elements = {};
-            
+
             // Cache for article content (extracted once)
             this.contentCache = {
                 content: null,
@@ -39,7 +39,7 @@
                 url: null,
                 extracted: false
             };
-            
+
             this.init();
         }
 
@@ -58,7 +58,7 @@
             if (typeof crypto !== 'undefined' && crypto.randomUUID) {
                 return crypto.randomUUID();
             }
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
             });
@@ -90,29 +90,29 @@
                 this.log('[Divee] Google Ads already initialized, skipping');
                 return;
             }
-            
+
             this.log('[Divee] Initializing Google Ads...');
             const self = this; // Capture widget instance
-            window.googletag = window.googletag || {cmd: []};
+            window.googletag = window.googletag || { cmd: [] };
             const gptScript = document.createElement('script');
             gptScript.async = true;
             gptScript.src = 'https://securepubads.g.doubleclick.net/tag/js/gpt.js';
             gptScript.crossOrigin = 'anonymous';
-            
-            gptScript.onload = function() {
+
+            gptScript.onload = function () {
                 self.log('[Divee] Google Ads script loaded successfully');
             };
-            
-            gptScript.onerror = function() {
+
+            gptScript.onerror = function () {
                 console.error('[Divee] Failed to load Google Ads script');
             };
-            
+
             document.head.appendChild(gptScript);
             this.log('[Divee] Google Ads script tag added to head');
-            
-            googletag.cmd.push(function() {
+
+            googletag.cmd.push(function () {
                 self.log('[Divee] Defining ad slots...');
-                
+
                 const desktopSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'div-gpt-ad-1768979426842-0');
                 if (desktopSlot) {
                     desktopSlot.addService(googletag.pubads());
@@ -120,7 +120,7 @@
                 } else {
                     console.error('[Divee] Failed to define desktop ad slot');
                 }
-                
+
                 const mobileSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'div-gpt-ad-1768979511037-0');
                 if (mobileSlot) {
                     mobileSlot.addService(googletag.pubads());
@@ -128,10 +128,10 @@
                 } else {
                     console.error('[Divee] Failed to define mobile ad slot');
                 }
-                
+
                 googletag.pubads().collapseEmptyDivs();
                 self.log('[Divee] Configured to collapse empty ad divs');
-                
+
                 googletag.enableServices();
                 self.log('[Divee] Google Ads services enabled');
             });
@@ -400,7 +400,7 @@
         createEmptyState(config) {
             const container = document.createElement('div');
             container.className = 'divee-empty-state';
-            
+
             const placeholders = config.input_text_placeholders || ['Ask anything about this article...'];
             // Use the first one as primary, or all of them.
             // Let's show the first one as a prompt.
@@ -419,8 +419,8 @@
             view.className = 'divee-expanded';
 
             const config = this.state.serverConfig || this.getDefaultConfig();
-            const placeholder = (config.input_text_placeholders && config.input_text_placeholders.length > 0) 
-                ? config.input_text_placeholders[0] 
+            const placeholder = (config.input_text_placeholders && config.input_text_placeholders.length > 0)
+                ? config.input_text_placeholders[0]
                 : 'Ask anything about this article...';
 
             view.innerHTML = `
@@ -460,9 +460,9 @@
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
               </svg>
             </button>
-                        <div class="divee-input-footer">
-                            <div class="divee-warning">This is an AI driven tool, results might not always be accurate</div>
-                            <div class="divee-counter">0/200</div>
+            <div class="divee-input-footer">
+                <div class="divee-warning">This is an AI driven tool, results might not always be accurate</div>
+                <div class="divee-counter">0/200</div>
             </div>
           </div>
         </div>
@@ -479,8 +479,8 @@
             // Add empty state if no messages
             const messagesContainer = view.querySelector('.divee-messages');
             if (this.state.messages.length === 0) {
-                 const emptyState = this.createEmptyState(config);
-                 messagesContainer.appendChild(emptyState);
+                const emptyState = this.createEmptyState(config);
+                messagesContainer.appendChild(emptyState);
             }
 
             return view;
@@ -489,7 +489,7 @@
         insertWidget(container) {
             this.log('[Divee] insertWidget called');
             this.log('[Divee] Config containerSelector:', this.config.containerSelector);
-            
+
             let targetElement = null;
 
             // First, try custom container selector if provided
@@ -527,7 +527,7 @@
                 this.log('[Divee] No suitable container found, appending to body as fallback');
                 document.body.appendChild(container);
             }
-            
+
             this.log('[Divee] Widget inserted successfully');
 
             // Display ads after widget is in DOM
@@ -539,26 +539,26 @@
                 desktop_element: !!document.getElementById('div-gpt-ad-1768979426842-0'),
                 mobile_element: !!document.getElementById('div-gpt-ad-1768979511037-0')
             });
-            
+
             if (config.show_ad && window.googletag) {
                 const self = this; // Capture widget instance
                 setTimeout(() => {
                     self.log('[Divee] Starting ad display in 1s timeout...');
-                    googletag.cmd.push(function() {
+                    googletag.cmd.push(function () {
                         self.log('[Divee] Requesting ad display for slots...');
-                        
+
                         googletag.display('div-gpt-ad-1768979426842-0');
                         self.log('[Divee] Display called for div-gpt-ad-1768979426842-0 (desktop)');
-                        
+
                         googletag.display('div-gpt-ad-1768979511037-0');
                         self.log('[Divee] Display called for div-gpt-ad-1768979511037-0 (mobile)');
-                        
+
                         // Listen for ad slot rendering
                         let emptyAdCount = 0;
-                        googletag.pubads().addEventListener('slotRenderEnded', function(event) {
+                        googletag.pubads().addEventListener('slotRenderEnded', function (event) {
                             const slotId = event.slot.getSlotElementId();
                             const adElement = document.getElementById(slotId);
-                            
+
                             self.log('[Divee] Ad slot render event:', {
                                 slot: slotId,
                                 isEmpty: event.isEmpty,
@@ -568,12 +568,12 @@
                                 creativeId: event.creativeId,
                                 element_exists: !!adElement
                             });
-                            
+
                             if (event.isEmpty && adElement) {
                                 adElement.style.display = 'none';
                                 emptyAdCount++;
                                 self.log('[Divee] Ad slot hidden (empty):', slotId, `(${emptyAdCount}/2 empty)`);
-                                
+
                                 // If both ads are empty, hide the entire ad slot container
                                 if (emptyAdCount === 2) {
                                     const adSlot = document.querySelector('.divee-ad-slot');
@@ -586,19 +586,19 @@
                                 self.log('[Divee] Ad successfully rendered:', slotId);
                             }
                         });
-                        
+
                         // Listen for slot loaded
-                        googletag.pubads().addEventListener('slotOnload', function(event) {
+                        googletag.pubads().addEventListener('slotOnload', function (event) {
                             self.log('[Divee] Ad slot loaded:', event.slot.getSlotElementId());
                         });
-                        
+
                         // Listen for slot requested
-                        googletag.pubads().addEventListener('slotRequested', function(event) {
+                        googletag.pubads().addEventListener('slotRequested', function (event) {
                             self.log('[Divee] Ad slot requested:', event.slot.getSlotElementId());
                         });
-                        
+
                         // Listen for slot response received
-                        googletag.pubads().addEventListener('slotResponseReceived', function(event) {
+                        googletag.pubads().addEventListener('slotResponseReceived', function (event) {
                             self.log('[Divee] Ad slot response received:', event.slot.getSlotElementId());
                         });
                     });
@@ -632,9 +632,9 @@
             document.addEventListener('click', (e) => {
                 const suggestionsInput = this.elements.expandedView.querySelector('.divee-suggestions-input');
                 const inputContainer = this.elements.expandedView.querySelector('.divee-input-container');
-                
-                if (suggestionsInput && 
-                    suggestionsInput.classList.contains('is-open') && 
+
+                if (suggestionsInput &&
+                    suggestionsInput.classList.contains('is-open') &&
                     !inputContainer.contains(e.target)) {
                     suggestionsInput.classList.remove('is-open');
                 }
@@ -705,7 +705,7 @@
 
         async onTextAreaFocus() {
             const suggestionsContainer = this.elements.expandedView.querySelector('.divee-suggestions-input');
-            
+
             // If we already have suggestions, just show them
             if (this.state.suggestions.length > 0) {
                 if (suggestionsContainer && !suggestionsContainer.classList.contains('is-open')) {
@@ -739,23 +739,23 @@
                 // No complex fade needed, just swap content as structure matches
                 if (!suggestionsList) return;
                 suggestionsList.innerHTML = '';
-                    
+
                 // Add suggestions with animation
                 suggestions.forEach((item, idx) => {
-                        const questionText = typeof item === 'string' ? item : item.question;
-                        const questionId = typeof item === 'string' ? null : item.id;
-                        const button = document.createElement('button');
-                        button.className = 'divee-suggestion';
-                        button.setAttribute('data-index', idx);
-                        if (questionId) button.setAttribute('data-id', questionId);
-                        button.textContent = questionText;
-                        button.addEventListener('click', (e) => {
-                            const question = e.target.textContent;
-                            const id = e.target.getAttribute('data-id');
-                            this.askQuestion(question, 'suggestion', id);
-                        });
-                        suggestionsList.appendChild(button);
+                    const questionText = typeof item === 'string' ? item : item.question;
+                    const questionId = typeof item === 'string' ? null : item.id;
+                    const button = document.createElement('button');
+                    button.className = 'divee-suggestion';
+                    button.setAttribute('data-index', idx);
+                    if (questionId) button.setAttribute('data-id', questionId);
+                    button.textContent = questionText;
+                    button.addEventListener('click', (e) => {
+                        const question = e.target.textContent;
+                        const id = e.target.getAttribute('data-id');
+                        this.askQuestion(question, 'suggestion', id);
                     });
+                    suggestionsList.appendChild(button);
+                });
 
                 this.trackEvent('suggestions_fetched', {
                     article_id: this.config.articleId,
@@ -849,7 +849,7 @@
 
         addMessage(role, content, streaming = false) {
             const messagesContainer = this.elements.expandedView.querySelector('.divee-messages');
-            
+
             // Remove empty state
             const emptyState = messagesContainer.querySelector('.divee-empty-state');
             if (emptyState) emptyState.remove();
@@ -1022,11 +1022,11 @@
         const scripts = document.querySelectorAll('script[data-project-id]');
         const urlParams = new URLSearchParams(window.location.search);
         const isDebug = urlParams.get('diveeDebug') === 'true';
-        
+
         if (isDebug) {
             console.log('[Divee] Found', scripts.length, 'widget script(s)');
         }
-        
+
         scripts.forEach((script, index) => {
             const config = {
                 projectId: script.getAttribute('data-project-id'),
@@ -1035,7 +1035,7 @@
                 articleClass: script.getAttribute('data-article-class'),
                 containerSelector: script.getAttribute('data-container-selector')
             };
-            
+
             if (isDebug) {
                 console.log(`[Divee] Auto-init config [${index}]:`, config);
             }
