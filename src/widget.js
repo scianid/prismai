@@ -13,15 +13,12 @@
         constructor(config) {
             this.config = {
                 projectId: config.projectId,
-                articleId: config.articleId || null,
-                position: config.position || 'bottom',
-                maxHeight: config.maxHeight || 600,
-                autoExpand: config.autoExpand || false,
                 apiBaseUrl: config.apiBaseUrl || 'http://localhost:3000/api/v1',
-                articleClass: config.articleClass || null,
-                containerSelector: config.containerSelector || null,
-                displayMode: config.displayMode || 'anchored', // 'anchored' or 'floating'
-                floatingPosition: config.floatingPosition || 'bottom-right' // 'bottom-right' or 'bottom-left'
+                // These will be populated from server config
+                displayMode: 'anchored',
+                floatingPosition: 'bottom-right',
+                articleClass: null,
+                containerSelector: null
             };
 
             this.state = {
@@ -218,6 +215,24 @@
 
                 this.state.serverConfig = serverConfig;
                 this.log('[Divee] Server config loaded:', this.state.serverConfig);
+
+                // Apply display settings from server config (override data attributes)
+                if (serverConfig.display_mode) {
+                    this.config.displayMode = serverConfig.display_mode;
+                    this.log('[Divee] Display mode from config:', serverConfig.display_mode);
+                }
+                if (serverConfig.display_position) {
+                    this.config.floatingPosition = serverConfig.display_position;
+                    this.log('[Divee] Display position from config:', serverConfig.display_position);
+                }
+                if (serverConfig.article_class) {
+                    this.config.articleClass = serverConfig.article_class;
+                    this.log('[Divee] Article class from config:', serverConfig.article_class);
+                }
+                if (serverConfig.widget_container_class) {
+                    this.config.containerSelector = serverConfig.widget_container_class;
+                    this.log('[Divee] Container selector from config:', serverConfig.widget_container_class);
+                }
 
                 // Apply direction and language
                 if (serverConfig.direction) {
@@ -538,12 +553,12 @@
 
         insertWidget(container) {
             this.log('[Divee] insertWidget called');
-            this.log('[Divee] Config containerSelector:', this.config.containerSelector);
             this.log('[Divee] Display mode:', this.config.displayMode);
+            this.log('[Divee] Config containerSelector (from server):', this.config.containerSelector);
 
             // For floating mode, always append to body
             if (this.config.displayMode === 'floating') {
-                this.log('[Divee] Floating mode: appending to body');
+                this.log('[Divee] Floating mode: appending to body (containerSelector ignored)');
                 document.body.appendChild(container);
                 this.displayAdsIfNeeded();
                 return;
@@ -553,15 +568,21 @@
 
             // First, try custom container selector if provided
             if (this.config.containerSelector) {
-                this.log('[Divee] Attempting to find custom container:', this.config.containerSelector);
+                this.log('[Divee] ✓ Using containerSelector from server config:', this.config.containerSelector);
+                this.log('[Divee] Attempting to find element with querySelector:', this.config.containerSelector);
                 targetElement = document.querySelector(this.config.containerSelector);
                 if (targetElement) {
-                    this.log('[Divee] ✓ Found custom container:', this.config.containerSelector, targetElement);
+                    this.log('[Divee] ✓ Found custom container element:', {
+                        selector: this.config.containerSelector,
+                        tagName: targetElement.tagName,
+                        className: targetElement.className,
+                        id: targetElement.id
+                    });
                 } else {
-                    this.log(`[Divee] ✗ Container selector "${this.config.containerSelector}" not found, falling back to default behavior`);
+                    this.log(`[Divee] ✗ Container selector "${this.config.containerSelector}" not found in DOM, falling back to default behavior`);
                 }
             } else {
-                this.log('[Divee] No custom containerSelector provided, using default behavior');
+                this.log('[Divee] No containerSelector from server config, using default auto-detection');
             }
 
             // Fallback to default behavior
@@ -1228,13 +1249,24 @@
         scripts.forEach((script, index) => {
             const config = {
                 projectId: script.getAttribute('data-project-id'),
-                position: script.getAttribute('data-position') || 'bottom',
-                apiBaseUrl: "https://srv.divee.ai/functions/v1",
-                articleClass: script.getAttribute('data-article-class'),
-                containerSelector: script.getAttribute('data-container-selector'),
-                displayMode: script.getAttribute('data-display-mode') || 'anchored',
-                floatingPosition: script.getAttribute('data-floating-position') || 'bottom-right'
+                apiBaseUrl: "https://srv.divee.ai/functions/v1"
             };
+
+            // Show deprecation warnings if data attributes are used
+            if (isDebug) {
+                if (script.getAttribute('data-display-mode')) {
+                    console.warn('[Divee] DEPRECATED: data-display-mode is deprecated. Configure display_mode in your project settings.');
+                }
+                if (script.getAttribute('data-floating-position')) {
+                    console.warn('[Divee] DEPRECATED: data-floating-position is deprecated. Configure display_position in your project settings.');
+                }
+                if (script.getAttribute('data-article-class')) {
+                    console.warn('[Divee] DEPRECATED: data-article-class is deprecated. Configure article_class in your project settings.');
+                }
+                if (script.getAttribute('data-container-selector')) {
+                    console.warn('[Divee] DEPRECATED: data-container-selector is deprecated. Configure widget_container_class in your project settings.');
+                }
+            }
 
             if (isDebug) {
                 console.log(`[Divee] Auto-init config [${index}]:`, config);

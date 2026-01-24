@@ -12,130 +12,76 @@ Add the following script tag to your HTML page, just before the closing `</body>
 
 Replace `your-project-id` with your actual Divee project ID.
 
+**All widget settings (display mode, position, styling) are now configured in your Divee project dashboard.** This allows you to change widget behavior without updating your website code.
+
 ---
 
-## Display Modes
+## Configuration
 
-### Anchored Mode (Default)
+### Project Dashboard Settings
 
-The widget is embedded inline within your content. This is the default behavior.
+Configure your widget behavior in the Divee dashboard under Project Settings:
 
-```html
-<script src="https://srv.divee.ai/sdk/divee.sdk.latest.js" 
-    data-project-id="your-project-id"
-    data-display-mode="anchored"
-    data-container-selector="#widget-container">
-</script>
-```
+| Setting | Values | Default | Description |
+|---------|--------|---------|-------------|
+| **Display Mode** | `anchored` \| `floating` | `anchored` | How the widget is positioned on the page |
+| **Display Position** | `bottom-right` \| `bottom-left` | `bottom-right` | Position for floating mode |
+| **Article Class** | CSS selector | `.article` | CSS selector to identify article content |
+| **Container Class** | CSS selector | (none) | CSS selector for where to insert the widget (anchored mode only) |
 
-**Characteristics:**
-- Embedded inline in the article
+### Display Modes
+
+#### Anchored Mode
+- Embedded inline within your content
 - Shows ads in both collapsed and expanded states
 - Flows with page content
 - Max width: 800px, centered
+- Positioned based on **Container Class** setting or auto-detected
 
-**Positioning Options:**
-- Use `data-container-selector` to specify where to insert the widget (e.g., `data-container-selector="#widget-container"`)
-- If not specified, automatically inserts at the end of the first `<article>`, `[role="article"]`, or `<main>` element
-- Falls back to appending to `<body>` if no suitable container is found
-
-### Floating Mode
-
-The widget appears as a floating button in the corner of the screen.
-
-```html
-<script src="https://srv.divee.ai/sdk/divee.sdk.latest.js" 
-    data-project-id="your-project-id"
-    data-display-mode="floating"
-    data-floating-position="bottom-right">
-</script>
-```
-
-**Characteristics:**
+#### Floating Mode
 - Fixed position at screen corner
-- **No ads in collapsed state** - just a compact button
+- **No ads in collapsed state** - just a compact button (56px circle on mobile)
 - Ads shown only in expanded chat state
-- Width: 400px when expanded
+- Width: 400px on desktop, full-width on mobile
 - Always visible while scrolling
+- Position based on **Display Position** setting
 
 ---
 
-## Configuration Options
+## Installation Examples
 
-### Required Attributes
+### Basic Installation
 
-| Attribute | Description | Example |
-|-----------|-------------|---------|
-| `data-project-id` | Your Divee project ID (required) | `data-project-id="abc-123-xyz"` |
-
-### Display Options
-
-| Attribute | Values | Default | Description |
-|-----------|--------|---------|-------------|
-| `data-display-mode` | `anchored` \| `floating` | `anchored` | How the widget is positioned on the page |
-| `data-floating-position` | `bottom-right` \| `bottom-left` | `bottom-right` | Position for floating mode (only applies when `display-mode="floating"`) |
-
-### Content Selection
-
-| Attribute | Description | Example |
-|-----------|-------------|---------|
-| `data-article-class` | CSS class selector to identify article content | `data-article-class=".article-content"` |
-| `data-container-selector` | CSS selector for where to insert the widget (anchored mode only) | `data-container-selector="#widget-container"` |
-
-> **Note:** `data-container-selector` only applies to anchored mode. In floating mode, the widget is always appended to `<body>`.
-
-### Legacy Options
-
-| Attribute | Values | Default | Description |
-|-----------|--------|---------|-------------|
-| `data-position` | `top` \| `bottom` | `bottom` | Legacy position setting (use `display-mode` instead) |
-
----
-
-## Complete Examples
-
-### Example 1: Floating Widget (Bottom-Right)
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>My Article</title>
-</head>
-<body>
-    <article class="main-article">
-        <h1>Article Title</h1>
-        <p>Article content here...</p>
-    </article>
-
-    <!-- Divee Widget -->
-    <script src="https://srv.divee.ai/sdk/divee.sdk.latest.js" 
-        data-project-id="your-project-id"
-        data-display-mode="floating"
-        data-floating-position="bottom-right"
-        data-article-class=".main-article">
-    </script>
-</body>
-</html>
-```
-
-### Example 2: Floating Widget (Bottom-Left)
+The simplest setup - all configuration comes from your dashboard:
 
 ```html
 <script src="https://srv.divee.ai/sdk/divee.sdk.latest.js" 
-    data-project-id="your-project-id"
-    data-display-mode="floating"
-    data-floating-position="bottom-left"
-    data-article-class=".article-content">
+    data-project-id="your-project-id">
 </script>
 ```
 
-### Example 3: Anchored Widget (Inline)
+### With Article Content Detection
+
+If your article has a specific class:
+
+```html
+<article class="post-content">
+    <h1>Article Title</h1>
+    <p>Article content here...</p>
+</article>
+
+<script src="https://srv.divee.ai/sdk/divee.sdk.latest.js" 
+    data-project-id="your-project-id">
+</script>
+```
+
+Configure `article_class` as `.post-content` in your project dashboard.
+
+### With Custom Container Placement (Anchored Mode)
 
 ```html
 <article class="blog-post">
     <h1>Article Title</h1>
-    
     <p>First paragraph...</p>
     
     <!-- Widget will appear here -->
@@ -145,29 +91,28 @@ The widget appears as a floating button in the corner of the screen.
 </article>
 
 <script src="https://srv.divee.ai/sdk/divee.sdk.latest.js" 
-    data-project-id="your-project-id"
-    data-display-mode="anchored"
-    data-container-selector="#ai-assistant-container"
-    data-article-class=".blog-post">
+    data-project-id="your-project-id">
 </script>
 ```
 
-### Example 4: Anchored Widget (Auto-Placement)
+Configure `widget_container_class` as `#ai-assistant-container` in your project dashboard.
 
-If you don't specify `data-container-selector`, the widget will automatically insert itself at the end of the first `<article>`, `[role="article"]`, or `<main>` element:
+---
 
-```html
-<article>
-    <h1>Article Title</h1>
-    <p>Content here...</p>
-    <!-- Widget will be automatically inserted at the end -->
-</article>
+## Deprecated: Data Attributes (Backwards Compatibility)
 
-<script src="https://srv.divee.ai/sdk/divee.sdk.latest.js" 
-    data-project-id="your-project-id"
-    data-display-mode="anchored">
-</script>
-```
+> **⚠️ DEPRECATED:** The following data attributes are deprecated and will be removed in a future version. Configure these settings in your project dashboard instead.
+
+For backwards compatibility, these attributes still work but will show console warnings in debug mode:
+
+| Deprecated Attribute | Use Dashboard Setting Instead |
+|---------------------|-------------------------------|
+| `data-display-mode` | **Display Mode** |
+| `data-floating-position` | **Display Position** |
+| `data-article-class` | **Article Class** |
+| `data-container-selector` | **Container Class** |
+
+**Migration Path:** Remove these attributes from your script tag and configure them in your Divee dashboard. This allows you to update settings without touching your website code.
 
 ---
 

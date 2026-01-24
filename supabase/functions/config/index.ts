@@ -72,7 +72,11 @@ Deno.serve(async (req: Request) => {
       show_ad: typeof project.show_ad === 'boolean' ? project.show_ad : true,
       input_text_placeholders: project.input_text_placeholders || [
         'Ask anything about this article...'
-      ]
+      ],
+      display_mode: project.display_mode || 'anchored',
+      display_position: project.display_position || 'bottom-right',
+      article_class: project.article_class || null,
+      widget_container_class: project.widget_container_class || null
     };
 
     return successResp(config);
