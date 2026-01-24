@@ -3,7 +3,7 @@
  * Tests for Edge Function endpoints
  */
 
-const { describe, test, expect, beforeEach, jest } = require('@jest/globals');
+const { describe, test, expect, beforeEach } = require('@jest/globals');
 
 describe('Backend API Endpoints', () => {
   const baseUrl = 'https://srv.divee.ai/functions/v1';

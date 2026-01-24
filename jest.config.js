@@ -3,7 +3,7 @@ module.exports = {
   testEnvironment: 'jsdom',
   testMatch: [
     '**/__tests__/**/*.test.js',
-    '**/?(*.)+(spec|test).js'
+    '!**/__tests__/e2e/**'
   ],
   collectCoverageFrom: [
     'src/**/*.js',
