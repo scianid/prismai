@@ -495,10 +495,6 @@
                     <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
                 </div>
                 <div class="divee-content">
-                    <div class="divee-suggestions" style="display: none;">
-                        <button class="divee-suggestions-toggle" type="button" aria-expanded="false">Suggested questions</button>
-                        <div class="divee-suggestions-list"></div>
-          </div>
                     <div class="divee-chat">
                         <div class="divee-messages"></div>
           </div>
