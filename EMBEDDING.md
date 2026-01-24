@@ -23,7 +23,8 @@ The widget is embedded inline within your content. This is the default behavior.
 ```html
 <script src="https://srv.divee.ai/sdk/divee.sdk.latest.js" 
     data-project-id="your-project-id"
-    data-display-mode="anchored">
+    data-display-mode="anchored"
+    data-container-selector="#widget-container">
 </script>
 ```
 
@@ -32,6 +33,11 @@ The widget is embedded inline within your content. This is the default behavior.
 - Shows ads in both collapsed and expanded states
 - Flows with page content
 - Max width: 800px, centered
+
+**Positioning Options:**
+- Use `data-container-selector` to specify where to insert the widget (e.g., `data-container-selector="#widget-container"`)
+- If not specified, automatically inserts at the end of the first `<article>`, `[role="article"]`, or `<main>` element
+- Falls back to appending to `<body>` if no suitable container is found
 
 ### Floating Mode
 
@@ -75,6 +81,8 @@ The widget appears as a floating button in the corner of the screen.
 |-----------|-------------|---------|
 | `data-article-class` | CSS class selector to identify article content | `data-article-class=".article-content"` |
 | `data-container-selector` | CSS selector for where to insert the widget (anchored mode only) | `data-container-selector="#widget-container"` |
+
+> **Note:** `data-container-selector` only applies to anchored mode. In floating mode, the widget is always appended to `<body>`.
 
 ### Legacy Options
 
