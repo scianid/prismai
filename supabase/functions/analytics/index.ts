@@ -20,11 +20,6 @@ const ALLOWED_EVENT_TYPES = [
     'question_asked',
     'ask_question',
     'answer_streamed',
-    'citation_clicked',
-    'click_source',
-    'click_contact',
-    'submit_form',
-    'suggested_read_clicked',
     'ad_impression',
     'ad_click',
 ] as const;

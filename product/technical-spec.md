@@ -405,7 +405,6 @@ The widget header displays two icons side by side:
   suggestion_clicked: { question, position: 1|2|3 },
   question_asked: { type: 'suggestion' | 'custom', question },
   answer_streamed: { question, duration, citations },
-  citation_clicked: { paragraph_id },
   suggested_read_clicked: { article_id, sponsored },
   ad_impression: { ad_unit, position },
   widget_collapsed: { time_spent, questions_asked }
