@@ -206,10 +206,19 @@
   <!-- Divee Widget 
       data-project-id="e6ab0c7f-102a-46eb-a015-fa7e6637ca32" // WALLA 
       data-project-id="26853c64-1104-4525-b62c-66367d925b12" // CNN
+      
+      Display modes:
+      - data-display-mode="anchored" (default) - embedded in content
+      - data-display-mode="floating" - fixed position floating widget
+      
+      Floating positions (only for floating mode):
+      - data-floating-position="bottom-right" (default)
+      - data-floating-position="bottom-left"
       -->
   <script src="../dist/divee.sdk.latest.js" 
       data-project-id="26853c64-1104-4525-b62c-66367d925b12"
-      data-container-selector="#divee-widget-placeholder"
+      data-display-mode="floating"
+      data-floating-position="bottom-right"
       data-article-class=".technews-daily-article">
   </script>
 </body>

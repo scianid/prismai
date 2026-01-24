@@ -19,6 +19,65 @@
   box-sizing: border-box !important;
 }
 
+/* Floating mode styles */
+.divee-widget-floating {
+  position: fixed !important;
+  z-index: 999999 !important;
+  margin: 0 !important;
+  max-width: 400px !important;
+  width: 400px !important;
+}
+
+/* Floating collapsed state - compact button */
+.divee-widget-floating[data-state="collapsed"] {
+  width: auto !important;
+  max-width: none !important;
+  border-radius: 50px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Floating expanded state - chat window */
+.divee-widget-floating[data-state="expanded"] {
+  width: 400px !important;
+  height: auto !important;
+  max-height: 90vh !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Floating expanded - adjust expanded view to flex properly */
+.divee-widget-floating .divee-expanded {
+  max-height: 85vh !important;
+  height: auto !important;
+}
+
+/* Position: bottom-right */
+.divee-widget-floating[data-floating-position="bottom-right"] {
+  bottom: 24px !important;
+  right: 24px !important;
+}
+
+/* Position: bottom-left */
+.divee-widget-floating[data-floating-position="bottom-left"] {
+  bottom: 24px !important;
+  left: 24px !important;
+}
+
+/* Floating collapsed view adjustments */
+.divee-widget-floating .divee-collapsed {
+  padding: 12px 20px !important;
+  margin: 0 !important;
+}
+
+.divee-widget-floating .divee-search-container-collapsed {
+  margin-bottom: 0 !important;
+  min-width: 280px !important;
+}
+
+.divee-widget-floating .divee-powered-by-collapsed {
+  display: none !important;
+}
+
 /* Reset all children */
 .divee-widget * {
   box-sizing: border-box !important;

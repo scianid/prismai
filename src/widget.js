@@ -19,7 +19,9 @@
                 autoExpand: config.autoExpand || false,
                 apiBaseUrl: config.apiBaseUrl || 'http://localhost:3000/api/v1',
                 articleClass: config.articleClass || null,
-                containerSelector: config.containerSelector || null
+                containerSelector: config.containerSelector || null,
+                displayMode: config.displayMode || 'anchored', // 'anchored' or 'floating'
+                floatingPosition: config.floatingPosition || 'bottom-right' // 'bottom-right' or 'bottom-left'
             };
 
             this.state = {
@@ -326,6 +328,12 @@
             const container = document.createElement('div');
             container.className = 'divee-widget';
             container.setAttribute('data-state', 'collapsed');
+            
+            // Apply display mode
+            if (this.config.displayMode === 'floating') {
+                container.classList.add('divee-widget-floating');
+                container.setAttribute('data-floating-position', this.config.floatingPosition);
+            }
 
             // Apply direction from config
             const config = this.state.serverConfig || this.getDefaultConfig();
@@ -356,7 +364,8 @@
             view.className = 'divee-collapsed';
 
             const config = this.state.serverConfig || this.getDefaultConfig();
-            const showAd = config.show_ad ? '' : 'style="display: none;"';
+            // Hide ads in floating mode collapsed view
+            const showAd = (config.show_ad && this.config.displayMode !== 'floating') ? '' : 'style="display: none;"';
 
             this.log('[Divee DEBUG] Creating collapsed view with showAd:', showAd);
             this.log('[Divee DEBUG] config.show_ad:', config.show_ad);
@@ -530,6 +539,15 @@
         insertWidget(container) {
             this.log('[Divee] insertWidget called');
             this.log('[Divee] Config containerSelector:', this.config.containerSelector);
+            this.log('[Divee] Display mode:', this.config.displayMode);
+
+            // For floating mode, always append to body
+            if (this.config.displayMode === 'floating') {
+                this.log('[Divee] Floating mode: appending to body');
+                document.body.appendChild(container);
+                this.displayAdsIfNeeded();
+                return;
+            }
 
             let targetElement = null;
 
@@ -571,6 +589,10 @@
 
             this.log('[Divee] Widget inserted successfully');
 
+            this.displayAdsIfNeeded();
+        }
+
+        displayAdsIfNeeded() {
             // Display ads after widget is in DOM
             const config = this.state.serverConfig || this.getDefaultConfig();
             this.log('[Divee DEBUG] ====== AD DISPLAY CHECK ======');
@@ -1209,7 +1231,9 @@
                 position: script.getAttribute('data-position') || 'bottom',
                 apiBaseUrl: "https://srv.divee.ai/functions/v1",
                 articleClass: script.getAttribute('data-article-class'),
-                containerSelector: script.getAttribute('data-container-selector')
+                containerSelector: script.getAttribute('data-container-selector'),
+                displayMode: script.getAttribute('data-display-mode') || 'anchored',
+                floatingPosition: script.getAttribute('data-floating-position') || 'bottom-right'
             };
 
             if (isDebug) {
