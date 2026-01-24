@@ -14,20 +14,78 @@ node server.js
 
 Navigate to: http://localhost:3000/test/index.html
 
+### 3. Run Tests
+
+```bash
+# Unit and integration tests
+npm test
+
+# E2E tests (requires server running)
+npm run test:e2e
+
+# All tests
+npm run test:all
+```
+
+See [TESTING_GUIDE.md](TESTING_GUIDE.md) for comprehensive testing documentation.
+
 ## Project Structure
 
 ```
 prismai/
 ├── src/
 │   ├── widget.js      # Main widget implementation
-│   └── styles.css     # Widget styles
+│   ├── styles.css     # Widget styles
+│   └── content.js     # Content extraction utilities
+├── __tests__/
+│   ├── api.test.js              # Backend API tests (14 tests)
+│   ├── widget-core.test.js      # Widget unit tests (17 tests)
+│   ├── content.test.js          # Content extraction tests (9 tests)
+│   ├── integration/
+│   │   └── widget-flow.test.js  # Integration tests (10 tests)
+│   └── e2e/                     # E2E tests (365 tests across 5 browsers)
+│       ├── widget-initialization.spec.js
+│       ├── widget-suggestions.spec.js
+│       ├── widget-chat.spec.js
+│       └── widget-storage.spec.js
 ├── test/
 │   └── index.html     # Test article page
 ├── product/
 │   ├── product.md     # Product overview
 │   └── technical-spec.md  # Technical specification
+├── TEST_PLAN.md       # Comprehensive testing strategy (120+ test cases)
+├── TESTING_GUIDE.md   # Testing instructions and troubleshooting
 └── server.js          # Development server with mock API
 ```
+
+## Testing
+
+### Test Coverage
+- **417 total tests**: 52 unit/integration + 365 E2E (73 unique × 5 browsers)
+- **79% pass rate** for unit tests (41/52 passing, 11 skipped for E2E)
+- **100% API coverage** (14/14 backend tests passing)
+- **5 browsers**: Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari
+
+### Running Tests
+
+```bash
+# Unit & Integration Tests (Jest)
+npm test                    # Run all unit tests
+npm run test:watch          # Watch mode
+npm run test:coverage       # With coverage report
+npm run test:unit           # Unit tests only
+npm run test:integration    # Integration tests only
+
+# E2E Tests (Playwright) - requires server running
+npm run test:e2e            # All browsers, headless
+npm run test:e2e:headed     # Visible browsers
+npm run test:e2e:debug      # Debug mode with Playwright Inspector
+
+# Run Everything
+npm run test:all            # Unit + E2E tests
+```
+
+For detailed testing instructions, see [TESTING_GUIDE.md](TESTING_GUIDE.md).
 
 ## Usage
 

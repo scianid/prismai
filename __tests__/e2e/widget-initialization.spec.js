@@ -36,15 +36,15 @@ test.describe('Widget Initialization', () => {
   });
 
   test('should show AI and site icons', async ({ page }) => {
-    const aiIcon = page.locator('.divee-icon-ai-collapsed');
-    const siteIcon = page.locator('.divee-icon-site-collapsed');
+    const aiIcon = page.locator('.divee-icon-ai-collapsed').first();
+    const siteIcon = page.locator('.divee-icon-site-collapsed').first();
     
     await expect(aiIcon).toBeVisible();
     await expect(siteIcon).toBeVisible();
   });
 
   test('should display powered by link', async ({ page }) => {
-    const poweredBy = page.locator('.divee-powered-by');
+    const poweredBy = page.locator('.divee-powered-by').first();
     await expect(poweredBy).toBeVisible();
     
     const href = await poweredBy.getAttribute('href');
