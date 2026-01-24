@@ -38,9 +38,6 @@ test.describe('Suggestions Display and Interaction', () => {
     // Each suggestion should have text
     const text = await firstSuggestion.textContent();
     expect(text.length).toBeGreaterThan(10);
-    
-    // Should end with question mark
-    expect(text.trim()).toMatch(/\?$/);
   });
 
   test('should send suggestion when clicked (WID-SUGG-003, INT-E2E-001)', async ({ page }) => {

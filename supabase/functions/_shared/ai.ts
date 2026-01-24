@@ -108,13 +108,21 @@ export async function generateSuggestions(title: string, content: string, langua
 
 export async function streamAnswer(title: string, content: string, question: string): Promise<Response> {
   const apiKey = getApiKey();
+  // @ts-ignore
+  const rejectUnrelatedQuestions = Deno.env.get('REJECT_UNRELATED_QUESTIONS') === 'true';
+  
+  const denyUnrelatedQuestionsPrompt = `
+    Do not answer questions unrelated to the article.
+    If the question is not related to the article, reply with:
+    "I'm sorry, I can only answer questions related to the article." but in the same language as the question.  
+`
 
-  const systemPrompt = `You are a helpful assistant that answers questions about an article. 
+  const systemPrompt = `You are a helpful assistant that answers questions about an article or subjects related to the article. 
     Reply concisely in under 1000 characters but make sure you respond fully.
-    Do not answer questions unrelated to the article. 
-    under any circumstance, do not mention you are an AI model. 
-    If the question is not related to the article, reply with 
-    "I'm sorry, I can only answer questions related to the article." but in the same language as the question.`;
+    under any circumstance, do not mention you are an AI model.
+    if you cant base your answer on the article content, use your own knowledge - but you must say that it did not appear in the article!
+    ${rejectUnrelatedQuestions ? denyUnrelatedQuestionsPrompt : ''}
+    `;
 
   const userPrompt = `Title: 
     ${title || ''}
