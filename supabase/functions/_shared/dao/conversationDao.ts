@@ -1,4 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js'
+// Use SupabaseClient type from existing imports
+type SupabaseClient = any;
 
 export type ConversationRecord = {
   id: string;
@@ -43,8 +44,14 @@ export async function getOrCreateConversation(
     .eq('project_id', projectId)
     .single();
 
+  // Return existing if found (ignore PGRST116 = not found error)
   if (existing && !fetchError) {
     return existing as ConversationRecord;
+  }
+
+  // If error is not "not found", log it
+  if (fetchError && fetchError.code !== 'PGRST116') {
+    console.error('conversationDao: error fetching conversation', fetchError);
   }
 
   // Create new conversation

@@ -47,8 +47,25 @@ Deno.serve(async (req: Request) => {
     if (!isAllowedOrigin(requestUrl, project?.allowed_urls))
         return errorResp('Origin not allowed', 403);
 
+    // Ensure article exists first (required for conversation foreign key)
+    let article = await getArticleById(url, projectId, supabase);
+    if (!article) {
+        console.log('chat: creating new article', { url, projectId });
+        await insertArticle(url, title, content, projectId, supabase);
+        // Re-fetch to get the created article
+        article = await getArticleById(url, projectId, supabase);
+    }
+
     // Get or create conversation (per visitor + article)
-    const articleUniqueId = `${url}-${projectId}`;
+    // Use same format as article.unique_id (no dash)
+    const articleUniqueId = url + projectId;
+    console.log('chat: getting/creating conversation', { 
+      articleUniqueId, 
+      visitor_id, 
+      projectId,
+      hasArticle: !!article 
+    });
+    
     const conversation = await getOrCreateConversation(
       supabase,
       projectId,
@@ -58,6 +75,12 @@ Deno.serve(async (req: Request) => {
       title,
       content
     );
+
+    console.log('chat: conversation result', { 
+      conversationId: conversation?.id,
+      messageCount: conversation?.message_count,
+      hasConversation: !!conversation
+    });
 
     if (!conversation) {
       console.error('chat: failed to get/create conversation');
@@ -83,11 +106,6 @@ Deno.serve(async (req: Request) => {
       conversation_id: conversation.id,
       message_count: conversation.message_count
     });
-
-    const article = await getArticleById(url, projectId, supabase);
-
-    if (!article)
-        await insertArticle(url, title, content, projectId, supabase);
 
     const cacheSuggestions = extractCachedSuggestions(article);
 
@@ -170,6 +188,13 @@ Deno.serve(async (req: Request) => {
     // Collect answer and store in conversation
     readDeepSeekStreamAndCollectAnswer(cacheStream)
       .then(async (answer) => {
+        console.log('chat: collected answer, appending to conversation', {
+          conversationId: conversation.id,
+          questionLength: resolvedQuestion.length,
+          answerLength: answer.length,
+          existingMessageCount: messages.length
+        });
+
         // Create message objects
         const userMessage: ConversationMessage = {
           role: 'user',
@@ -186,7 +211,7 @@ Deno.serve(async (req: Request) => {
         };
 
         // Append to conversation
-        await appendMessagesToConversation(
+        const success = await appendMessagesToConversation(
           supabase,
           conversation.id,
           userMessage,
@@ -194,6 +219,8 @@ Deno.serve(async (req: Request) => {
           messages,
           conversation.total_chars
         );
+
+        console.log('chat: append messages result', { success, conversationId: conversation.id });
 
         // Also update cache if it's a suggestion
         if (cachedItem) {
