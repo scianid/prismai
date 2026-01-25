@@ -18,6 +18,11 @@ export type SuggestionItem = {
   answer: string | null;
 };
 
+export type Message = {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+};
+
 function stripCodeFences(text: string): string {
   const trimmed = text.trim();
   if (trimmed.startsWith('```')) {
@@ -106,32 +111,55 @@ export async function generateSuggestions(title: string, content: string, langua
 }
 
 
-export async function streamAnswer(title: string, content: string, question: string): Promise<Response> {
+// Overload for backward compatibility (single question)
+export async function streamAnswer(title: string, content: string, question: string): Promise<Response>;
+// Overload for conversation history (message array)
+export async function streamAnswer(messages: Message[]): Promise<Response>;
+
+export async function streamAnswer(
+  titleOrMessages: string | Message[],
+  content?: string,
+  question?: string
+): Promise<Response> {
   const apiKey = getApiKey();
-  // @ts-ignore
-  const rejectUnrelatedQuestions = Deno.env.get('REJECT_UNRELATED_QUESTIONS') === 'true';
   
-  const denyUnrelatedQuestionsPrompt = `
-    Do not answer questions unrelated to the article.
-    If the question is not related to the article, reply with:
-    "I'm sorry, I can only answer questions related to the article." but in the same language as the question.  
-`
-
-  const systemPrompt = `You are a helpful assistant that answers questions about an article or subjects related to the article. 
-    Reply concisely in under 1000 characters but make sure you respond fully.
-    under any circumstance, do not mention you are an AI model.
-    if you cant base your answer on the article content, use your own knowledge - but you must say that it did not appear in the article!
-    ${rejectUnrelatedQuestions ? denyUnrelatedQuestionsPrompt : ''}
-    `;
-
-  const userPrompt = `Title: 
-    ${title || ''}
-
-    Content:
-    ${content || ''}
+  let messages: Message[];
+  
+  // Handle message array (new conversation format)
+  if (Array.isArray(titleOrMessages)) {
+    messages = titleOrMessages;
+  } else {
+    // Handle legacy format (title, content, question)
+    // @ts-ignore
+    const rejectUnrelatedQuestions = Deno.env.get('REJECT_UNRELATED_QUESTIONS') === 'true';
     
-    Question: 
-    ${question}`;
+    const denyUnrelatedQuestionsPrompt = `
+      Do not answer questions unrelated to the article.
+      If the question is not related to the article, reply with:
+      "I'm sorry, I can only answer questions related to the article." but in the same language as the question.  
+  `
+
+    const systemPrompt = `You are a helpful assistant that answers questions about an article or subjects related to the article. 
+      Reply concisely in under 1000 characters but make sure you respond fully.
+      under any circumstance, do not mention you are an AI model.
+      if you cant base your answer on the article content, use your own knowledge - but you must say that it did not appear in the article!
+      ${rejectUnrelatedQuestions ? denyUnrelatedQuestionsPrompt : ''}
+      `;
+
+    const userPrompt = `Title: 
+      ${titleOrMessages || ''}
+
+      Content:
+      ${content || ''}
+      
+      Question: 
+      ${question}`;
+    
+    messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ];
+  }
 
   const aiResponse = await fetch(AI_URL, {
     method: 'POST',
@@ -141,10 +169,7 @@ export async function streamAnswer(title: string, content: string, question: str
     },
     body: JSON.stringify({
       model: AI_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
+      messages: messages,
       temperature: 0.4,
       max_tokens: MAX_TOKENS_CHAT,
       stream: true
@@ -202,4 +227,12 @@ export async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<
   }
 
   return answer;
+}
+
+/**
+ * Estimate character count for message pruning
+ * Simply returns string length for fast calculation
+ */
+export function estimateCharCount(text: string): number {
+  return text.length;
 }

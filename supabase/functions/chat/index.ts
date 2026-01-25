@@ -2,13 +2,14 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseClient } from '../_shared/supabaseClient.ts';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { logEvent } from '../_shared/analytics.ts';
-import { readDeepSeekStreamAndCollectAnswer, streamAnswer } from '../_shared/ai.ts';
+import { readDeepSeekStreamAndCollectAnswer, streamAnswer, estimateCharCount, type Message } from '../_shared/ai.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
 import { extractCachedSuggestions, getArticleById, insertArticle, updateCacheAnswer } from "../_shared/dao/articleDao.ts";
 import { insertFreeformQuestion, updateFreeformAnswer } from "../_shared/dao/freeformQaDao.ts";
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH } from "../_shared/constants.ts";
+import { getOrCreateConversation, appendMessagesToConversation, type ConversationMessage } from "../_shared/dao/conversationDao.ts";
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -46,14 +47,41 @@ Deno.serve(async (req: Request) => {
     if (!isAllowedOrigin(requestUrl, project?.allowed_urls))
         return errorResp('Origin not allowed', 403);
 
+    // Get or create conversation (per visitor + article)
+    const articleUniqueId = `${url}-${projectId}`;
+    const conversation = await getOrCreateConversation(
+      supabase,
+      projectId,
+      articleUniqueId,
+      visitor_id,
+      session_id,
+      title,
+      content
+    );
+
+    if (!conversation) {
+      console.error('chat: failed to get/create conversation');
+      return errorResp('Failed to create conversation', 500);
+    }
+
+    // Check conversation message limit
+    if (conversation.message_count >= 20) {
+      return new Response(
+        JSON.stringify({ error: 'Conversation limit reached', limit: 20 }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Track Event (Async)
     logEvent(supabase, {
       projectId,
       visitorId: visitor_id,
       sessionId: session_id
-    }, 'ask_question', undefined, {
+    }, conversation.message_count === 0 ? 'conversation_started' : 'conversation_continued', undefined, {
       question_text: question,
-      question_id: questionId
+      question_id: questionId,
+      conversation_id: conversation.id,
+      message_count: conversation.message_count
     });
 
     const article = await getArticleById(url, projectId, supabase);
@@ -77,35 +105,110 @@ Deno.serve(async (req: Request) => {
     if (!cachedItem && !allowFreeForm)
         return errorResp('Question not allowed', 403);
 
-    if (cachedItem?.answer)
+    // Check for cached answer (only for suggestions, not conversations)
+    if (cachedItem?.answer && conversation.message_count === 0)
         return successResp({ answer: cachedItem.answer, cached: true });
 
+    // Build AI context with conversation history
+    const messages = conversation.messages || [];
+    const articleTitle = conversation.article_title;
+    const articleContent = conversation.article_content;
+
+    // Character-based pruning (100k limit)
+    const ARTICLE_CHARS = (articleTitle + articleContent).length;
+    const MAX_CONVERSATION_CHARS = 100000;
+    const AVAILABLE_CHARS = MAX_CONVERSATION_CHARS - ARTICLE_CHARS;
+
+    let totalChars = 0;
+    const prunedMessages: ConversationMessage[] = [];
+    
+    // Read from end (newest first), keep until hitting limit
+    for (let i = messages.length - 1; i >= 0; i--) {
+      totalChars += messages[i].char_count;
+      if (totalChars <= AVAILABLE_CHARS) {
+        prunedMessages.unshift(messages[i]);
+      } else {
+        break;
+      }
+    }
+
+    // @ts-ignore
+    const rejectUnrelatedQuestions = Deno.env.get('REJECT_UNRELATED_QUESTIONS') === 'true';
+    
+    const denyUnrelatedQuestionsPrompt = `
+      Do not answer questions unrelated to the article.
+      If the question is not related to the article, reply with:
+      "I'm sorry, I can only answer questions related to the article." but in the same language as the question.  
+    `;
+
+    const systemPrompt = `You are a helpful assistant that answers questions about an article or subjects related to the article. 
+      Reply concisely in under 1000 characters but make sure you respond fully.
+      under any circumstance, do not mention you are an AI model.
+      if you cant base your answer on the article content, use your own knowledge - but you must say that it did not appear in the article!
+      ${rejectUnrelatedQuestions ? denyUnrelatedQuestionsPrompt : ''}
+    `;
+
+    // Build message array for AI
+    const aiMessages: Message[] = [
+      { role: 'system', content: systemPrompt },
+      { 
+        role: 'user', 
+        content: `[Article Context - Reference for all questions]\nTitle: ${articleTitle}\n\nContent: ${articleContent}` 
+      },
+      ...prunedMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      { role: 'user', content: question }
+    ];
+
     const resolvedQuestion = cachedItem?.question || question;
-    const aiResponse = await streamAnswer(title, content, resolvedQuestion);
+    const aiResponse = await streamAnswer(aiMessages);
 
     if (!aiResponse.body)
       return errorResp('AI response stream unavailable', 500);
 
     const [clientStream, cacheStream] = aiResponse.body.tee();
 
-    // Cache the full answer after streaming completes
-    if (cachedItem) {
-        // If it's a suggestion, update the article cache
-        readDeepSeekStreamAndCollectAnswer(cacheStream)
-            .then((answer) => updateCacheAnswer(supabase, article.unique_id, questionId, resolvedQuestion, answer))
-            .catch(() => undefined);
-    } else {
-        // If it's a free-form question, save to freeform_qa table
-        insertFreeformQuestion(supabase, projectId, article.unique_id, resolvedQuestion, visitor_id, session_id)
-            .then((freeformId) => {
-                if (freeformId) {
-                    readDeepSeekStreamAndCollectAnswer(cacheStream)
-                        .then((answer) => updateFreeformAnswer(supabase, freeformId, answer))
-                        .catch(() => undefined);
-                }
-            })
-            .catch(() => undefined);
-    }
+    // Collect answer and store in conversation
+    readDeepSeekStreamAndCollectAnswer(cacheStream)
+      .then(async (answer) => {
+        // Create message objects
+        const userMessage: ConversationMessage = {
+          role: 'user',
+          content: resolvedQuestion,
+          char_count: resolvedQuestion.length,
+          created_at: new Date().toISOString()
+        };
+
+        const assistantMessage: ConversationMessage = {
+          role: 'assistant',
+          content: answer,
+          char_count: answer.length,
+          created_at: new Date().toISOString()
+        };
+
+        // Append to conversation
+        await appendMessagesToConversation(
+          supabase,
+          conversation.id,
+          userMessage,
+          assistantMessage,
+          messages,
+          conversation.total_chars
+        );
+
+        // Also update cache if it's a suggestion
+        if (cachedItem) {
+          await updateCacheAnswer(supabase, article.unique_id, questionId, resolvedQuestion, answer);
+        } else if (allowFreeForm) {
+          // Store in freeform_qa for backwards compatibility
+          const freeformId = await insertFreeformQuestion(supabase, projectId, article.unique_id, resolvedQuestion, visitor_id, session_id);
+          if (freeformId) {
+            await updateFreeformAnswer(supabase, freeformId, answer);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('chat: failed to cache answer', err);
+      });
 
     return new Response(clientStream, {
       status: 200,
@@ -113,7 +216,8 @@ Deno.serve(async (req: Request) => {
         ...corsHeaders,
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
+        'Connection': 'keep-alive',
+        'X-Conversation-Id': conversation.id
       }
     });
   } catch (error) {

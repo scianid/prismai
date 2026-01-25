@@ -26,7 +26,8 @@
                 isStreaming: false,
                 suggestions: [],
                 messages: [],
-                serverConfig: null
+                serverConfig: null,
+                conversationId: null
             };
 
             this.elements = {};
@@ -80,6 +81,13 @@
 
             this.state.visitorId = visitorId;
             this.state.sessionId = sessionId;
+
+            // Conversation ID (per article, persists in sessionStorage)
+            const conversationKey = `divee_conversation_${window.location.href}`;
+            let conversationId = sessionStorage.getItem(conversationKey);
+            if (conversationId) {
+                this.state.conversationId = conversationId;
+            }
 
             return { visitorId, sessionId };
         }
@@ -1071,6 +1079,7 @@
                 content: this.contentCache.content,
                 visitor_id: this.state.visitorId,
                 session_id: this.state.sessionId,
+                conversation_id: this.state.conversationId // Include if exists
             };
 
             const response = await fetch(`${this.config.apiBaseUrl}/chat`, {
@@ -1087,7 +1096,23 @@
                     if (cursor) cursor.remove();
                     return;
                 }
+                if (response.status === 429) {
+                    const errorData = await response.json().catch(() => ({}));
+                    this.updateMessage(messageId, errorData.error || 'Too many requests. Please try again later.');
+                    const messageDiv = this.elements.expandedView.querySelector(`[data-message-id="${messageId}"]`);
+                    const cursor = messageDiv?.querySelector('.divee-cursor');
+                    if (cursor) cursor.remove();
+                    return;
+                }
                 throw new Error(`Chat request failed: ${response.status}`);
+            }
+
+            // Store conversation ID from response header
+            const conversationId = response.headers.get('X-Conversation-Id');
+            if (conversationId && !this.state.conversationId) {
+                this.state.conversationId = conversationId;
+                const conversationKey = `divee_conversation_${window.location.href}`;
+                sessionStorage.setItem(conversationKey, conversationId);
             }
 
             const contentType = response.headers.get('content-type') || '';
