@@ -708,7 +708,7 @@
 .divee-input-container {
   display: flex;
   align-items: flex-start;
-  padding: 10px 0;
+  padding: 10px 0 0;
   background: white;
   position: relative;
   flex-wrap: wrap;
@@ -1348,7 +1348,7 @@
   
   /* Reduce input container padding */
   .divee-widget-floating .divee-input-container {
-    padding: 6px 0 !important;
+    padding: 6px 3px !important;
     gap: 8px !important;
     margin-left: 5px !important;
     margin-right: 5px !important;
