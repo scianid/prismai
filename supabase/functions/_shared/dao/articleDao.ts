@@ -27,9 +27,8 @@ export async function insertArticle(url: string,
         created_at: metadata?.created_at || new Date().toISOString()
     };
     
-    // Add image metadata if provided
-    if (metadata?.image_url) cacheData.image_url = metadata.image_url;
-    if (metadata?.og_image) cacheData.og_image = metadata.og_image;
+    // Prioritize og_image over image_url for featured image
+    const imageUrl = metadata?.og_image || metadata?.image_url || null;
     
     const article = {
         unique_id: url + projectId,
@@ -37,6 +36,7 @@ export async function insertArticle(url: string,
         title,
         content,
         cache: cacheData,
+        image_url: imageUrl,
         project_id: projectId
     };
 
@@ -70,6 +70,17 @@ export async function updateArticleCache(article: any,
         .update({ cache })
         .eq('unique_id', article.unique_id);
     console.log('suggestions: cached', { count: cache.suggestions?.length || 0 });
+}
+
+export async function updateArticleImage(article: any,
+    imageUrl: string,
+    supabase: any) {
+
+    await supabase
+        .from('article')
+        .update({ image_url: imageUrl })
+        .eq('unique_id', article.unique_id);
+    console.log('article: updated image_url');
 }
 
 export async function updateCacheAnswer(

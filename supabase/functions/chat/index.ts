@@ -6,7 +6,7 @@ import { readDeepSeekStreamAndCollectAnswer, streamAnswer, estimateCharCount, ty
 import { corsHeaders } from '../_shared/cors.ts';
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
-import { extractCachedSuggestions, getArticleById, insertArticle, updateCacheAnswer } from "../_shared/dao/articleDao.ts";
+import { extractCachedSuggestions, getArticleById, insertArticle, updateCacheAnswer, updateArticleImage } from "../_shared/dao/articleDao.ts";
 import { insertFreeformQuestion, updateFreeformAnswer } from "../_shared/dao/freeformQaDao.ts";
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH } from "../_shared/constants.ts";
 import { getOrCreateConversation, appendMessagesToConversation, type ConversationMessage } from "../_shared/dao/conversationDao.ts";
@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    let { projectId, questionId, question, title, content, url, visitor_id, session_id } = await req.json();
+    let { projectId, questionId, question, title, content, url, visitor_id, session_id, metadata } = await req.json();
 
     // Truncate inputs
     if (title) title = title.substring(0, MAX_TITLE_LENGTH);
@@ -51,9 +51,19 @@ Deno.serve(async (req: Request) => {
     let article = await getArticleById(url, projectId, supabase);
     if (!article) {
         console.log('chat: creating new article', { url, projectId });
-        await insertArticle(url, title, content, projectId, supabase);
+        await insertArticle(url, title, content, projectId, supabase, metadata);
         // Re-fetch to get the created article
         article = await getArticleById(url, projectId, supabase);
+    } else {
+        // Update existing article with image if missing
+        const needsImageUpdate = !article.image_url && metadata && (metadata.og_image || metadata.image_url);
+        
+        if (needsImageUpdate) {
+          console.log('chat: updating article with image');
+          const imageUrl = metadata.og_image || metadata.image_url;
+          await updateArticleImage(article, imageUrl!, supabase);
+          article.image_url = imageUrl;
+        }
     }
 
     // Get or create conversation (per visitor + article)

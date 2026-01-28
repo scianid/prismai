@@ -39,6 +39,8 @@
                 content: null,
                 title: null,
                 url: null,
+                image_url: null,
+                og_image: null,
                 extracted: false
             };
 
@@ -340,18 +342,31 @@
                     this.articleUrl = window.location.href;
                 }
 
+                // Extract social share image metadata
+                const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content') ||
+                               document.querySelector('meta[name="twitter:image"]')?.getAttribute('content') ||
+                               null;
+                
+                const articleImage = document.querySelector('article img')?.src ||
+                                   document.querySelector('[role="article"] img')?.src ||
+                                   null;
+
                 // Cache the extracted content
                 this.contentCache = {
                     content: this.articleContent,
                     title: this.articleTitle,
                     url: this.articleUrl,
+                    image_url: articleImage,
+                    og_image: ogImage,
                     extracted: true
                 };
 
                 this.log('[Divee] Article extracted and cached:', {
                     title: this.articleTitle,
                     url: this.articleUrl,
-                    contentLength: this.articleContent.length
+                    contentLength: this.articleContent.length,
+                    hasOgImage: !!ogImage,
+                    hasArticleImage: !!articleImage
                 });
             } catch (error) {
                 console.error('[Divee] Error extracting content:', error);
@@ -359,6 +374,15 @@
                 this.articleTitle = document.title || 'Untitled Article';
                 this.articleContent = document.body.textContent.trim();
                 this.articleUrl = window.location.href;
+                
+                this.contentCache = {
+                    content: this.articleContent,
+                    title: this.articleTitle,
+                    url: this.articleUrl,
+                    image_url: null,
+                    og_image: null,
+                    extracted: true
+                };
             }
         }
 
@@ -938,7 +962,11 @@
                 url: this.contentCache.url,
                 content: this.contentCache.content,
                 visitor_id: this.state.visitorId,
-                session_id: this.state.sessionId
+                session_id: this.state.sessionId,
+                metadata: {
+                    image_url: this.contentCache.image_url,
+                    og_image: this.contentCache.og_image
+                }
             };
 
             try {
@@ -1095,7 +1123,11 @@
                 content: this.contentCache.content,
                 visitor_id: this.state.visitorId,
                 session_id: this.state.sessionId,
-                conversation_id: this.state.conversationId // Include if exists
+                conversation_id: this.state.conversationId, // Include if exists
+                metadata: {
+                    image_url: this.contentCache.image_url,
+                    og_image: this.contentCache.og_image
+                }
             };
 
             const response = await fetch(`${this.config.apiBaseUrl}/chat`, {
@@ -1243,7 +1275,7 @@
             card.setAttribute('tabindex', '0');
             card.setAttribute('aria-label', `Suggested article: ${suggestion.title}`);
 
-            const imageUrl = suggestion.image_url || 'https://via.placeholder.com/80x100/E5E7EB/6B7280?text=No+Image';
+            const imageUrl = suggestion.image_url || 'https://srv.divee.ai/storage/v1/object/public/public-files/placeholder.jpg';
             
             card.innerHTML = `
                 <button class="divee-suggestion-dismiss" aria-label="Dismiss suggestion">✕</button>

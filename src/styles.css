@@ -861,16 +861,16 @@
   position: relative;
   width: 100%;
   max-width: 100%;
-  padding: 16px;
-  margin: 12px 0;
+  padding: 10px;
+  margin: 7px 0;
   
   /* Border & Background */
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 7px;
   background: #f3f4f6;
   
   /* Shadow */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   
   /* Interaction */
   cursor: pointer;
@@ -915,15 +915,15 @@
 
 .divee-suggestion-image {
   /* Layout */
-  width: 80px;
+  width: 60px;
   height: 100%;
   flex-shrink: 0;
   
   /* Position */
-  margin-right: 16px;
+  margin-right: 12px;
   
   /* Border */
-  border-radius: 8px;
+  border-radius: 5px;
   overflow: hidden;
   
   /* Fallback */
@@ -941,8 +941,8 @@
 /* Mobile: Smaller image */
 @media (max-width: 400px) {
   .divee-suggestion-image {
-    width: 60px;
-    margin-right: 12px;
+    width: 48px;
+    margin-right: 10px;
   }
 }
 
@@ -963,10 +963,10 @@
   font-size: 8px;
   font-weight: 500;
   color: #6B7280;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
-  margin-bottom: 8px;
-  line-height: 1.2;
+  margin-bottom: 5px;
+  line-height: 1.1;
 }
 
 /* RTL text alignment */
@@ -977,18 +977,18 @@
 
 /* Title */
 .divee-suggestion-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #1F2937;
-  line-height: 1.4;
+  line-height: 1.3;
   
   /* Truncation */
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-height: calc(1.4em * 3);
+  max-height: calc(1.3em * 2);
   word-break: break-word;
 }
 
@@ -1001,9 +1001,9 @@
 /* Mobile: Smaller title, 2 lines max */
 @media (max-width: 400px) {
   .divee-suggestion-title {
-    font-size: 14px;
+    font-size: 13px;
     -webkit-line-clamp: 2;
-    max-height: calc(1.4em * 2);
+    max-height: calc(1.3em * 2);
   }
 }
 
@@ -1014,16 +1014,16 @@
 .divee-suggestion-dismiss {
   /* Position */
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 7px;
+  right: 7px;
   
   /* Size */
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
   
   /* Style */
   color: #9CA3AF;
-  font-size: 16px;
+  font-size: 17px;
   background: transparent;
   border: none;
   

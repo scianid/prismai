@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
     // ========================================
     const { data: recentArticles, error } = await supabase
       .from('article')  // ← Source: ARTICLE table
-      .select('unique_id, url, title, cache')
+      .select('unique_id, url, title, image_url, cache')
       .eq('project_id', projectId)  // ← Filter: same project only
       .neq('url', currentUrl)  // ← Exclude current article
       .order('cache->created_at', { ascending: false })
@@ -84,12 +84,8 @@ Deno.serve(async (req: Request) => {
     const position = suggestionIndex % selectedArticles.length;
     const suggestion = selectedArticles[position];
 
-    // Extract image URL from cache if available
-    let imageUrl = null;
-    if (suggestion.cache && typeof suggestion.cache === 'object') {
-      const cache = suggestion.cache as any;
-      imageUrl = cache.image_url || cache.og_image || null;
-    }
+    // Get image URL from the image_url column
+    const imageUrl = suggestion.image_url || null;
 
     // Update round-robin counter in conversation (for next suggestion rotation)
     if (conversationId) {
