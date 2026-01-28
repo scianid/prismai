@@ -267,9 +267,24 @@
                 if (serverConfig.language) {
                     this.elements.container?.setAttribute('lang', serverConfig.language);
                 }
+                
+                // Apply highlight colors as CSS custom properties
+                this.applyThemeColors(serverConfig);
             } catch (error) {
                 console.error('[Divee] Failed to load config:', error);
                 this.state.serverConfig = null;
+            }
+        }
+
+        applyThemeColors(config) {
+            if (!this.elements.container) return;
+            
+            const colors = config?.highlight_color || this.getDefaultConfig().highlight_color;
+            
+            if (Array.isArray(colors) && colors.length >= 2) {
+                this.elements.container.style.setProperty('--divee-color-primary', colors[0]);
+                this.elements.container.style.setProperty('--divee-color-secondary', colors[1]);
+                this.log('[Divee] Applied theme colors:', colors[0], colors[1]);
             }
         }
 
@@ -417,6 +432,9 @@
             this.elements.container = container;
             this.elements.collapsedView = collapsedView;
             this.elements.expandedView = expandedView;
+
+            // Apply initial theme colors (will be updated when server config loads)
+            this.applyThemeColors(this.state.serverConfig || this.getDefaultConfig());
 
             // Insert into page
             this.insertWidget(container);

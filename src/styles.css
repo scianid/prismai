@@ -5,6 +5,10 @@
 
 /* Container - Reset all styles to prevent inheritance */
 .divee-widget {
+  /* CSS Custom Properties for dynamic theming */
+  --divee-color-primary: #68E5FD;
+  --divee-color-secondary: #A389E0;
+  
   all: initial;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   width: 100% !important;
@@ -165,7 +169,7 @@
   align-items: center;
   gap: 12px;
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #68E5FD, #A389E0) border-box;
+              linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box;
   border: 2px solid transparent;
   border-radius: 40px;
   padding: 12px 16px;
@@ -177,7 +181,7 @@
 
 .divee-search-container-collapsed:hover {
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #68E5FD, #FD3C4F) border-box;
+              linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box;
   border: 2px solid transparent;
   box-shadow: 0 4px 12px rgba(104, 229, 253, 0.15),
               0 2px 4px rgba(163, 137, 224, 0.08);
@@ -192,7 +196,7 @@
 .divee-icon-ai-collapsed {
   width: 24px;
   height: 24px;
-  color: #A389E0;
+  color: var(--divee-color-secondary);
   transition: all 0.3s;
 }
 
@@ -252,7 +256,7 @@
 }
 
 .divee-search-input-collapsed.typewriter-active {
-  border-right: 2px solid #A389E0;
+  border-right: 2px solid var(--divee-color-secondary);
   animation: blink 0.7s step-end infinite;
   width: 100%;
   overflow: hidden;
@@ -286,7 +290,7 @@
   padding: 16px 20px 10px 20px;
   border-bottom: 2px solid transparent;
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #68E5FD, #A389E0) border-box;
+              linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box;
   border-bottom: 2px solid transparent;
   background-clip: padding-box, border-box;
   background-origin: padding-box, border-box;
@@ -338,7 +342,7 @@
 .divee-icon-ai {
   width: 32px;
   height: 32px;
-  color: #A389E0;
+  color: var(--divee-color-secondary);
 }
 
 .divee-icon-site {
@@ -612,7 +616,7 @@
   justify-content: center;
   background: #f3f4f6;
   border-radius: 50%;
-  color: #A389E0;
+  color: var(--divee-color-secondary);
 }
 
 .divee-empty-icon img {
@@ -686,7 +690,7 @@
 }
 
 .divee-message-user .divee-message-content {
-  background: linear-gradient(135deg, #68E5FD 0%, #A389E0 100%);
+  background: linear-gradient(135deg, var(--divee-color-primary) 0%, var(--divee-color-secondary) 100%);
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -699,7 +703,7 @@
 }
 
 .divee-cursor {
-  color: #68E5FD;
+  color: var(--divee-color-primary);
   flex-wrap: wrap;-blink 1s infinite;
   margin-left: 2px;
 }
@@ -738,7 +742,7 @@
 .divee-widget .divee-input {
   flex: 1 !important;
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #68E5FD, #A389E0) border-box !important;
+              linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box !important;
   border: 2px solid transparent !important;
   border-radius: 40px !important;
   padding: 10px 22px !important;
@@ -761,7 +765,7 @@
 
 .divee-widget .divee-input:focus {
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #68E5FD, #FD3C4F) border-box !important;
+              linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box !important;
   border: 2px solid transparent !important;
   box-shadow: 0 4px 12px rgba(104, 229, 253, 0.15),
               0 2px 4px rgba(163, 137, 224, 0.08) !important;
@@ -772,7 +776,7 @@
 }
 
 .divee-send {
-  background: linear-gradient(135deg, #68E5FD 0%, #A389E0 100%);
+  background: linear-gradient(135deg, var(--divee-color-primary) 0%, var(--divee-color-secondary) 100%);
   color: white;
   border: none;
   border-radius: 50%;
@@ -873,11 +877,11 @@
   
   /* Border & Background */
   border: 1px solid #e5e7eb;
-  border-left: 3px solid #A389E0;
+  border-left: 3px solid var(--divee-color-secondary);
   border-radius: 7px;
   background: linear-gradient(135deg, 
-    rgba(104, 229, 253, 0.03) 0%, 
-    rgba(163, 137, 224, 0.05) 100%);
+    color-mix(in srgb, var(--divee-color-primary) 3%, transparent) 0%, 
+    color-mix(in srgb, var(--divee-color-secondary) 5%, transparent) 100%);
   
   /* Shadow */
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
@@ -904,7 +908,7 @@
   .divee-suggestion-card:hover {
     transform: translateY(-2px) scale(1.01);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-    border-left-color: #68E5FD;
+    border-left-color: var(--divee-color-primary);
   }
 }
 
@@ -1162,7 +1166,7 @@
 
 .divee-content::-webkit-scrollbar-thumb,
 .divee-chat::-webkit-scrollbar-thumb {
-  background: #A389E0;
+  background: var(--divee-color-secondary);
   border-radius: 8px;
 }
 
