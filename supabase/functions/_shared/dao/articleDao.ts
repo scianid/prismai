@@ -20,13 +20,23 @@ export async function insertArticle(url: string,
     title: string,
     content: string,
     projectId: string,
-    supabase: any) {
+    supabase: any,
+    metadata?: { image_url?: string | null; og_image?: string | null; created_at?: string }) {
+    
+    const cacheData: any = {
+        created_at: metadata?.created_at || new Date().toISOString()
+    };
+    
+    // Add image metadata if provided
+    if (metadata?.image_url) cacheData.image_url = metadata.image_url;
+    if (metadata?.og_image) cacheData.og_image = metadata.og_image;
+    
     const article = {
         unique_id: url + projectId,
         url,
         title,
         content,
-        cache: {},
+        cache: cacheData,
         project_id: projectId
     };
 

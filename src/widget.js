@@ -27,7 +27,9 @@
                 suggestions: [],
                 messages: [],
                 serverConfig: null,
-                conversationId: null
+                conversationId: null,
+                aiResponseCount: 0,
+                suggestionsSuppressed: false
             };
 
             this.elements = {};
@@ -40,12 +42,26 @@
                 extracted: false
             };
 
+            // Check if suggestions are suppressed for this session
+            this.checkSuggestionsSuppression();
+
             this.init();
         }
 
         isDebugMode() {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get('diveeDebug') === 'true';
+        }
+
+        checkSuggestionsSuppression() {
+            const key = `divee_suggestions_suppressed_${window.location.href}`;
+            this.state.suggestionsSuppressed = sessionStorage.getItem(key) === 'true';
+        }
+
+        suppressSuggestions() {
+            const key = `divee_suggestions_suppressed_${window.location.href}`;
+            sessionStorage.setItem(key, 'true');
+            this.state.suggestionsSuppressed = true;
         }
 
         log(...args) {
@@ -1156,6 +1172,170 @@
             const messageDiv = this.elements.expandedView.querySelector(`[data-message-id="${messageId}"]`);
             const cursor = messageDiv?.querySelector('.divee-cursor');
             if (cursor) cursor.remove();
+
+            // Increment AI response count and check if we should show a suggestion
+            this.state.aiResponseCount++;
+            await this.maybeShowSuggestionCard();
+        }
+
+        async maybeShowSuggestionCard() {
+            // Show suggestion card after every 2nd AI response (#2, #4, #6, #8...)
+            if (!this.state.suggestionsSuppressed && this.state.aiResponseCount % 2 === 0) {
+                await this.showSuggestionCard();
+            }
+        }
+
+        async fetchSuggestedArticle() {
+            const payload = {
+                projectId: this.config.projectId,
+                currentUrl: this.contentCache.url,
+                conversationId: this.state.conversationId
+            };
+
+            try {
+                const response = await fetch(`${this.config.apiBaseUrl}/suggested-articles`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Suggested articles request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.suggestion || null;
+            } catch (error) {
+                console.error('[Divee] Failed to fetch suggested article:', error);
+                return null;
+            }
+        }
+
+        async showSuggestionCard() {
+            const suggestion = await this.fetchSuggestedArticle();
+            
+            // Don't show card if no suggestions available
+            if (!suggestion) return;
+
+            const messagesContainer = this.elements.expandedView.querySelector('.divee-messages');
+            const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
+            
+            const cardId = `suggestion-${Date.now()}`;
+            const card = this.createSuggestionCard(suggestion, cardId);
+            messagesContainer.appendChild(card);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Track analytics
+            this.trackEvent('suggestion_shown', {
+                article_id: suggestion.unique_id,
+                conversation_id: this.state.conversationId,
+                position_in_chat: this.state.aiResponseCount
+            });
+        }
+
+        createSuggestionCard(suggestion, cardId) {
+            const card = document.createElement('div');
+            card.className = 'divee-suggestion-card';
+            card.setAttribute('data-card-id', cardId);
+            card.setAttribute('role', 'link');
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('aria-label', `Suggested article: ${suggestion.title}`);
+
+            const imageUrl = suggestion.image_url || 'https://via.placeholder.com/80x100/E5E7EB/6B7280?text=No+Image';
+            
+            card.innerHTML = `
+                <button class="divee-suggestion-dismiss" aria-label="Dismiss suggestion">✕</button>
+                <div class="divee-suggestion-image">
+                    <img src="${imageUrl}" alt="${suggestion.title}" />
+                </div>
+                <div class="divee-suggestion-text">
+                    <div class="divee-suggestion-label">DIVE DEEPER...</div>
+                    <div class="divee-suggestion-title">${suggestion.title}</div>
+                </div>
+            `;
+
+            // Handle card click (open article)
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.divee-suggestion-dismiss')) {
+                    this.trackEvent('suggestion_clicked', {
+                        article_id: suggestion.unique_id,
+                        conversation_id: this.state.conversationId,
+                        position_in_chat: this.state.aiResponseCount
+                    });
+                    window.open(suggestion.url, '_blank');
+                }
+            });
+
+            // Handle Enter/Space for accessibility
+            card.addEventListener('keydown', (e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.divee-suggestion-dismiss')) {
+                    e.preventDefault();
+                    this.trackEvent('suggestion_clicked', {
+                        article_id: suggestion.unique_id,
+                        conversation_id: this.state.conversationId,
+                        position_in_chat: this.state.aiResponseCount
+                    });
+                    window.open(suggestion.url, '_blank');
+                }
+            });
+
+            // Handle dismiss button
+            const dismissBtn = card.querySelector('.divee-suggestion-dismiss');
+            dismissBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.trackEvent('suggestion_x_clicked', {
+                    article_id: suggestion.unique_id,
+                    conversation_id: this.state.conversationId,
+                    position_in_chat: this.state.aiResponseCount
+                });
+                this.showDismissalConfirmation(card, cardId, suggestion);
+            });
+
+            return card;
+        }
+
+        showDismissalConfirmation(card, cardId, suggestion) {
+            // Transform card to confirmation state
+            card.classList.add('divee-suggestion-dismissing');
+            card.innerHTML = `
+                <div class="divee-suggestion-confirm">
+                    <div class="divee-suggestion-confirm-title">Don't show suggestions in this chat?</div>
+                    <div class="divee-suggestion-confirm-subtitle">(You'll miss related articles)</div>
+                    <div class="divee-suggestion-confirm-actions">
+                        <button class="divee-btn-ghost divee-cancel-dismiss">Cancel</button>
+                        <button class="divee-btn-primary divee-confirm-dismiss">Yes, hide them</button>
+                    </div>
+                </div>
+            `;
+
+            // Handle cancel
+            const cancelBtn = card.querySelector('.divee-cancel-dismiss');
+            cancelBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.trackEvent('suggestion_dismissed_cancelled', {
+                    article_id: suggestion.unique_id,
+                    conversation_id: this.state.conversationId
+                });
+                // Remove the card
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 200);
+            });
+
+            // Handle confirm
+            const confirmBtn = card.querySelector('.divee-confirm-dismiss');
+            confirmBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.trackEvent('suggestion_dismissed_confirmed', {
+                    article_id: suggestion.unique_id,
+                    conversation_id: this.state.conversationId
+                });
+                this.suppressSuggestions();
+                // Remove the card
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 200);
+            });
         }
 
         autoResizeTextarea(textarea) {

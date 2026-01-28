@@ -88,9 +88,9 @@ Deno.serve(async (req: Request) => {
     }
 
     // Check conversation message limit
-    if (conversation.message_count >= 20) {
+    if (conversation.message_count >= 200) {
       return new Response(
-        JSON.stringify({ error: 'Conversation limit reached', limit: 20 }),
+        JSON.stringify({ error: 'Conversation limit reached', limit: 200 }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

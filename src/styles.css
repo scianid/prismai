@@ -829,6 +829,314 @@
   }
 }
 
+@keyframes slideInLTR {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRTL {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ============================================
+   SUGGESTION CARD - BASE STYLES
+   ============================================ */
+
+.divee-suggestion-card {
+  /* Layout */
+  display: flex;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  padding: 16px;
+  margin: 12px 0;
+  
+  /* Border & Background */
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f3f4f6;
+  
+  /* Shadow */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  
+  /* Interaction */
+  cursor: pointer;
+  transition: all 200ms ease-out;
+  
+  /* Animation */
+  animation: slideInLTR 300ms ease-out;
+  
+  /* Reset */
+  box-sizing: border-box;
+  outline: none;
+}
+
+/* RTL entrance animation */
+[dir="rtl"] .divee-suggestion-card {
+  animation: slideInRTL 300ms ease-out;
+}
+
+/* Hover state (desktop only) */
+@media (hover: hover) {
+  .divee-suggestion-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Focus state (keyboard navigation) */
+.divee-suggestion-card:focus {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
+/* Active state (click feedback on mobile) */
+.divee-suggestion-card:active {
+  transform: translateY(0);
+  opacity: 0.9;
+}
+
+/* ============================================
+   IMAGE
+   ============================================ */
+
+.divee-suggestion-image {
+  /* Layout */
+  width: 80px;
+  height: 100%;
+  flex-shrink: 0;
+  
+  /* Position */
+  margin-right: 16px;
+  
+  /* Border */
+  border-radius: 8px;
+  overflow: hidden;
+  
+  /* Fallback */
+  background: #E5E7EB;
+}
+
+.divee-suggestion-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* Mobile: Smaller image */
+@media (max-width: 400px) {
+  .divee-suggestion-image {
+    width: 60px;
+    margin-right: 12px;
+  }
+}
+
+/* ============================================
+   TEXT CONTENT
+   ============================================ */
+
+.divee-suggestion-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-width: 0; /* Allow text truncation */
+}
+
+/* Label */
+.divee-suggestion-label {
+  font-size: 8px;
+  font-weight: 500;
+  color: #6B7280;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+/* RTL text alignment */
+[dir="rtl"] .divee-suggestion-label {
+  text-align: right;
+  direction: rtl;
+}
+
+/* Title */
+.divee-suggestion-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1F2937;
+  line-height: 1.4;
+  
+  /* Truncation */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: calc(1.4em * 3);
+  word-break: break-word;
+}
+
+/* RTL text alignment */
+[dir="rtl"] .divee-suggestion-title {
+  text-align: right;
+  direction: rtl;
+}
+
+/* Mobile: Smaller title, 2 lines max */
+@media (max-width: 400px) {
+  .divee-suggestion-title {
+    font-size: 14px;
+    -webkit-line-clamp: 2;
+    max-height: calc(1.4em * 2);
+  }
+}
+
+/* ============================================
+   DISMISS BUTTON (X)
+   ============================================ */
+
+.divee-suggestion-dismiss {
+  /* Position */
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  
+  /* Size */
+  width: 20px;
+  height: 20px;
+  
+  /* Style */
+  color: #9CA3AF;
+  font-size: 16px;
+  background: transparent;
+  border: none;
+  
+  /* Interaction */
+  cursor: pointer;
+  transition: color 150ms ease;
+  
+  /* Layout */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  
+  /* Layer */
+  z-index: 10;
+}
+
+.divee-suggestion-dismiss:hover {
+  color: #374151;
+}
+
+.divee-suggestion-dismiss:focus {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Note: X button does NOT mirror in RTL - always top-right */
+
+/* ============================================
+   DISMISSAL CONFIRMATION STATE
+   ============================================ */
+
+.divee-suggestion-dismissing {
+  /* Override card layout for confirmation UI */
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+}
+
+.divee-suggestion-dismissing:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.divee-suggestion-confirm {
+  text-align: center;
+}
+
+.divee-suggestion-confirm-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0 0 4px 0;
+}
+
+.divee-suggestion-confirm-subtitle {
+  font-size: 13px;
+  color: #6B7280;
+  font-style: italic;
+  margin: 0 0 20px 0;
+}
+
+.divee-suggestion-confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* Cancel button (ghost) */
+.divee-btn-ghost {
+  padding: 8px 16px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  background: transparent;
+  color: #6B7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.divee-btn-ghost:hover {
+  background: #F9FAFB;
+}
+
+.divee-btn-ghost:focus {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
+/* Yes, hide them button (primary) */
+.divee-btn-primary {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #3B82F6;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.divee-btn-primary:hover {
+  background: #2563EB; /* 10% darker */
+}
+
+.divee-btn-primary:focus {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
 /* Scrollbar styling */
 .divee-content::-webkit-scrollbar,
 .divee-chat::-webkit-scrollbar {
