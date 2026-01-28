@@ -24,7 +24,7 @@
   position: fixed !important;
   z-index: 999999 !important;
   margin: 0 !important;
-  max-width: 400px !important;
+  max-width: 500px !important;
   width: 400px !important;
 }
 
@@ -38,7 +38,7 @@
 
 /* Floating expanded state - chat window */
 .divee-widget-floating[data-state="expanded"] {
-  width: 400px !important;
+  width: 500px !important;
   height: auto !important;
   max-height: 90vh !important;
   border-radius: 16px !important;
@@ -281,9 +281,9 @@
 .divee-header {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-  padding: 20px 24px 12px 24px;
+  gap: 0px;
+  margin-bottom: 8px;
+  padding: 16px 20px 10px 20px;
   border-bottom: 2px solid transparent;
   background: linear-gradient(white, white) padding-box,
               linear-gradient(135deg, #68E5FD, #A389E0) border-box;
@@ -306,11 +306,14 @@
 }
 
 .divee-powered-by {
-  font-size: 11px;
+  font-size: 12px;
   color: #9ca3af;
   text-decoration: none;
-  padding: 0 4px;
+  padding: 0 6px;
   display: inline-block;
+  margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .divee-powered-by:hover {
@@ -350,6 +353,10 @@
   font-size: 16px;
   color: #1f2937;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .divee-close {
@@ -434,7 +441,7 @@
   padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 4px;
 }
 
 /* Suggestions */
@@ -562,11 +569,11 @@
 
 /* Chat Messages */
 .divee-chat {
-  height: 240px;
+  height: 280px;
   overflow-y: scroll !important;
   overflow-x: hidden;
   scroll-behavior: smooth;
-  margin-bottom: 16px;
+  margin-bottom: 2px;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 12px;
@@ -1226,7 +1233,7 @@
   
   .divee-widget-floating[data-state="expanded"] {
     width: calc(100vw - 16px) !important;
-    max-width: 400px !important;
+    max-width: 500px !important;
     height: auto !important;
     max-height: 70vh !important;
     bottom: 8px !important;
@@ -1269,4 +1276,94 @@
 
 .divee-widget[dir="rtl"] .divee-search-container-collapsed:hover .divee-send-icon-collapsed {
   transform: scaleX(-1) translateX(-2px) scale(1.15);
+}
+
+/* Mobile-specific optimizations for chat window width */
+@media (max-width: 768px) {
+  /* Reduce content padding on mobile */
+  .divee-widget-floating .divee-content {
+    padding: 6px !important;
+    gap: 10px !important;
+  }
+  
+  /* Reduce chat container padding and margins */
+  .divee-widget-floating .divee-chat {
+    padding: 6px !important;
+    margin-bottom: 2px !important;
+  }
+  
+  /* Reduce message gap */
+  .divee-widget-floating .divee-messages {
+    gap: 8px !important;
+  }
+  
+  /* Increase message width to use more space */
+  .divee-widget-floating .divee-message {
+    max-width: 92% !important;
+  }
+  
+  /* Reduce message content padding */
+  .divee-widget-floating .divee-message-content {
+    padding: 8px 10px !important;
+  }
+  
+  /* Reduce header padding */
+  .divee-widget-floating .divee-header {
+    padding: 12px 8px 8px 8px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  /* Adjust powered-by font size on mobile */
+  .divee-widget-floating .divee-powered-by {
+    font-size: 12px !important;
+    padding: 0 4px !important;
+  }
+  
+  /* Make close button smaller on mobile */
+  .divee-widget-floating .divee-close {
+    font-size: 18px !important;
+    padding: 2px 6px !important;
+  }
+  
+  /* Reduce title font on mobile */
+  .divee-widget-floating .divee-title {
+    font-size: 14px !important;
+  }
+  
+  /* Reduce header-top gap on mobile */
+  .divee-widget-floating .divee-header-top {
+    gap: 8px !important;
+  }
+  
+  /* Reduce icon size on mobile */
+  .divee-widget-floating .divee-icon-site {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  
+  /* Reduce empty state padding */
+  .divee-widget-floating .divee-empty-state {
+    padding: 12px !important;
+  }
+  
+  /* Reduce input container padding */
+  .divee-widget-floating .divee-input-container {
+    padding: 6px 0 !important;
+    gap: 8px !important;
+    margin-left: 5px !important;
+    margin-right: 5px !important;
+  }
+  
+  /* Reduce suggestions dropdown padding */
+  .divee-widget-floating .divee-suggestions-input {
+    margin-bottom: 8px !important;
+  }
+  
+  .divee-widget-floating .divee-suggestions-list {
+    padding: 6px !important;
+  }
+  
+  .divee-widget-floating .divee-suggestion {
+    padding: 8px 10px !important;
+  }
 }

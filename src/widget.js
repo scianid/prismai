@@ -536,11 +536,9 @@
                             <img class="divee-icon-site" src="${config.icon_url}" alt="Site icon" />
                         </div>
                         <span class="divee-title">${config.client_name}</span>
+                        <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
                         <button class="divee-close" aria-label="Close">✕</button>
                     </div>
-                </div>
-                <div class="divee-powered-by-wrapper">
-                    <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
                 </div>
                 <div class="divee-content">
                     <div class="divee-chat">
