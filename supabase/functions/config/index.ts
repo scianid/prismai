@@ -4,7 +4,7 @@ import { logImpression } from '../_shared/analytics.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { supabaseClient } from "../_shared/supabaseClient.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
-import { getProjectById } from "../_shared/dao/projectDao.ts";
+import { getProjectById, getProjectConfigById } from "../_shared/dao/projectDao.ts";
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -31,7 +31,11 @@ Deno.serve(async (req: Request) => {
 
     const supabase = await supabaseClient();
 
-    const project = await getProjectById(projectKey, supabase);
+    // Fetch project and project_config in parallel
+    const [project, projectConfig] = await Promise.all([
+      getProjectById(projectKey, supabase),
+      getProjectConfigById(projectKey, supabase)
+    ]);
 
     const requestUrl = getRequestOriginUrl(req);
     if (!isAllowedOrigin(requestUrl, project.allowed_urls)) 
@@ -76,7 +80,11 @@ Deno.serve(async (req: Request) => {
       display_mode: project.display_mode || 'anchored',
       display_position: project.display_position || 'bottom-right',
       article_class: project.article_class || null,
-      widget_container_class: project.widget_container_class || null
+      widget_container_class: project.widget_container_class || null,
+      // Merge project_config fields (e.g., ad tag ID)
+      ...(projectConfig && {
+        ad_tag_id: projectConfig.ad_tag_id || null
+      })
     };
 
     return successResp(config);
