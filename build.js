@@ -54,11 +54,10 @@ ${widgetJs}
 })();
 `;
 
-  // 4. Minify JS with console stripping
+  // 4. Minify JS (keep console for debug mode)
   const result = await esbuild.transform(combinedJs, { 
     loader: 'js', 
     minify: true,
-    drop: ['console', 'debugger'],  // Remove console.log and debugger statements
     target: 'es2020'  // Modern browsers
   });
 

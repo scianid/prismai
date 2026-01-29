@@ -121,6 +121,24 @@
 
             this.log('[Divee DEBUG] Initializing Google Ads...');
             const self = this; // Capture widget instance
+            
+            // Get ad tag ID from config or use default fallback
+            // Server sends only the second number (e.g., "227399588")
+            const defaultAdTagId = '227399588';
+            const adTagId = this.state.serverConfig?.ad_tag_id || defaultAdTagId;
+            
+            // First numbers differ by platform
+            const desktopFirstId = '23335681243';
+            const mobileFirstId = '23335681369';
+            
+            this.log('[Divee DEBUG] Using ad tag ID:', adTagId);
+            
+            // Build ad paths: /{firstId},{adTagId}/Divee.AI/{platform}/{ad_name}
+            const desktopAdPath = `/${desktopFirstId},${adTagId}/Divee.AI/desktop/Divee.AI_banner`;
+            const mobileAdPath = `/${mobileFirstId},${adTagId}/Divee.AI/mobileweb/Divee.AI_cube`;
+            this.log('[Divee DEBUG] Desktop ad path:', desktopAdPath);
+            this.log('[Divee DEBUG] Mobile ad path:', mobileAdPath);
+            
             window.googletag = window.googletag || { cmd: [] };
             window.googletag._initialized_by_divee = true;
             const gptScript = document.createElement('script');
@@ -146,7 +164,7 @@
                 self.log('[Divee DEBUG] Defining ad slots...');
 
                 // Collapsed view ads
-                const desktopSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'div-gpt-ad-1768979426842-0');
+                const desktopSlot = googletag.defineSlot(desktopAdPath, [[650, 100], [728, 90]], 'div-gpt-ad-1768979426842-0');
                 self.log('[Divee DEBUG] Desktop slot result:', desktopSlot);
                 if (desktopSlot) {
                     desktopSlot.addService(googletag.pubads());
@@ -155,7 +173,7 @@
                     console.error('[Divee] Failed to define desktop ad slot');
                 }
 
-                const mobileSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'div-gpt-ad-1768979511037-0');
+                const mobileSlot = googletag.defineSlot(mobileAdPath, [[336, 280], [300, 250]], 'div-gpt-ad-1768979511037-0');
                 self.log('[Divee DEBUG] Mobile slot result:', mobileSlot);
                 if (mobileSlot) {
                     mobileSlot.addService(googletag.pubads());
@@ -165,7 +183,7 @@
                 }
 
                 // Expanded view ads
-                const desktopSlotExpanded = googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'div-gpt-ad-expanded-desktop');
+                const desktopSlotExpanded = googletag.defineSlot(desktopAdPath, [[650, 100], [728, 90]], 'div-gpt-ad-expanded-desktop');
                 self.log('[Divee DEBUG] Expanded desktop slot result:', desktopSlotExpanded);
                 if (desktopSlotExpanded) {
                     desktopSlotExpanded.addService(googletag.pubads());
@@ -174,7 +192,7 @@
                     console.error('[Divee] Failed to define expanded desktop ad slot');
                 }
 
-                const mobileSlotExpanded = googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'div-gpt-ad-expanded-mobile');
+                const mobileSlotExpanded = googletag.defineSlot(mobileAdPath, [[336, 280], [300, 250]], 'div-gpt-ad-expanded-mobile');
                 self.log('[Divee DEBUG] Expanded mobile slot result:', mobileSlotExpanded);
                 if (mobileSlotExpanded) {
                     mobileSlotExpanded.addService(googletag.pubads());
@@ -198,11 +216,11 @@
             // Initialize Analytics IDs
             this.getAnalyticsIds();
 
-            // Initialize Google Ads
-            this.initGoogleAds();
-
-            // Load server configuration
+            // Load server configuration first (needed for ad_tag_id)
             await this.loadServerConfig();
+
+            // Initialize Google Ads (after config is loaded to get ad_tag_id)
+            this.initGoogleAds();
 
             if (!this.state.serverConfig) {
                 this.log('[Divee] Widget disabled due to config load failure');
