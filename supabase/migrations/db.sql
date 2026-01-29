@@ -23,6 +23,15 @@ CREATE TABLE public.account_collaborator (
   CONSTRAINT account_collaborator_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT account_collaborator_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES auth.users(id)
 );
+CREATE TABLE public.admin_users (
+  user_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  created_by uuid,
+  notes text,
+  CONSTRAINT admin_users_pkey PRIMARY KEY (user_id),
+  CONSTRAINT admin_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT admin_users_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+);
 CREATE TABLE public.analytics_events (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   project_id text NOT NULL,
@@ -58,6 +67,7 @@ CREATE TABLE public.article (
   cache jsonb,
   project_id text NOT NULL,
   unique_id text NOT NULL UNIQUE,
+  image_url text,
   CONSTRAINT article_pkey PRIMARY KEY (unique_id)
 );
 CREATE TABLE public.conversations (
@@ -73,6 +83,7 @@ CREATE TABLE public.conversations (
   last_message_at timestamp with time zone DEFAULT now(),
   message_count integer DEFAULT 0,
   total_chars integer DEFAULT 0,
+  suggestion_index integer DEFAULT 0,
   CONSTRAINT conversations_pkey PRIMARY KEY (id),
   CONSTRAINT conversations_article_unique_id_fkey FOREIGN KEY (article_unique_id) REFERENCES public.article(unique_id)
 );
@@ -90,7 +101,6 @@ CREATE TABLE public.freeform_qa (
   CONSTRAINT freeform_qa_article_unique_id_fkey FOREIGN KEY (article_unique_id) REFERENCES public.article(unique_id)
 );
 CREATE TABLE public.project (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   direction USER-DEFINED NOT NULL,
   language text NOT NULL,
@@ -100,13 +110,29 @@ CREATE TABLE public.project (
   highlight_color ARRAY,
   show_ad boolean NOT NULL,
   input_text_placeholders ARRAY NOT NULL,
-  project_id text DEFAULT gen_random_uuid() UNIQUE,
+  project_id text NOT NULL DEFAULT gen_random_uuid() UNIQUE,
   allowed_urls ARRAY,
   account_id uuid DEFAULT gen_random_uuid(),
   display_mode USER-DEFINED NOT NULL DEFAULT 'anchored'::display_mode,
   display_position USER-DEFINED NOT NULL DEFAULT 'bottom-right'::display_position,
   article_class text DEFAULT '.article'::text,
   widget_container_class text,
-  CONSTRAINT project_pkey PRIMARY KEY (id),
+  CONSTRAINT project_pkey PRIMARY KEY (project_id),
   CONSTRAINT project_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.account(id)
+);
+CREATE TABLE public.project_config (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  project_id text NOT NULL UNIQUE,
+  ad_tag_id text,
+  ad_tag_id_locked boolean DEFAULT false,
+  ad_tag_id_updated_at timestamp with time zone,
+  ad_tag_id_updated_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  deleted_by uuid,
+  CONSTRAINT project_config_pkey PRIMARY KEY (id),
+  CONSTRAINT project_config_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(project_id),
+  CONSTRAINT project_config_ad_tag_id_updated_by_fkey FOREIGN KEY (ad_tag_id_updated_by) REFERENCES auth.users(id),
+  CONSTRAINT project_config_deleted_by_fkey FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
 );
