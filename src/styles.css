@@ -1243,7 +1243,7 @@
     width: calc(100vw - 16px) !important;
     max-width: 500px !important;
     height: auto !important;
-    max-height: 95vh !important;
+    max-height: 105vh !important;
     bottom: 8px !important;
     border-radius: 16px !important;
   }
@@ -1257,7 +1257,7 @@
   }
   
   .divee-widget-floating .divee-expanded {
-    max-height: 95vh !important;
+    max-height: 105vh !important;
     height: auto !important;
     border-radius: 16px !important;
   }
@@ -1290,7 +1290,7 @@
 @media (max-width: 768px) {
   /* Ensure chat has minimum usable height on mobile regardless of ad size */
   .divee-chat {
-    min-height: 200px !important;
+    min-height: 220px !important;
     height: auto !important;
     flex: 1 !important;
   }
