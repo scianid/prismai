@@ -118,6 +118,19 @@ Deno.serve(async (req: Request) => {
     });
 
     const cacheSuggestions = extractCachedSuggestions(article);
+    const cachedItem = cacheSuggestions?.find((s) => s.id === questionId);
+    const questionType: 'suggestion' | 'custom' = cachedItem ? 'suggestion' : 'custom';
+    // Track question_asked event
+    logEvent(supabase, {
+      projectId,
+      visitorId: visitor_id,
+      sessionId: session_id
+    }, `${questionType}_question_asked`, undefined, {
+      type: questionType,
+      question: question,
+      question_id: questionId,
+      conversation_id: conversation.id
+    });
 
     // @ts-ignore
     const allowFreeForm = Deno.env.get('ALLOW_FREEFORM_ASK') === 'true';
@@ -125,9 +138,6 @@ Deno.serve(async (req: Request) => {
     // If no cache and no freeform, we can't do anything
     if (!cacheSuggestions && !allowFreeForm)
         return errorResp('No cached suggestions', 404);
-      
-
-    const cachedItem = cacheSuggestions?.find((s) => s.id === questionId);
     
     // If request entails a specific question ID not in cache, and freeform is disabled
     if (!cachedItem && !allowFreeForm)

@@ -128,14 +128,14 @@
             const adTagId = this.state.serverConfig?.ad_tag_id || defaultAdTagId;
             
             // First numbers differ by platform
-            const desktopFirstId = '23335681243';
-            const mobileFirstId = '23335681369';
+            const accountId = '22065771467';
             
+            // /23335681243,227399588/Divee.AI/desktop/Divee.AI_banner
             this.log('[Divee DEBUG] Using ad tag ID:', adTagId);
             
             // Build ad paths: /{firstId},{adTagId}/Divee.AI/{platform}/{ad_name}
-            const desktopAdPath = `/${desktopFirstId},${adTagId}/Divee.AI/desktop/Divee.AI_banner`;
-            const mobileAdPath = `/${mobileFirstId},${adTagId}/Divee.AI/mobileweb/Divee.AI_cube`;
+            const desktopAdPath = `/${accountId},${adTagId}/Divee.AI/desktop/Divee.AI_banner`;
+            const mobileAdPath = `/${accountId},${adTagId}/Divee.AI/mobileweb/Divee.AI_cube`;
             this.log('[Divee DEBUG] Desktop ad path:', desktopAdPath);
             this.log('[Divee DEBUG] Mobile ad path:', mobileAdPath);
             
@@ -165,6 +165,7 @@
 
                 // Collapsed view ads
                 const desktopSlot = googletag.defineSlot(desktopAdPath, [[650, 100], [728, 90]], 'div-gpt-ad-1768979426842-0');
+                //const desktopSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'div-gpt-ad-1768979426842-0');
                 self.log('[Divee DEBUG] Desktop slot result:', desktopSlot);
                 if (desktopSlot) {
                     desktopSlot.addService(googletag.pubads());
@@ -174,6 +175,7 @@
                 }
 
                 const mobileSlot = googletag.defineSlot(mobileAdPath, [[336, 280], [300, 250]], 'div-gpt-ad-1768979511037-0');
+                //const mobileSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'div-gpt-ad-1768979511037-0');
                 self.log('[Divee DEBUG] Mobile slot result:', mobileSlot);
                 if (mobileSlot) {
                     mobileSlot.addService(googletag.pubads());
@@ -184,6 +186,7 @@
 
                 // Expanded view ads
                 const desktopSlotExpanded = googletag.defineSlot(desktopAdPath, [[650, 100], [728, 90]], 'div-gpt-ad-expanded-desktop');
+                // const desktopSlotExpanded = googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'div-gpt-ad-expanded-desktop');
                 self.log('[Divee DEBUG] Expanded desktop slot result:', desktopSlotExpanded);
                 if (desktopSlotExpanded) {
                     desktopSlotExpanded.addService(googletag.pubads());
@@ -193,6 +196,7 @@
                 }
 
                 const mobileSlotExpanded = googletag.defineSlot(mobileAdPath, [[336, 280], [300, 250]], 'div-gpt-ad-expanded-mobile');
+                //const mobileSlotExpanded = googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'div-gpt-ad-expanded-mobile');
                 self.log('[Divee DEBUG] Expanded mobile slot result:', mobileSlotExpanded);
                 if (mobileSlotExpanded) {
                     mobileSlotExpanded.addService(googletag.pubads());
@@ -1051,8 +1055,6 @@
 
             // Add user message
             this.addMessage('user', question);
-
-            this.trackEvent('question_asked', { type, question, question_id: questionId });
 
             // Start streaming response
             this.state.isStreaming = true;
