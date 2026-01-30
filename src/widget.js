@@ -727,8 +727,24 @@
                         // Listen for ad slot rendering
                         self.log('[Divee DEBUG] Setting up event listeners...');
                         let emptyAdCount = 0;
+                        
+                        // Only track Divee's own ad slots
+                        const diveeAdSlotIds = [
+                            'div-gpt-ad-1768979426842-0',  // desktop collapsed
+                            'div-gpt-ad-1768979511037-0',  // mobile collapsed
+                            'div-gpt-ad-expanded-desktop', // desktop expanded
+                            'div-gpt-ad-expanded-mobile'   // mobile expanded
+                        ];
+                        
                         googletag.pubads().addEventListener('slotRenderEnded', function (event) {
                             const slotId = event.slot.getSlotElementId();
+                            
+                            // Ignore ads that aren't ours
+                            if (!diveeAdSlotIds.includes(slotId)) {
+                                self.log('[Divee DEBUG] Ignoring non-Divee ad slot:', slotId);
+                                return;
+                            }
+                            
                             const adElement = document.getElementById(slotId);
 
                             self.log('[Divee DEBUG] ====== AD RENDER EVENT ======');
