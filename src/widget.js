@@ -250,15 +250,12 @@
 
         async loadServerConfig() {
             try {
-                const serverConfig = await this.fetchServerConfig({
-                    client_id: this.config.projectId,
-                    title: this.contentCache.title || this.articleTitle,
-                    url: this.contentCache.url || this.articleUrl,
-                    article_content: this.contentCache.content || this.articleContent,
-                    visitor_id: this.state.visitorId,
-                    session_id: this.state.sessionId,
-                    referrer: document.referrer,
-                    user_agent: navigator.userAgent
+                const serverConfig = await this.fetchServerConfig(this.config.projectId);
+                
+                // Track impression separately
+                this.trackEvent('impression', {
+                    url: this.contentCache.url || window.location.href,
+                    referrer: document.referrer
                 });
 
                 this.state.serverConfig = serverConfig;
@@ -310,15 +307,13 @@
             }
         }
 
-        async fetchServerConfig(payload) {
+        async fetchServerConfig(projectId) {
             if (!this.config.apiBaseUrl) {
                 throw new Error('Missing apiBaseUrl');
             }
 
-            const response = await fetch(`${this.config.apiBaseUrl}/config`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+            const response = await fetch(`${this.config.apiBaseUrl}/config?projectId=${encodeURIComponent(projectId)}`, {
+                method: 'GET'
             });
 
             if (!response.ok) {

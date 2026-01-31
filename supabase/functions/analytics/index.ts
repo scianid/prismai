@@ -1,13 +1,14 @@
 // @ts-ignore
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { logEvent, type AnalyticsContext } from '../_shared/analytics.ts';
+import { logEvent, logImpression, type AnalyticsContext } from '../_shared/analytics.ts';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { supabaseClient } from '../_shared/supabaseClient.ts';
 import { getProjectById } from '../_shared/dao/projectDao.ts';
 
 // Allowed event types for analytics tracking
 const ALLOWED_EVENT_TYPES = [
+    'impression',
     'widget_loaded',
     'widget_expanded',
     'widget_collapsed',
@@ -78,14 +79,19 @@ serve(async (req: Request) => {
             projectId: project_id,
             visitorId: visitor_id,
             sessionId: session_id,
-            url: req.headers.get('referer') || undefined,
-            referrer: req.headers.get('referer') || undefined,
+            url: event_data?.url || req.headers.get('referer') || undefined,
+            referrer: event_data?.referrer || req.headers.get('referer') || undefined,
             userAgent: req.headers.get('user-agent') || undefined,
             ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
         };
 
-        // Log the event
-        await logEvent(supabase, context, event_type, event_label, event_data);
+        // Handle impression separately to use logImpression with geo enrichment
+        if (event_type === 'impression') {
+            await logImpression(supabase, context);
+        } else {
+            // Log the event
+            await logEvent(supabase, context, event_type, event_label, event_data);
+        }
 
         return new Response(
             JSON.stringify({ success: true }),

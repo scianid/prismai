@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
-import { logImpression } from '../_shared/analytics.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { supabaseClient } from "../_shared/supabaseClient.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
@@ -14,56 +13,24 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { projectId, 
-      client_id, 
-      visitor_id, 
-      session_id, 
-      url, 
-      referrer, 
-      user_agent 
-    } = await req.json();
+    // Get projectId from query params (GET request)
+    const url = new URL(req.url);
+    const projectId = url.searchParams.get('projectId') || url.searchParams.get('client_id');
 
-    // Use projectId or client_id
-    const projectKey = projectId || client_id;
-
-    if (!projectKey)
-      return errorResp('Missing projectId or client_id', 400);
+    if (!projectId)
+      return errorResp('Missing projectId', 400);
 
     const supabase = await supabaseClient();
 
     // Fetch project and project_config in parallel
     const [project, projectConfig] = await Promise.all([
-      getProjectById(projectKey, supabase),
-      getProjectConfigById(projectKey, supabase)
+      getProjectById(projectId, supabase),
+      getProjectConfigById(projectId, supabase)
     ]);
 
     const requestUrl = getRequestOriginUrl(req);
     if (!isAllowedOrigin(requestUrl, project.allowed_urls)) 
       return errorResp('Origin not allowed', 403);
-
-    // Resolve IP and Geo
-    let ip = req.headers.get('cf-connecting-ip') || req.headers.get('x-forwarded-for') || null;
-    if (ip && ip.includes(',')) {
-        ip = ip.split(',')[0].trim();
-    }
-
-    let country = req.headers.get('cf-ipcountry') || req.headers.get('x-vercel-ip-country') || null;
-    let city = req.headers.get('cf-ipcity') || req.headers.get('x-vercel-ip-city') || null;
-
-    // Track Impression (Async)
-    logImpression(supabase, {
-      projectId: projectKey,
-      visitorId: visitor_id,
-      sessionId: session_id,
-      url: url || getRequestOriginUrl(req),
-      referrer: referrer || req.headers.get('referer'),
-      userAgent: user_agent || req.headers.get('user-agent'),
-      ip: ip || undefined,
-      geo: {
-        country: country || undefined,
-        city: city || undefined
-      }
-    });
     
     // Map database fields to widget config format
     const config = {
