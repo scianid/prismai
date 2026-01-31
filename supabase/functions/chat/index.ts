@@ -129,7 +129,9 @@ Deno.serve(async (req: Request) => {
       type: questionType,
       question: question,
       question_id: questionId,
-      conversation_id: conversation.id
+      conversation_id: conversation.id,
+      article_url: url,
+      article_id: article?.unique_id || null
     });
 
     // @ts-ignore
