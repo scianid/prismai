@@ -1022,7 +1022,7 @@
             };
 
             try {
-                const response = await fetch(`${this.config.cachedBaseUrl}/suggestions`, {
+                const response = await fetch(`${this.config.nonCacheBaseUrl}/suggestions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
