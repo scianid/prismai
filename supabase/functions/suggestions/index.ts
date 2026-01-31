@@ -5,7 +5,7 @@ import { logEvent } from '../_shared/analytics.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { errorResp, successResp } from '../_shared/responses.ts';
 import { getProjectById } from '../_shared/dao/projectDao.ts';
-import { extractCachedSuggestions, getArticleById, insertArticle, updateArticleCache, updateArticleImage } from '../_shared/dao/articleDao.ts';
+import { extractCachedSuggestions, getArticleById, insertArticle, updateArticleCache } from '../_shared/dao/articleDao.ts';
 import { supabaseClient } from '../_shared/supabaseClient.ts';
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH } from "../_shared/constants.ts";
 
@@ -50,16 +50,6 @@ Deno.serve(async (req: Request) => {
 
     if (!article) {
       article = await insertArticle(url, title, content, projectId, supabase, metadata);
-    } else {
-      // Update existing article with image if missing
-      const needsImageUpdate = !article.image_url && metadata && (metadata.og_image || metadata.image_url);
-      
-      if (needsImageUpdate) {
-        console.log('suggestions: updating article with image');
-        const imageUrl = metadata.og_image || metadata.image_url;
-        await updateArticleImage(article, imageUrl!, supabase);
-        article.image_url = imageUrl;
-      }
     }
 
     // Return cached suggestions if available
