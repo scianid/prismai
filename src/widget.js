@@ -33,6 +33,15 @@
                 suggestionsSuppressed: false
             };
 
+            // Analytics batching
+            this.analyticsQueue = [];
+            this.analyticsFlushTimer = null;
+            this.analyticsConfig = {
+                maxBatchSize: 10,      // Flush when queue reaches this size
+                flushInterval: 3000,   // Flush after 3 seconds of inactivity
+                immediateEvents: ['widget_loaded', 'impression'] // Events to send immediately
+            };
+
             this.elements = {};
 
             // Cache for article content (extracted once)
@@ -240,6 +249,9 @@
 
             // Attach event listeners
             this.attachEventListeners();
+
+            // Setup analytics batch flush on page unload
+            this.setupPageUnloadFlush();
 
             // Track analytics
             this.trackEvent('widget_loaded', {
@@ -1436,21 +1448,9 @@
         setupAdClickTracking(adElement, slotId, eventData) {
             const self = this;
             
-            // Track clicks on the ad container
+            // Track clicks on the ad container (debug logging only, no analytics event)
             adElement.addEventListener('click', function(e) {
                 self.log('[Divee DEBUG] Ad clicked:', slotId);
-                
-                self.trackEvent('ad_click', {
-                    ad_unit: slotId,
-                    position: slotId.includes('expanded') ? 'expanded' : 'collapsed',
-                    size: eventData.size ? `${eventData.size[0]}x${eventData.size[1]}` : 'unknown',
-                    advertiser_id: eventData.advertiserId || null,
-                    creative_id: eventData.creativeId || null,
-                    line_item_id: eventData.lineItemId || null,
-                    click_x: e.clientX,
-                    click_y: e.clientY,
-                    timestamp: Date.now()
-                });
             });
             
             // Also track clicks on any links inside the ad (for additional granularity)
@@ -1471,7 +1471,7 @@
             }, 100);
         }
 
-        async trackEvent(eventName, data = {}) {
+        trackEvent(eventName, data = {}) {
             this.log('[Divee Analytics]', eventName, data);
             
             // Get visitor and session IDs from state (already initialized in init())
@@ -1490,18 +1490,74 @@
             }
             
             // Prepare event payload
-            const payload = {
+            const event = {
                 project_id: projectId,
                 visitor_id: visitorId,
                 session_id: sessionId,
                 event_type: eventName,
                 event_label: data.label || null,
-                event_data: data
+                event_data: data,
+                timestamp: Date.now()
             };
             
+            // Check if this event should be sent immediately
+            if (this.analyticsConfig.immediateEvents.includes(eventName)) {
+                this.sendAnalyticsBatch([event]);
+                return;
+            }
+            
+            // Add to queue
+            this.analyticsQueue.push(event);
+            this.log('[Divee Analytics] Queued event, queue size:', this.analyticsQueue.length);
+            
+            // Flush if queue is full
+            if (this.analyticsQueue.length >= this.analyticsConfig.maxBatchSize) {
+                this.flushAnalytics();
+                return;
+            }
+            
+            // Reset flush timer
+            this.scheduleAnalyticsFlush();
+        }
+
+        scheduleAnalyticsFlush() {
+            // Clear existing timer
+            if (this.analyticsFlushTimer) {
+                clearTimeout(this.analyticsFlushTimer);
+            }
+            
+            // Set new timer
+            this.analyticsFlushTimer = setTimeout(() => {
+                this.flushAnalytics();
+            }, this.analyticsConfig.flushInterval);
+        }
+
+        flushAnalytics() {
+            // Clear timer
+            if (this.analyticsFlushTimer) {
+                clearTimeout(this.analyticsFlushTimer);
+                this.analyticsFlushTimer = null;
+            }
+            
+            // Nothing to flush
+            if (this.analyticsQueue.length === 0) {
+                return;
+            }
+            
+            // Get events and clear queue
+            const events = [...this.analyticsQueue];
+            this.analyticsQueue = [];
+            
+            this.log('[Divee Analytics] Flushing batch of', events.length, 'events');
+            this.sendAnalyticsBatch(events);
+        }
+
+        sendAnalyticsBatch(events) {
+            if (events.length === 0) return;
+            
             try {
-                // Use fetch with keepalive for cross-origin reliability
                 const endpoint = `${this.config.nonCacheBaseUrl}/analytics`;
+                const payload = events.length === 1 ? events[0] : { batch: events };
                 
                 fetch(endpoint, {
                     method: 'POST',
@@ -1511,11 +1567,42 @@
                     body: JSON.stringify(payload),
                     keepalive: true
                 }).catch(err => {
-                    console.error('[Divee Analytics] Failed to send event:', err);
+                    console.error('[Divee Analytics] Failed to send batch:', err);
                 });
             } catch (err) {
-                console.error('[Divee Analytics] Error tracking event:', err);
+                console.error('[Divee Analytics] Error sending batch:', err);
             }
+        }
+
+        setupPageUnloadFlush() {
+            // Flush analytics on page unload
+            const flushOnUnload = () => {
+                if (this.analyticsQueue.length > 0) {
+                    const events = [...this.analyticsQueue];
+                    this.analyticsQueue = [];
+                    
+                    // Use sendBeacon for reliable delivery on page unload
+                    const endpoint = `${this.config.nonCacheBaseUrl}/analytics`;
+                    const payload = events.length === 1 ? events[0] : { batch: events };
+                    
+                    if (navigator.sendBeacon) {
+                        navigator.sendBeacon(endpoint, JSON.stringify(payload));
+                    } else {
+                        // Fallback to sync XHR (blocking but reliable)
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', endpoint, false);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        xhr.send(JSON.stringify(payload));
+                    }
+                }
+            };
+            
+            window.addEventListener('pagehide', flushOnUnload);
+            window.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    flushOnUnload();
+                }
+            });
         }
     }
 
