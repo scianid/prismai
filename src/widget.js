@@ -13,7 +13,8 @@
         constructor(config) {
             this.config = {
                 projectId: config.projectId,
-                apiBaseUrl: config.apiBaseUrl || 'http://localhost:3000/api/v1',
+                cachedBaseUrl: config.cachedBaseUrl || 'https://cdn.divee.ai/functions/v1',
+                nonCacheBaseUrl: config.nonCacheBaseUrl || 'https://srv.divee.ai/functions/v1',
                 // These will be populated from server config
                 displayMode: 'anchored',
                 floatingPosition: 'bottom-right',
@@ -308,11 +309,13 @@
         }
 
         async fetchServerConfig(projectId) {
-            if (!this.config.apiBaseUrl) {
-                throw new Error('Missing apiBaseUrl');
+            if (!this.config.cachedBaseUrl) {
+                throw new Error('Missing cachedBaseUrl');
             }
 
-            const response = await fetch(`${this.config.apiBaseUrl}/config?projectId=${encodeURIComponent(projectId)}`, {
+            const configUrl = `${this.config.cachedBaseUrl}/config?projectId=${encodeURIComponent(projectId)}`;
+
+            const response = await fetch(configUrl, {
                 method: 'GET'
             });
 
@@ -1019,7 +1022,7 @@
             };
 
             try {
-                const response = await fetch(`${this.config.apiBaseUrl}/suggestions`, {
+                const response = await fetch(`${this.config.cachedBaseUrl}/suggestions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -1177,7 +1180,7 @@
                 }
             };
 
-            const response = await fetch(`${this.config.apiBaseUrl}/chat`, {
+            const response = await fetch(`${this.config.nonCacheBaseUrl}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -1272,7 +1275,7 @@
             };
 
             try {
-                const response = await fetch(`${this.config.apiBaseUrl}/suggested-articles`, {
+                const response = await fetch(`${this.config.nonCacheBaseUrl}/suggested-articles`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -1498,7 +1501,7 @@
             
             try {
                 // Use fetch with keepalive for cross-origin reliability
-                const endpoint = `${this.config.apiBaseUrl}/analytics`;
+                const endpoint = `${this.config.nonCacheBaseUrl}/analytics`;
                 
                 fetch(endpoint, {
                     method: 'POST',
@@ -1529,7 +1532,8 @@
         scripts.forEach((script, index) => {
             const config = {
                 projectId: script.getAttribute('data-project-id'),
-                apiBaseUrl: "https://srv.divee.ai/functions/v1"
+                cachedBaseUrl: "https://cdn.divee.ai/functions/v1",
+                nonCacheBaseUrl: "https://srv.divee.ai/functions/v1"
             };
 
             // Show deprecation warnings if data attributes are used

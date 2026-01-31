@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { supabaseClient } from "../_shared/supabaseClient.ts";
-import { errorResp, successResp } from "../_shared/responses.ts";
+import { errorResp, successRespWithCache } from "../_shared/responses.ts";
 import { getProjectById, getProjectConfigById } from "../_shared/dao/projectDao.ts";
 
 // @ts-ignore
@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
       })
     };
 
-    return successResp(config);
+    return successRespWithCache(config);
     
   } catch (error) {
     console.error('Error:', error);

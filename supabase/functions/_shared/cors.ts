@@ -4,3 +4,8 @@ export const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
   'Access-Control-Expose-Headers': 'X-Conversation-Id',
 };
+
+// Minimal CORS headers for cacheable responses (no Vary-inducing headers)
+export const corsHeadersForCache = {
+  'Access-Control-Allow-Origin': '*',
+};
