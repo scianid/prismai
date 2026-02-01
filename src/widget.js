@@ -320,7 +320,7 @@
                 
                 // Always log overrides (not just in debug mode)
                 if (overrideDisplayMode || overrideDisplayPosition || overrideArticleClass || overrideContainerSelector) {
-                    console.log('[Divee] URL param overrides detected:', {
+                    this.log('[Divee] URL param overrides detected:', {
                         displayMode: overrideDisplayMode,
                         displayPosition: overrideDisplayPosition,
                         articleClass: overrideArticleClass,
@@ -330,7 +330,7 @@
                 
                 if (overrideDisplayMode) {
                     this.config.displayMode = overrideDisplayMode;
-                    console.log('[Divee] Display mode overridden by URL param:', overrideDisplayMode);
+                    this.log('[Divee] Display mode overridden by URL param:', overrideDisplayMode);
                 }
                 if (overrideDisplayPosition) {
                     // For floating mode positions (bottom-right, bottom-left, etc.)
@@ -339,19 +339,19 @@
                     if (['top', 'bottom'].includes(overrideDisplayPosition)) {
                         this.config.anchoredPosition = overrideDisplayPosition;
                     }
-                    console.log('[Divee] Display position overridden by URL param:', overrideDisplayPosition);
+                    this.log('[Divee] Display position overridden by URL param:', overrideDisplayPosition);
                 }
                 if (overrideArticleClass) {
                     this.config.articleClass = overrideArticleClass;
-                    console.log('[Divee] Article class overridden by URL param:', overrideArticleClass);
+                    this.log('[Divee] Article class overridden by URL param:', overrideArticleClass);
                 }
                 if (overrideContainerSelector) {
                     this.config.containerSelector = overrideContainerSelector;
-                    console.log('[Divee] Container selector overridden by URL param:', overrideContainerSelector);
+                    this.log('[Divee] Container selector overridden by URL param:', overrideContainerSelector);
                 }
                 
                 // Log final config after all overrides
-                console.log('[Divee] Final config after overrides:', {
+                this.log('[Divee] Final config after overrides:', {
                     displayMode: this.config.displayMode,
                     floatingPosition: this.config.floatingPosition,
                     anchoredPosition: this.config.anchoredPosition,
@@ -491,7 +491,7 @@
 
         createWidget() {
             // Debug: Log config values at widget creation time
-            console.log('[Divee] createWidget called with config:', {
+            this.log('[Divee] createWidget called with config:', {
                 displayMode: this.config.displayMode,
                 floatingPosition: this.config.floatingPosition,
                 anchoredPosition: this.config.anchoredPosition
@@ -504,11 +504,11 @@
             
             // Apply display mode
             if (this.config.displayMode === 'floating') {
-                console.log('[Divee] Applying floating mode with position:', this.config.floatingPosition);
+                this.log('[Divee] Applying floating mode with position:', this.config.floatingPosition);
                 container.classList.add('divee-widget-floating');
                 container.setAttribute('data-floating-position', this.config.floatingPosition);
             } else {
-                console.log('[Divee] Anchored mode, position:', this.config.anchoredPosition);
+                this.log('[Divee] Anchored mode, position:', this.config.anchoredPosition);
             }
 
             // Apply direction from config
@@ -710,7 +710,7 @@
         }
 
         insertWidget(container) {
-            console.log('[Divee] insertWidget called with config:', {
+            this.log('[Divee] insertWidget called with config:', {
                 displayMode: this.config.displayMode,
                 anchoredPosition: this.config.anchoredPosition,
                 containerSelector: this.config.containerSelector
@@ -720,7 +720,7 @@
 
             // For floating mode, always append to body
             if (this.config.displayMode === 'floating') {
-                console.log('[Divee] Floating mode: appending to body');
+                this.log('[Divee] Floating mode: appending to body');
                 document.body.appendChild(container);
                 this.displayAdsIfNeeded();
                 return;
@@ -762,17 +762,17 @@
 
             // Insert widget based on anchored position
             if (targetElement) {
-                console.log('[Divee] Inserting widget to target element, position:', this.config.anchoredPosition);
+                this.log('[Divee] Inserting widget to target element, position:', this.config.anchoredPosition);
                 if (this.config.anchoredPosition === 'top') {
-                    console.log('[Divee] Using prepend() for top position');
+                    this.log('[Divee] Using prepend() for top position');
                     targetElement.prepend(container);
                 } else {
-                    console.log('[Divee] Using appendChild() for bottom position');
+                    this.log('[Divee] Using appendChild() for bottom position');
                     targetElement.appendChild(container);
                 }
             } else {
                 // Final fallback: append to body if nothing found
-                console.log('[Divee] No suitable container found, appending to body as fallback');
+                this.log('[Divee] No suitable container found, appending to body as fallback');
                 if (this.config.anchoredPosition === 'top') {
                     document.body.prepend(container);
                 } else {
