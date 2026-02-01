@@ -176,13 +176,25 @@
                 self.log('[Divee DEBUG] === Inside googletag.cmd.push callback ===');
                 self.log('[Divee DEBUG] Defining ad slots...');
 
-                // Collapsed view ads
+                // Collapsed view ads - with responsive size mapping
+                const desktopSizeMapping = googletag.sizeMapping()
+                    .addSize([1024, 0], [[728, 90], [650, 100]])  // Desktop: standard banner sizes
+                    .addSize([768, 0], [[650, 100]])              // Tablet: slightly smaller
+                    .addSize([0, 0], [])                          // Mobile: don't show desktop ad
+                    .build();
+                
+                const mobileSizeMapping = googletag.sizeMapping()
+                    .addSize([768, 0], [])                        // Desktop/Tablet: don't show mobile ad
+                    .addSize([0, 0], [[300, 250], [336, 280]])    // Mobile: cube sizes
+                    .build();
+
                 const desktopSlot = googletag.defineSlot(desktopAdPath, [[650, 100], [728, 90]], 'div-gpt-ad-1768979426842-0');
                 //const desktopSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'div-gpt-ad-1768979426842-0');
                 self.log('[Divee DEBUG] Desktop slot result:', desktopSlot);
                 if (desktopSlot) {
+                    desktopSlot.defineSizeMapping(desktopSizeMapping);
                     desktopSlot.addService(googletag.pubads());
-                    self.log('[Divee DEBUG] ✓ Desktop ad slot defined:', desktopSlot.getSlotElementId());
+                    self.log('[Divee DEBUG] ✓ Desktop ad slot defined with size mapping:', desktopSlot.getSlotElementId());
                 } else {
                     console.error('[Divee] Failed to define desktop ad slot');
                 }
@@ -191,19 +203,21 @@
                 //const mobileSlot = googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'div-gpt-ad-1768979511037-0');
                 self.log('[Divee DEBUG] Mobile slot result:', mobileSlot);
                 if (mobileSlot) {
+                    mobileSlot.defineSizeMapping(mobileSizeMapping);
                     mobileSlot.addService(googletag.pubads());
-                    self.log('[Divee DEBUG] ✓ Mobile ad slot defined:', mobileSlot.getSlotElementId());
+                    self.log('[Divee DEBUG] ✓ Mobile ad slot defined with size mapping:', mobileSlot.getSlotElementId());
                 } else {
                     console.error('[Divee] Failed to define mobile ad slot');
                 }
 
-                // Expanded view ads
+                // Expanded view ads - with responsive size mapping
                 const desktopSlotExpanded = googletag.defineSlot(desktopAdPath, [[650, 100], [728, 90]], 'div-gpt-ad-expanded-desktop');
                 // const desktopSlotExpanded = googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'div-gpt-ad-expanded-desktop');
                 self.log('[Divee DEBUG] Expanded desktop slot result:', desktopSlotExpanded);
                 if (desktopSlotExpanded) {
+                    desktopSlotExpanded.defineSizeMapping(desktopSizeMapping);
                     desktopSlotExpanded.addService(googletag.pubads());
-                    self.log('[Divee DEBUG] ✓ Expanded desktop ad slot defined:', desktopSlotExpanded.getSlotElementId());
+                    self.log('[Divee DEBUG] ✓ Expanded desktop ad slot defined with size mapping:', desktopSlotExpanded.getSlotElementId());
                 } else {
                     console.error('[Divee] Failed to define expanded desktop ad slot');
                 }
@@ -212,8 +226,9 @@
                 //const mobileSlotExpanded = googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'div-gpt-ad-expanded-mobile');
                 self.log('[Divee DEBUG] Expanded mobile slot result:', mobileSlotExpanded);
                 if (mobileSlotExpanded) {
+                    mobileSlotExpanded.defineSizeMapping(mobileSizeMapping);
                     mobileSlotExpanded.addService(googletag.pubads());
-                    self.log('[Divee DEBUG] ✓ Expanded mobile ad slot defined:', mobileSlotExpanded.getSlotElementId());
+                    self.log('[Divee DEBUG] ✓ Expanded mobile ad slot defined with size mapping:', mobileSlotExpanded.getSlotElementId());
                 } else {
                     console.error('[Divee] Failed to define expanded mobile ad slot');
                 }
@@ -228,6 +243,15 @@
                     mobileScaling: 2.0        // Double margins on mobile for better UX
                 });
                 self.log('[Divee DEBUG] ✓ Lazy loading enabled');
+
+                // Enable Single Request Architecture (SRA) for faster loading and better fill
+                googletag.pubads().enableSingleRequest();
+                self.log('[Divee DEBUG] ✓ Single Request Architecture (SRA) enabled');
+
+                // Page-level targeting for better ad relevance and fill rates
+                googletag.pubads().setTargeting('content_type', 'article');
+                googletag.pubads().setTargeting('display_mode', self.config.displayMode || 'anchored');
+                self.log('[Divee DEBUG] ✓ Page-level targeting set');
 
                 googletag.enableServices();
                 self.log('[Divee DEBUG] ✓ Google Ads services enabled');

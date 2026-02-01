@@ -124,9 +124,9 @@ desktopSlot.defineSizeMapping(sizeMapping);
 |----------|---------------|--------|--------|--------|
 | 1 | Lazy Loading | Medium | High | ✅ Done |
 | 2 | SRA + slotRenderEnded listener | Low | High | ✅ Done |
-| 3 | Size Mapping | Medium | Medium | Pending |
+| 3 | Size Mapping | Medium | Medium | ✅ Done |
 | 4 | GPT Ready Check | Low | Medium | ✅ Done |
-| 5 | Page-Level Targeting | Medium | Medium | Pending |
+| 5 | Page-Level Targeting | Medium | Medium | ✅ Done |
 | 6 | Ad Refresh on Expand | Low | Low | ✅ Done |
 | 7 | Empty Slot Handling | Low | Low | ✅ Done |
 
