@@ -31,7 +31,9 @@
                 serverConfig: null,
                 conversationId: null,
                 aiResponseCount: 0,
-                suggestionsSuppressed: false
+                suggestionsSuppressed: false,
+                lastAdRefresh: 0,              // Timestamp of last ad refresh
+                expandedAdsDisplayed: false    // Track if expanded ads have been displayed
             };
 
             // Analytics batching
@@ -861,6 +863,13 @@
                                 emptyAdCount++;
                                 self.log('[Divee DEBUG] Ad slot hidden (empty):', slotId, `(${emptyAdCount}/2 empty)`);
 
+                                // Track unfilled ad impression for analytics
+                                self.trackEvent('ad_unfilled', {
+                                    ad_unit: slotId,
+                                    position: slotId.includes('expanded') ? 'expanded' : 'collapsed',
+                                    reason: 'no_fill'
+                                });
+
                                 // If both ads are empty, hide the entire ad slot container
                                 if (emptyAdCount === 2) {
                                     const adSlot = document.querySelector('.divee-ad-slot');
@@ -920,7 +929,12 @@
             }
 
             const self = this;
+            const now = Date.now();
+            const throttleInterval = 30000; // 30 seconds minimum between refreshes (Google policy)
+            const timeSinceLastRefresh = now - this.state.lastAdRefresh;
+            
             this.log('[Divee DEBUG] Displaying expanded view ads...');
+            this.log('[Divee DEBUG] Time since last refresh:', timeSinceLastRefresh, 'ms');
             
             googletag.cmd.push(function () {
                 self.log('[Divee DEBUG] Requesting expanded ad display...');
@@ -928,14 +942,41 @@
                 const desktopEl = document.getElementById('div-gpt-ad-expanded-desktop');
                 const mobileEl = document.getElementById('div-gpt-ad-expanded-mobile');
                 
-                if (desktopEl) {
-                    googletag.display('div-gpt-ad-expanded-desktop');
-                    self.log('[Divee DEBUG] ✓ Display called for expanded desktop ad');
+                // First time: just display the ads
+                if (!self.state.expandedAdsDisplayed) {
+                    if (desktopEl) {
+                        googletag.display('div-gpt-ad-expanded-desktop');
+                        self.log('[Divee DEBUG] ✓ Display called for expanded desktop ad');
+                    }
+                    
+                    if (mobileEl) {
+                        googletag.display('div-gpt-ad-expanded-mobile');
+                        self.log('[Divee DEBUG] ✓ Display called for expanded mobile ad');
+                    }
+                    
+                    self.state.expandedAdsDisplayed = true;
+                    self.state.lastAdRefresh = now;
+                    self.log('[Divee DEBUG] Expanded ads displayed for first time');
                 }
-                
-                if (mobileEl) {
-                    googletag.display('div-gpt-ad-expanded-mobile');
-                    self.log('[Divee DEBUG] ✓ Display called for expanded mobile ad');
+                // Subsequent expansions: refresh if throttle period has passed
+                else if (timeSinceLastRefresh >= throttleInterval) {
+                    // Get the slot objects for refresh
+                    const slots = googletag.pubads().getSlots().filter(slot => {
+                        const slotId = slot.getSlotElementId();
+                        return slotId === 'div-gpt-ad-expanded-desktop' || slotId === 'div-gpt-ad-expanded-mobile';
+                    });
+                    
+                    if (slots.length > 0) {
+                        googletag.pubads().refresh(slots);
+                        self.state.lastAdRefresh = now;
+                        self.log('[Divee DEBUG] ✓ Refreshed expanded ads (', slots.length, 'slots)');
+                        self.trackEvent('ad_refresh', {
+                            slots: slots.map(s => s.getSlotElementId()),
+                            time_since_last: timeSinceLastRefresh
+                        });
+                    }
+                } else {
+                    self.log('[Divee DEBUG] Skipping refresh - throttled (', throttleInterval - timeSinceLastRefresh, 'ms remaining)');
                 }
             });
         }
