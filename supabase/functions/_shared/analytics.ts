@@ -25,14 +25,16 @@ export async function logImpression(supabase: ReturnType<typeof createClient>, c
     if (ctx.ip && !ctx.geo?.country) {
         try {
             const ipApiKey = Deno.env.get('IP_API_KEY');
-            if (!ipApiKey) {
+            let keyParam = ''
+            if (ipApiKey) {
+                keyParam = `&key=${ipApiKey}`;
+                // Don't return here - continue to insert the impression without geo data
+            } else {
                 console.warn('Analytics: IP_API_KEY not configured, skipping geo lookup');
-                return;
             }
-            
             // https://members.ip-api.com/#pricing
             // will cost 15 euro per month for infinite amount of queries
-            const res = await fetch(`http://ip-api.com/json/${ctx.ip}?key=${ipApiKey}&fields=countryCode,city,lat,lon,status,mobile,proxy`);
+            const res = await fetch(`http://ip-api.com/json/${ctx.ip}?fields=countryCode,city,lat,lon,status,mobile,proxy${keyParam}`);
             const resData = await res.json();
             if (resData.status === 'success') {
                 ctx.geo = {
