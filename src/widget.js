@@ -807,12 +807,13 @@
 
             if (config.show_ad && window.googletag) {
                 const self = this; // Capture widget instance
-                self.log('[Divee DEBUG] Setting up 1s timeout for ad display...');
-                setTimeout(() => {
-                    self.log('[Divee DEBUG] === 1s timeout fired, displaying ads ===');
-                    googletag.cmd.push(function () {
-                        self.log('[Divee DEBUG] Inside display cmd callback...');
-                        self.log('[Divee DEBUG] Requesting ad display for slots...');
+                self.log('[Divee DEBUG] Queueing ad display via googletag.cmd...');
+                
+                // Use googletag.cmd.push instead of setTimeout - it automatically waits for GPT to be ready
+                googletag.cmd.push(function () {
+                    self.log('[Divee DEBUG] === GPT ready, displaying ads ===');
+                    self.log('[Divee DEBUG] Inside display cmd callback...');
+                    self.log('[Divee DEBUG] Requesting ad display for slots...');
 
                         self.log('[Divee DEBUG] Calling googletag.display for desktop...');
                         googletag.display('div-gpt-ad-1768979426842-0');
@@ -903,7 +904,6 @@
                             self.log('[Divee DEBUG] Ad slot response received:', event.slot.getSlotElementId());
                         });
                     });
-                }, 1000);
             } else {
                 this.log('[Divee WARNING] Ads NOT displayed!');
                 this.log('[Divee WARNING] Reason:', !config.show_ad ? 'show_ad is false in config' : 'googletag not available');
