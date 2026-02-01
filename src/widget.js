@@ -236,13 +236,10 @@
                 googletag.pubads().collapseEmptyDivs();
                 self.log('[Divee DEBUG] Configured to collapse empty ad divs');
 
-                // Enable lazy loading for better viewability scores and fill rates
-                googletag.pubads().enableLazyLoad({
-                    fetchMarginPercent: 200,  // Fetch ads 2 viewports ahead
-                    renderMarginPercent: 100, // Render ads 1 viewport ahead
-                    mobileScaling: 2.0        // Double margins on mobile for better UX
-                });
-                self.log('[Divee DEBUG] ✓ Lazy loading enabled');
+                // Note: Lazy loading disabled for faster ad display
+                // Since the widget is intentionally placed in content, we want ads ready
+                // immediately when users scroll to the widget position
+                // googletag.pubads().enableLazyLoad({...});
 
                 // Enable Single Request Architecture (SRA) for faster loading and better fill
                 googletag.pubads().enableSingleRequest();

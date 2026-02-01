@@ -122,7 +122,7 @@ desktopSlot.defineSizeMapping(sizeMapping);
 
 | Priority | Recommendation | Effort | Impact | Status |
 |----------|---------------|--------|--------|--------|
-| 1 | Lazy Loading | Medium | High | ✅ Done |
+| 1 | Lazy Loading | Medium | High | ⏸️ Disabled (caused delays) |
 | 2 | SRA + slotRenderEnded listener | Low | High | ✅ Done |
 | 3 | Size Mapping | Medium | Medium | ✅ Done |
 | 4 | GPT Ready Check | Low | Medium | ✅ Done |
