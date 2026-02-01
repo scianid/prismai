@@ -58,6 +58,14 @@ async function processEvent(
         return { success: false, error: `Invalid event_type: ${event_type}` };
     }
 
+    // Extract client IP - try multiple headers used by different proxies/CDNs
+    const clientIp = req.headers.get('cf-connecting-ip') // Cloudflare
+        || req.headers.get('true-client-ip') // Akamai/Cloudflare Enterprise
+        || req.headers.get('x-client-ip') // Some proxies
+        || req.headers.get('x-real-ip') // Common proxy header
+        || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() // First IP in chain
+        || undefined;
+
     // Extract analytics context from request
     const context: AnalyticsContext = {
         projectId: project_id,
@@ -66,7 +74,7 @@ async function processEvent(
         url: event_data?.url as string || req.headers.get('referer') || undefined,
         referrer: event_data?.referrer as string || req.headers.get('referer') || undefined,
         userAgent: req.headers.get('user-agent') || undefined,
-        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
+        ip: clientIp,
     };
 
     // Handle impression separately to use logImpression with geo enrichment
@@ -194,6 +202,14 @@ serve(async (req: Request) => {
             );
         }
 
+        // Extract client IP - try multiple headers used by different proxies/CDNs
+        const clientIp = req.headers.get('cf-connecting-ip') // Cloudflare
+            || req.headers.get('true-client-ip') // Akamai/Cloudflare Enterprise
+            || req.headers.get('x-client-ip') // Some proxies
+            || req.headers.get('x-real-ip') // Common proxy header
+            || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() // First IP in chain
+            || undefined;
+
         // Extract analytics context from request
         const context: AnalyticsContext = {
             projectId: project_id,
@@ -202,7 +218,7 @@ serve(async (req: Request) => {
             url: event_data?.url || req.headers.get('referer') || undefined,
             referrer: event_data?.referrer || req.headers.get('referer') || undefined,
             userAgent: req.headers.get('user-agent') || undefined,
-            ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
+            ip: clientIp,
         };
 
         // Handle impression separately to use logImpression with geo enrichment

@@ -28,8 +28,8 @@ export async function logImpression(supabase: ReturnType<typeof createClient>, c
             let keyParam = ''
             if (ipApiKey) {
                 keyParam = `&key=${ipApiKey}`;
-                // Don't return here - continue to insert the impression without geo data
             } else {
+                // Don't return here - continue to insert the impression without geo data
                 console.warn('Analytics: IP_API_KEY not configured, skipping geo lookup');
             }
             // https://members.ip-api.com/#pricing
