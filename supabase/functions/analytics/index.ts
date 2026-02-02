@@ -10,6 +10,7 @@ import { getProjectById } from '../_shared/dao/projectDao.ts';
 const ALLOWED_EVENT_TYPES = [
     'impression',
     'widget_loaded',
+    'widget_visible',
     'widget_expanded',
     'widget_collapsed',
     'open_chat',
@@ -26,6 +27,8 @@ const ALLOWED_EVENT_TYPES = [
     'ask_question',
     'answer_streamed',
     'ad_impression',
+    'ad_unfilled',
+    'ad_refresh',
 ] as const;
 
 type AllowedEventType = typeof ALLOWED_EVENT_TYPES[number];

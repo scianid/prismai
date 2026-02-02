@@ -33,7 +33,8 @@
                 aiResponseCount: 0,
                 suggestionsSuppressed: false,
                 lastAdRefresh: 0,              // Timestamp of last ad refresh
-                expandedAdsDisplayed: false    // Track if expanded ads have been displayed
+                expandedAdsDisplayed: false,   // Track if expanded ads have been displayed
+                widgetVisibleTracked: false    // Track if widget_visible event has been fired
             };
 
             // Analytics batching
@@ -42,7 +43,7 @@
             this.analyticsConfig = {
                 maxBatchSize: 10,      // Flush when queue reaches this size
                 flushInterval: 3000,   // Flush after 3 seconds of inactivity
-                immediateEvents: ['widget_loaded', 'impression'] // Events to send immediately
+                immediateEvents: ['widget_loaded', 'impression', 'widget_visible'] // Events to send immediately
             };
 
             this.elements = {};
@@ -281,6 +282,9 @@
 
             // Attach event listeners
             this.attachEventListeners();
+
+            // Setup visibility tracking
+            this.setupVisibilityTracking();
 
             // Setup analytics batch flush on page unload
             this.setupPageUnloadFlush();
@@ -1722,6 +1726,37 @@
             } catch (err) {
                 console.error('[Divee Analytics] Error sending batch:', err);
             }
+        }
+
+        setupVisibilityTracking() {
+            // Track when widget becomes visible in viewport (fires once per session)
+            if (!this.elements.container || this.state.widgetVisibleTracked) {
+                return;
+            }
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !this.state.widgetVisibleTracked) {
+                        this.state.widgetVisibleTracked = true;
+                        
+                        this.trackEvent('widget_visible', {
+                            url: this.contentCache.url || window.location.href,
+                            display_mode: this.config.displayMode,
+                            viewport_width: window.innerWidth,
+                            viewport_height: window.innerHeight
+                        });
+                        
+                        this.log('[Divee] Widget visible event fired');
+                        
+                        // Disconnect observer after firing once
+                        observer.disconnect();
+                    }
+                });
+            }, {
+                threshold: 0.5  // Fire when 50% of widget is visible
+            });
+
+            observer.observe(this.elements.container);
         }
 
         setupPageUnloadFlush() {
