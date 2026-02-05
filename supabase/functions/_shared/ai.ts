@@ -1,10 +1,27 @@
 const TOTAL_SUGGESTIONS = 5;
-const AI_MODEL = 'deepseek-chat';
-const AI_URL = 'https://api.deepseek.com/v1/chat/completions';
 const MAX_TOKENS_CHAT = 4000;
 const MAX_TOKENS_SUGGESTIONS = 4000;
+const AI_PROVIDER_ENV = 'AI_PROVIDER';
+const DEFAULT_PROVIDER = 'openai';
 
-type DeepSeekChatResponse = {
+const AI_PROVIDERS = {
+  deepseek: {
+    label: 'deepseek',
+    apiKeyEnv: 'DEEPSEEK_API',
+    model: 'deepseek-chat',
+    url: 'https://api.deepseek.com/v1/chat/completions'
+  },
+  openai: {
+    label: 'openai',
+    apiKeyEnv: 'OPENAI_API_KEY',
+    model: 'gpt-5.2',
+    url: 'https://api.openai.com/v1/chat/completions'
+  }
+} as const;
+
+type AiProvider = keyof typeof AI_PROVIDERS;
+
+type ChatCompletionResponse = {
   choices?: Array<{
     message?: {
       content?: string;
@@ -42,16 +59,35 @@ function toSuggestionItems(questions: string[]): SuggestionItem[] {
   }));
 }
 
-function getApiKey(): string {
+function getProvider(): AiProvider {
   // @ts-ignore
-  const apiKey = Deno.env.get('DEEPSEEK_API');
+  const provider = Deno.env.get(AI_PROVIDER_ENV)?.toLowerCase();
+  if (!provider) return DEFAULT_PROVIDER as AiProvider;
+  if (provider in AI_PROVIDERS) return provider as AiProvider;
+  throw new Error(`AI_PROVIDER must be one of: ${Object.keys(AI_PROVIDERS).join(', ')}`);
+}
+
+function getAiConfig() {
+  const provider = getProvider();
+  const config = AI_PROVIDERS[provider];
+  // @ts-ignore
+  const apiKey = Deno.env.get(config.apiKeyEnv);
   if (!apiKey)
-    throw new Error('DEEPSEEK_API key not set');
-  return apiKey;
+    throw new Error(`${config.apiKeyEnv} key not set`);
+  return {
+    ...config,
+    provider,
+    apiKey
+  };
 }
 
 export async function generateSuggestions(title: string, content: string, language: string): Promise<SuggestionItem[]> {
-  const apiKey = getApiKey();
+  const { apiKey, url, model, provider } = getAiConfig();
+  console.info('ai: generateSuggestions', { provider, model });
+
+  const tokenParam = provider === 'openai'
+    ? { max_completion_tokens: MAX_TOKENS_SUGGESTIONS }
+    : { max_tokens: MAX_TOKENS_SUGGESTIONS };
 
   const prompt = `You are generating ${TOTAL_SUGGESTIONS} short, helpful questions a reader might want to ask about the article below.
   Write the questions in this language: ${language}.
@@ -65,33 +101,34 @@ export async function generateSuggestions(title: string, content: string, langua
    Do not include any additional text.
    First question should always be "Summarized the article in brief." make sure all questions are in the specified language: ${language}.`;
 
-  const response = await fetch(AI_URL, {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: AI_MODEL,
+      model,
       messages: [
         { role: 'system', content: 'You are a helpful assistant that returns concise JSON only. Example response: {"suggestions":["Question 1","Question 2","Question 3"]}' },
         { role: 'user', content: prompt }
       ],
       response_format: { type: 'json_object' },
       temperature: 0.4,
-      max_tokens: MAX_TOKENS_SUGGESTIONS
+      ...tokenParam
     })
   });
 
   if (!response.ok) {
-    console.error('ai: deepseek response not ok', { status: response.status });
-    throw new Error(`ai: deepseek response not ok: ${response.status}`);
+    const errorBody = await response.text().catch(() => '');
+    console.error(`ai: ${provider} response not ok`, { status: response.status, model, errorBody });
+    throw new Error(`ai: ${provider} response not ok: ${response.status}`);
   }
 
-  const data = await response.json() as DeepSeekChatResponse;
+  const data = await response.json() as ChatCompletionResponse;
   const contentText = data?.choices?.[0]?.message?.content;
   if (!contentText)
-    console.error('ai: missing content in deepseek response', { data });
+  console.error(`ai: missing content in ${provider} response`, { data });
 
   try {
     const parsed = JSON.parse(stripCodeFences(contentText || ''));
@@ -103,8 +140,8 @@ export async function generateSuggestions(title: string, content: string, langua
     }
     console.error('ai: parsed content is not string array', { parsed });
   } catch (error) {
-    console.error('ai: failed to parse deepseek content', { contentText, error });
-    throw new Error(`ai: failed to parse deepseek response: ${error}`);
+    console.error(`ai: failed to parse ${provider} content`, { contentText, error });
+    throw new Error(`ai: failed to parse ${provider} response: ${error}`);
   }
 
   throw new Error('ai: generateSuggestions did not produce suggestions');
@@ -121,7 +158,12 @@ export async function streamAnswer(
   content?: string,
   question?: string
 ): Promise<Response> {
-  const apiKey = getApiKey();
+  const { apiKey, url, model, provider } = getAiConfig();
+  console.info('ai: streamAnswer', { provider, model });
+
+  const tokenParam = provider === 'openai'
+    ? { max_completion_tokens: MAX_TOKENS_CHAT }
+    : { max_tokens: MAX_TOKENS_CHAT };
   
   let messages: Message[];
   
@@ -161,24 +203,25 @@ export async function streamAnswer(
     ];
   }
 
-  const aiResponse = await fetch(AI_URL, {
+  const aiResponse = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: AI_MODEL,
+      model,
       messages: messages,
       temperature: 0.4,
-      max_tokens: MAX_TOKENS_CHAT,
+      ...tokenParam,
       stream: true
     })
   });
 
   if (!aiResponse.ok || !aiResponse.body) {
-    console.error('chat: AI request failed', { status: aiResponse.status });
-    throw new Error('AI request failed');
+    const errorBody = await aiResponse.text().catch(() => '');
+    console.error(`chat: ${provider} request failed`, { status: aiResponse.status, model, errorBody });
+    throw new Error(`${provider} request failed`);
   }
 
   return aiResponse;
