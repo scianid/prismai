@@ -34,7 +34,7 @@ export async function logImpression(supabase: ReturnType<typeof createClient>, c
             }
             // https://members.ip-api.com/#pricing
             // will cost 15 euro per month for infinite amount of queries
-            const res = await fetch(`http://ip-api.com/json/${ctx.ip}?fields=countryCode,city,lat,lon,status,mobile,proxy${keyParam}`);
+            const res = await fetch(`http://pro.ip-api.com/json/${ctx.ip}?fields=countryCode,city,lat,lon,status,mobile,proxy${keyParam}`);
             const resData = await res.json();
             if (resData.status === 'success') {
                 ctx.geo = {
