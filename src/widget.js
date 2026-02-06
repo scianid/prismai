@@ -316,15 +316,24 @@
                     this.log('[Divee] Display mode from config:', serverConfig.display_mode);
                 }
                 if (serverConfig.display_position) {
-                    this.config.floatingPosition = serverConfig.display_position;
-                    this.log('[Divee] Display position from config:', serverConfig.display_position);
+                    // Apply position based on display mode
+                    if (this.config.displayMode === 'floating') {
+                        this.config.floatingPosition = serverConfig.display_position;
+                        this.log('[Divee] Floating position from config:', serverConfig.display_position);
+                    } else {
+                        // Anchored mode: only allow 'top' or 'bottom'
+                        this.config.anchoredPosition = ['top', 'bottom'].includes(serverConfig.display_position) 
+                            ? serverConfig.display_position 
+                            : 'bottom';
+                        this.log('[Divee] Anchored position from config:', this.config.anchoredPosition);
+                    }
                 }
                 if (serverConfig.anchored_position) {
-                    // Only allow 'top' or 'bottom', default to 'bottom'
+                    // Explicit anchored_position overrides display_position for anchored mode
                     this.config.anchoredPosition = ['top', 'bottom'].includes(serverConfig.anchored_position) 
                         ? serverConfig.anchored_position 
                         : 'bottom';
-                    this.log('[Divee] Anchored position from config:', this.config.anchoredPosition);
+                    this.log('[Divee] Anchored position override from config:', this.config.anchoredPosition);
                 }
                 if (serverConfig.article_class) {
                     this.config.articleClass = serverConfig.article_class;
