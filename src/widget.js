@@ -153,29 +153,41 @@
             this.log('[Divee DEBUG] Desktop ad path:', desktopAdPath);
             this.log('[Divee DEBUG] Mobile ad path:', mobileAdPath);
             
+            // Check if GPT is already loaded by the page
+            const gptAlreadyLoaded = window.googletag && window.googletag.apiReady;
+            this.log('[Divee DEBUG] GPT already loaded by page:', gptAlreadyLoaded);
+            this._gptAlreadyLoaded = gptAlreadyLoaded;
+            
             window.googletag = window.googletag || { cmd: [] };
             window.googletag._initialized_by_divee = true;
-            const gptScript = document.createElement('script');
-            gptScript.async = true;
-            gptScript.src = 'https://securepubads.g.doubleclick.net/tag/js/gpt.js';
-            gptScript.crossOrigin = 'anonymous';
+            
+            // Only load GPT script if not already loaded
+            if (!gptAlreadyLoaded) {
+                const gptScript = document.createElement('script');
+                gptScript.async = true;
+                gptScript.src = 'https://securepubads.g.doubleclick.net/tag/js/gpt.js';
+                gptScript.crossOrigin = 'anonymous';
 
-            gptScript.onload = function () {
-                self.log('[Divee DEBUG] ✓ Google Ads script loaded successfully');
-                self.log('[Divee DEBUG] googletag object:', window.googletag);
-            };
+                gptScript.onload = function () {
+                    self.log('[Divee DEBUG] ✓ Google Ads script loaded successfully');
+                    self.log('[Divee DEBUG] googletag object:', window.googletag);
+                };
 
-            gptScript.onerror = function () {
-                console.error('[Divee] Failed to load Google Ads script');
-            };
+                gptScript.onerror = function () {
+                    console.error('[Divee] Failed to load Google Ads script');
+                };
 
-            document.head.appendChild(gptScript);
-            this.log('[Divee DEBUG] Google Ads script tag added to head');
-            this.log('[Divee DEBUG] Script element:', gptScript);
+                document.head.appendChild(gptScript);
+                this.log('[Divee DEBUG] Google Ads script tag added to head');
+                this.log('[Divee DEBUG] Script element:', gptScript);
+            } else {
+                this.log('[Divee DEBUG] Using existing GPT instance from page');
+            }
 
             googletag.cmd.push(function () {
                 self.log('[Divee DEBUG] === Inside googletag.cmd.push callback ===');
                 self.log('[Divee DEBUG] Defining ad slots...');
+                self.log('[Divee DEBUG] _gptAlreadyLoaded flag:', self._gptAlreadyLoaded);
 
                 // Collapsed view ads - with responsive size mapping
                 const desktopSizeMapping = googletag.sizeMapping()
@@ -211,28 +223,7 @@
                     console.error('[Divee] Failed to define mobile ad slot');
                 }
 
-                // Expanded view ads - with responsive size mapping
-                const desktopSlotExpanded = googletag.defineSlot(desktopAdPath, [[650, 100], [728, 90]], 'div-gpt-ad-expanded-desktop');
-                // const desktopSlotExpanded = googletag.defineSlot('/22065771467,227399588/Divee.AI/desktop/Divee.AI_banner', [[650, 100], [728, 90]], 'div-gpt-ad-expanded-desktop');
-                self.log('[Divee DEBUG] Expanded desktop slot result:', desktopSlotExpanded);
-                if (desktopSlotExpanded) {
-                    desktopSlotExpanded.defineSizeMapping(desktopSizeMapping);
-                    desktopSlotExpanded.addService(googletag.pubads());
-                    self.log('[Divee DEBUG] ✓ Expanded desktop ad slot defined with size mapping:', desktopSlotExpanded.getSlotElementId());
-                } else {
-                    console.error('[Divee] Failed to define expanded desktop ad slot');
-                }
-
-                const mobileSlotExpanded = googletag.defineSlot(mobileAdPath, [[336, 280], [300, 250]], 'div-gpt-ad-expanded-mobile');
-                //const mobileSlotExpanded = googletag.defineSlot('/22065771467,227399588/Divee.AI/mobileweb/Divee.AI_cube', [[336, 280], [300, 250]], 'div-gpt-ad-expanded-mobile');
-                self.log('[Divee DEBUG] Expanded mobile slot result:', mobileSlotExpanded);
-                if (mobileSlotExpanded) {
-                    mobileSlotExpanded.defineSizeMapping(mobileSizeMapping);
-                    mobileSlotExpanded.addService(googletag.pubads());
-                    self.log('[Divee DEBUG] ✓ Expanded mobile ad slot defined with size mapping:', mobileSlotExpanded.getSlotElementId());
-                } else {
-                    console.error('[Divee] Failed to define expanded mobile ad slot');
-                }
+                self.log('[Divee DEBUG] Ad slots defined (shared for both collapsed and expanded states).');
 
                 googletag.pubads().collapseEmptyDivs();
                 self.log('[Divee DEBUG] Configured to collapse empty ad divs');
@@ -242,17 +233,31 @@
                 // immediately when users scroll to the widget position
                 // googletag.pubads().enableLazyLoad({...});
 
-                // Enable Single Request Architecture (SRA) for faster loading and better fill
-                googletag.pubads().enableSingleRequest();
-                self.log('[Divee DEBUG] ✓ Single Request Architecture (SRA) enabled');
+                // Note: SRA disabled to allow expanded ads to be requested separately
+                // when the widget is expanded, not at initial page load
+                // googletag.pubads().enableSingleRequest();
+                self.log('[Divee DEBUG] ✓ SRA disabled for independent slot requests');
 
                 // Page-level targeting for better ad relevance and fill rates
                 googletag.pubads().setTargeting('content_type', 'article');
                 googletag.pubads().setTargeting('display_mode', self.config.displayMode || 'anchored');
                 self.log('[Divee DEBUG] ✓ Page-level targeting set');
 
+                // Check if services are already enabled (page's GPT might have already called this)
+                // When GPT is already loaded by page, we need to refresh newly defined slots
+                const gptAlreadyLoaded = self._gptAlreadyLoaded || false;
+                self.log('[Divee DEBUG] GPT was already loaded:', gptAlreadyLoaded);
+                
                 googletag.enableServices();
-                self.log('[Divee DEBUG] ✓ Google Ads services enabled');
+                self.log('[Divee DEBUG] ✓ Called enableServices()');
+                
+                // If GPT was already loaded, mark slots for refresh
+                if (gptAlreadyLoaded) {
+                    self.log('[Divee DEBUG] GPT already loaded - slots will need refresh after display');
+                    self._needsSlotRefresh = true;
+                } else {
+                    self.log('[Divee DEBUG] Fresh GPT instance - no refresh needed');
+                }
                 self.log('[Divee DEBUG] === Finished defining ad slots ===');
             });
         }
@@ -570,10 +575,25 @@
             expandedView.style.display = 'none';
             container.appendChild(expandedView);
 
+            // Create shared ad container at the bottom (always visible)
+            const showAd = (config.show_ad && this.config.displayMode !== 'floating') ? '' : 'style="display: none;"';
+            const adContainer = document.createElement('div');
+            adContainer.className = 'divee-ad-container-shared';
+            adContainer.innerHTML = `
+                <div class="divee-ad-slot divee-ad-slot-shared" ${showAd}>
+                    <!-- Desktop Ad -->
+                    <div id='div-gpt-ad-1768979426842-0' class='divee-ad-desktop' style='min-width: 650px; min-height: 90px; margin: 0 !important;'></div>
+                    <!-- Mobile Ad -->
+                    <div id='div-gpt-ad-1768979511037-0' class='divee-ad-mobile' style='min-width: 300px; min-height: 250px;'></div>
+                </div>
+            `;
+            container.appendChild(adContainer);
+
             // Store references
             this.elements.container = container;
             this.elements.collapsedView = collapsedView;
             this.elements.expandedView = expandedView;
+            this.elements.adContainer = adContainer;
 
             // Apply initial theme colors (will be updated when server config loads)
             this.applyThemeColors(this.state.serverConfig || this.getDefaultConfig());
@@ -604,12 +624,6 @@
                     <svg class="divee-send-icon-collapsed" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
-        </div>
-                <div class="divee-ad-slot" ${showAd}>
-                    <!-- Desktop Ad -->
-                    <div id='div-gpt-ad-1768979426842-0' class='divee-ad-desktop' style='min-width: 650px; min-height: 90px; margin: 0 !important;'></div>
-                    <!-- Mobile Ad -->
-                    <div id='div-gpt-ad-1768979511037-0' class='divee-ad-mobile' style='min-width: 300px; min-height: 250px;'></div>
         </div>
       `;
 
@@ -722,14 +736,6 @@
             <div class="divee-input-footer">
                 <div class="divee-warning">This is an AI driven tool, results might not always be accurate</div>
                 <div class="divee-counter">0/200</div>
-            </div>
-            
-            <!-- Ad Slot in Expanded View -->
-            <div class="divee-ad-slot-expanded" style="margin-top: 5px; display: flex; justify-content: center;">
-                <!-- Desktop Ad -->
-                <div id='div-gpt-ad-expanded-desktop' class='divee-ad-desktop' style='min-width: 650px; min-height: 90px; margin: 0 !important;'></div>
-                <!-- Mobile Ad -->
-                <div id='div-gpt-ad-expanded-mobile' class='divee-ad-mobile' style='min-width: 300px; min-height: 250px;  margin: 0 !important;'></div>
             </div>
           </div>
         </div>
@@ -850,6 +856,7 @@
                     self.log('[Divee DEBUG] === GPT ready, displaying ads ===');
                     self.log('[Divee DEBUG] Inside display cmd callback...');
                     self.log('[Divee DEBUG] Requesting ad display for slots...');
+                    self.log('[Divee DEBUG] Needs slot refresh:', !!self._needsSlotRefresh);
 
                         self.log('[Divee DEBUG] Calling googletag.display for desktop...');
                         googletag.display('div-gpt-ad-1768979426842-0');
@@ -859,16 +866,40 @@
                         googletag.display('div-gpt-ad-1768979511037-0');
                         self.log('[Divee DEBUG] ✓ Display called for div-gpt-ad-1768979511037-0 (mobile)');
 
+                        // If services were already enabled when we defined slots, we need to refresh them
+                        self.log('[Divee DEBUG] Checking refresh flag: _needsSlotRefresh =', self._needsSlotRefresh);
+                        if (self._needsSlotRefresh) {
+                            self.log('[Divee DEBUG] Refreshing collapsed slots (GPT was already loaded)');
+                            const allSlots = googletag.pubads().getSlots();
+                            self.log('[Divee DEBUG] Total GPT slots on page:', allSlots.length);
+                            const collapsedSlots = allSlots.filter(slot => {
+                                const slotId = slot.getSlotElementId();
+                                const isOurs = slotId === 'div-gpt-ad-1768979426842-0' || slotId === 'div-gpt-ad-1768979511037-0';
+                                if (isOurs) {
+                                    self.log('[Divee DEBUG] Found our slot:', slotId);
+                                }
+                                return isOurs;
+                            });
+                            self.log('[Divee DEBUG] Our collapsed slots found:', collapsedSlots.length);
+                            if (collapsedSlots.length > 0) {
+                                googletag.pubads().refresh(collapsedSlots);
+                                self.log('[Divee DEBUG] ✓ Refreshed', collapsedSlots.length, 'collapsed slots');
+                            } else {
+                                self.log('[Divee DEBUG] ✗ No collapsed slots found to refresh!');
+                            }
+                            self._needsSlotRefresh = false;
+                        } else {
+                            self.log('[Divee DEBUG] No refresh needed (_needsSlotRefresh is false)');
+                        }
+
                         // Listen for ad slot rendering
                         self.log('[Divee DEBUG] Setting up event listeners...');
                         let emptyAdCount = 0;
                         
                         // Only track Divee's own ad slots
                         const diveeAdSlotIds = [
-                            'div-gpt-ad-1768979426842-0',  // desktop collapsed
-                            'div-gpt-ad-1768979511037-0',  // mobile collapsed
-                            'div-gpt-ad-expanded-desktop', // desktop expanded
-                            'div-gpt-ad-expanded-mobile'   // mobile expanded
+                            'div-gpt-ad-1768979426842-0',  // desktop
+                            'div-gpt-ad-1768979511037-0'   // mobile
                         ];
                         
                         googletag.pubads().addEventListener('slotRenderEnded', function (event) {
@@ -958,7 +989,7 @@
         displayExpandedAds() {
             const config = this.state.serverConfig || this.getDefaultConfig();
             if (!config.show_ad || !window.googletag) {
-                this.log('[Divee DEBUG] Skipping expanded ads display');
+                this.log('[Divee DEBUG] Skipping expanded ads display - config.show_ad:', config.show_ad, 'googletag:', !!window.googletag);
                 return;
             }
 
@@ -967,38 +998,118 @@
             const throttleInterval = 30000; // 30 seconds minimum between refreshes (Google policy)
             const timeSinceLastRefresh = now - this.state.lastAdRefresh;
             
-            this.log('[Divee DEBUG] Displaying expanded view ads...');
+            this.log('[Divee DEBUG] displayExpandedAds called');
+            this.log('[Divee DEBUG] expandedAdsDisplayed:', this.state.expandedAdsDisplayed);
             this.log('[Divee DEBUG] Time since last refresh:', timeSinceLastRefresh, 'ms');
             
             googletag.cmd.push(function () {
-                self.log('[Divee DEBUG] Requesting expanded ad display...');
+                self.log('[Divee DEBUG] === Inside googletag.cmd for expanded ads ===');
                 
                 const desktopEl = document.getElementById('div-gpt-ad-expanded-desktop');
                 const mobileEl = document.getElementById('div-gpt-ad-expanded-mobile');
                 
-                // First time: just display the ads
+                self.log('[Divee DEBUG] Desktop element exists:', !!desktopEl);
+                self.log('[Divee DEBUG] Mobile element exists:', !!mobileEl);
+                
+                // First time: define and display the ads
                 if (!self.state.expandedAdsDisplayed) {
+                    self.log('[Divee DEBUG] First time - defining and displaying expanded ads');
+                    
+                    // Get ad paths from widget config
+                    const serverConfig = self.state.serverConfig || self.getDefaultConfig();
+                    const defaultAdTagId = '227399588';
+                    const adTagId = serverConfig?.ad_tag_id || defaultAdTagId;
+                    const accountId = '22065771467';
+                    const desktopAdPath = `/${accountId},${adTagId}/Divee.AI/desktop/Divee.AI_banner`;
+                    const mobileAdPath = `/${accountId},${adTagId}/Divee.AI/mobileweb/Divee.AI_cube`;
+                    
+                    // Define size mappings
+                    const desktopSizeMapping = googletag.sizeMapping()
+                        .addSize([1024, 0], [[728, 90], [650, 100]])
+                        .addSize([768, 0], [[650, 100]])
+                        .addSize([0, 0], [])
+                        .build();
+                    
+                    const mobileSizeMapping = googletag.sizeMapping()
+                        .addSize([768, 0], [])
+                        .addSize([0, 0], [[300, 250], [336, 280]])
+                        .build();
+                    
+                    self.log('[Divee DEBUG] Current viewport size:', window.innerWidth, 'x', window.innerHeight);
+                    
+                    // Define desktop expanded slot
                     if (desktopEl) {
-                        googletag.display('div-gpt-ad-expanded-desktop');
-                        self.log('[Divee DEBUG] ✓ Display called for expanded desktop ad');
+                        // Check if element is visible
+                        const isVisible = desktopEl.offsetParent !== null;
+                        const computedStyle = window.getComputedStyle(desktopEl);
+                        self.log('[Divee DEBUG] Desktop element visibility check:', {
+                            isVisible,
+                            display: computedStyle.display,
+                            visibility: computedStyle.visibility,
+                            opacity: computedStyle.opacity,
+                            offsetParent: !!desktopEl.offsetParent
+                        });
+                        
+                        const desktopSlotExpanded = googletag.defineSlot(desktopAdPath, [[650, 100], [728, 90]], 'div-gpt-ad-expanded-desktop');
+                        if (desktopSlotExpanded) {
+                            desktopSlotExpanded.defineSizeMapping(desktopSizeMapping);
+                            desktopSlotExpanded.addService(googletag.pubads());
+                            self.log('[Divee DEBUG] ✓ Defined expanded desktop ad slot');
+                            
+                            googletag.display('div-gpt-ad-expanded-desktop');
+                            self.log('[Divee DEBUG] ✓ Display called for expanded desktop ad');
+                        } else {
+                            self.log('[Divee DEBUG] ✗ Failed to define expanded desktop slot');
+                        }
+                    } else {
+                        self.log('[Divee DEBUG] ✗ Desktop element not found');
                     }
                     
+                    // Define mobile expanded slot
                     if (mobileEl) {
-                        googletag.display('div-gpt-ad-expanded-mobile');
-                        self.log('[Divee DEBUG] ✓ Display called for expanded mobile ad');
+                        const mobileSlotExpanded = googletag.defineSlot(mobileAdPath, [[336, 280], [300, 250]], 'div-gpt-ad-expanded-mobile');
+                        if (mobileSlotExpanded) {
+                            mobileSlotExpanded.defineSizeMapping(mobileSizeMapping);
+                            mobileSlotExpanded.addService(googletag.pubads());
+                            self.log('[Divee DEBUG] ✓ Defined expanded mobile ad slot');
+                            
+                            googletag.display('div-gpt-ad-expanded-mobile');
+                            self.log('[Divee DEBUG] ✓ Display called for expanded mobile ad');
+                        } else {
+                            self.log('[Divee DEBUG] ✗ Failed to define expanded mobile slot');
+                        }
+                    } else {
+                        self.log('[Divee DEBUG] ✗ Mobile element not found');
                     }
                     
                     self.state.expandedAdsDisplayed = true;
                     self.state.lastAdRefresh = now;
-                    self.log('[Divee DEBUG] Expanded ads displayed for first time');
+                    self.log('[Divee DEBUG] Expanded ads defined and displayed for first time');
+                    
+                    // If GPT was already loaded, we need to refresh the newly defined slots
+                    if (self._gptAlreadyLoaded) {
+                        self.log('[Divee DEBUG] GPT was already loaded - refreshing expanded slots');
+                        const expandedSlots = googletag.pubads().getSlots().filter(slot => {
+                            const slotId = slot.getSlotElementId();
+                            return slotId === 'div-gpt-ad-expanded-desktop' || slotId === 'div-gpt-ad-expanded-mobile';
+                        });
+                        self.log('[Divee DEBUG] Found', expandedSlots.length, 'expanded slots to refresh');
+                        if (expandedSlots.length > 0) {
+                            googletag.pubads().refresh(expandedSlots);
+                            self.log('[Divee DEBUG] ✓ Refreshed expanded slots');
+                        }
+                    }
                 }
                 // Subsequent expansions: refresh if throttle period has passed
                 else if (timeSinceLastRefresh >= throttleInterval) {
+                    self.log('[Divee DEBUG] Refreshing expanded ads (throttle period passed)');
                     // Get the slot objects for refresh
                     const slots = googletag.pubads().getSlots().filter(slot => {
                         const slotId = slot.getSlotElementId();
                         return slotId === 'div-gpt-ad-expanded-desktop' || slotId === 'div-gpt-ad-expanded-mobile';
                     });
+                    
+                    self.log('[Divee DEBUG] Found', slots.length, 'slots to refresh');
                     
                     if (slots.length > 0) {
                         googletag.pubads().refresh(slots);
@@ -1076,9 +1187,6 @@
                 this.elements.collapsedView.style.display = 'none';
                 this.elements.expandedView.style.opacity = '1';
                 this.elements.expandedView.style.transform = 'translateY(0)';
-                
-                // Display expanded view ads
-                this.displayExpandedAds();
             }, 150);
 
             this.trackEvent('widget_expanded', { trigger: 'click' });

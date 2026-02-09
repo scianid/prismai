@@ -379,6 +379,16 @@
   background: #f3f4f6;
 }
 
+/* Shared ad container - visible in both states */
+.divee-ad-container-shared {
+  width: 100%;
+  display: block;
+  background: white;
+  padding: 0;
+  margin: 0;
+}
+
+/* Ad slot styling */
 .divee-ad-slot {
   margin: 12px 0;
   min-height: 100px;
@@ -387,20 +397,13 @@
   justify-content: center;
 }
 
-.divee-ad-slot-expanded {
-  margin-top: 5px;
-  display: flex;
-  justify-content: center;
-  min-height: 0;
+/* Keep ads visible in both collapsed and expanded states */
+.divee-widget[data-state="collapsed"] .divee-ad-container-shared {
+  display: block !important;
 }
 
-.divee-ad-slot-expanded:empty,
-.divee-ad-slot-expanded:has(> div[style*="display: none"]),
-.divee-ad-slot-expanded:has(> div:empty) {
-  display: none !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
+.divee-widget[data-state="expanded"] .divee-ad-container-shared {
+  display: block !important;
 }
 
 .divee-ad-desktop {
