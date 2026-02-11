@@ -870,15 +870,16 @@
                             
                             const adElement = document.getElementById(slotId);
 
-                            self.log('[Divee DEBUG] ====== AD RENDER EVENT ======');
-                            self.log('[Divee DEBUG] Slot:', slotId);
-                            self.log('[Divee DEBUG] isEmpty:', event.isEmpty);
-                            self.log('[Divee DEBUG] size:', event.size);
-                            self.log('[Divee DEBUG] advertiserId:', event.advertiserId);
-                            self.log('[Divee DEBUG] lineItemId:', event.lineItemId);
-                            self.log('[Divee DEBUG] creativeId:', event.creativeId);
-                            self.log('[Divee DEBUG] element_exists:', !!adElement);
-                            self.log('[Divee DEBUG] adElement:', adElement);
+                            self.log('[Divee DEBUG] AD RENDER EVENT:', {
+                                slotId,
+                                isEmpty: event.isEmpty,
+                                size: event.size,
+                                advertiserId: event.advertiserId,
+                                lineItemId: event.lineItemId,
+                                creativeId: event.creativeId,
+                                element_exists: !!adElement,
+                                adElement
+                            });
 
                             if (event.isEmpty && adElement) {
                                 adElement.style.display = 'none';
