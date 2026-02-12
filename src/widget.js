@@ -742,7 +742,7 @@
                         id: targetElement.id
                     });
                 } else {
-                    this.log(`[Divee] ✗ Container selector "${this.config.containerSelector}" not found in DOM, falling back to default behavior`);
+                    this.log(`✗ Container selector "${this.config.containerSelector}" not found in DOM, falling back to default behavior`);
                 }
             } else {
                 this.log('No containerSelector from server config, using default auto-detection');
