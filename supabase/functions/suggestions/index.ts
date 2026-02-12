@@ -8,6 +8,7 @@ import { getProjectById } from '../_shared/dao/projectDao.ts';
 import { extractCachedSuggestions, getArticleById, insertArticle, updateArticleCache } from '../_shared/dao/articleDao.ts';
 import { supabaseClient } from '../_shared/supabaseClient.ts';
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH } from "../_shared/constants.ts";
+import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -61,8 +62,30 @@ Deno.serve(async (req: Request) => {
 
     // Fallback: generate hard-coded suggestions
     console.log('suggestions: cache miss, generating');
-    const suggestions = await generateSuggestions(title, content, project?.language || 'en');
-    console.log('suggestions: ai result', suggestions);
+    const result = await generateSuggestions(title, content, project?.language || 'en');
+    const { suggestions, tokenUsage } = result;
+    console.log('suggestions: ai result', { suggestions, tokenUsage });
+
+    // Track token usage (async, don't block)
+    if (tokenUsage) {
+      console.log('suggestions: inserting token usage', tokenUsage);
+      insertTokenUsage(supabase, {
+        projectId,
+        visitorId: visitor_id,
+        sessionId: session_id,
+        inputTokens: tokenUsage.inputTokens,
+        outputTokens: tokenUsage.outputTokens,
+        model: undefined, // Will be populated from env in future
+        endpoint: 'suggestions',
+        metadata: {
+          article_url: url,
+          article_id: article?.unique_id || null,
+          language: project?.language || 'en'
+        }
+      }).then(() => console.log('suggestions: token usage tracked successfully')).catch(err => console.error('suggestions: failed to track tokens', err));
+    } else {
+      console.log('suggestions: no token usage data from AI provider');
+    }
 
     // Cache suggestions on the article (preserve existing metadata)
     const updatedCache = {

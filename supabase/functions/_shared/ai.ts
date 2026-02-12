@@ -27,6 +27,17 @@ type ChatCompletionResponse = {
       content?: string;
     };
   }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+};
+
+export type TokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
 };
 
 export type SuggestionItem = {
@@ -38,6 +49,16 @@ export type SuggestionItem = {
 export type Message = {
   role: 'system' | 'user' | 'assistant';
   content: string;
+};
+
+export type SuggestionsResult = {
+  suggestions: SuggestionItem[];
+  tokenUsage: TokenUsage | null;
+};
+
+export type StreamResult = {
+  response: Response;
+  tokenUsage: TokenUsage | null;
 };
 
 function stripCodeFences(text: string): string {
@@ -81,7 +102,7 @@ function getAiConfig() {
   };
 }
 
-export async function generateSuggestions(title: string, content: string, language: string): Promise<SuggestionItem[]> {
+export async function generateSuggestions(title: string, content: string, language: string): Promise<SuggestionsResult> {
   const { apiKey, url, model, provider } = getAiConfig();
   console.info('ai: generateSuggestions', { provider, model });
 
@@ -130,13 +151,22 @@ export async function generateSuggestions(title: string, content: string, langua
   if (!contentText)
   console.error(`ai: missing content in ${provider} response`, { data });
 
+  // Extract token usage
+  const tokenUsage: TokenUsage | null = data.usage ? {
+    inputTokens: data.usage.prompt_tokens || 0,
+    outputTokens: data.usage.completion_tokens || 0,
+    totalTokens: data.usage.total_tokens || 0
+  } : null;
+
+  console.log('ai: token usage', tokenUsage);
+
   try {
     const parsed = JSON.parse(stripCodeFences(contentText || ''));
     if (Array.isArray(parsed) && parsed.every((s) => typeof s === 'string')) {
-      return toSuggestionItems(parsed.slice(0, TOTAL_SUGGESTIONS));
+      return { suggestions: toSuggestionItems(parsed.slice(0, TOTAL_SUGGESTIONS)), tokenUsage };
     }
     if (parsed && Array.isArray(parsed.suggestions) && parsed.suggestions.every((s: unknown) => typeof s === 'string')) {
-      return toSuggestionItems(parsed.suggestions.slice(0, TOTAL_SUGGESTIONS));
+      return { suggestions: toSuggestionItems(parsed.suggestions.slice(0, TOTAL_SUGGESTIONS)), tokenUsage };
     }
     console.error('ai: parsed content is not string array', { parsed });
   } catch (error) {
@@ -233,13 +263,24 @@ type DeepSeekStreamChunk = {
       content?: string;
     };
   }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
 };
 
-export async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<Uint8Array>): Promise<string> {
+export type StreamCollectResult = {
+  answer: string;
+  tokenUsage: TokenUsage | null;
+};
+
+export async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<Uint8Array>): Promise<StreamCollectResult> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   let answer = '';
+  let tokenUsage: TokenUsage | null = null;
 
   while (true) {
     const { value, done } = await reader.read();
@@ -256,12 +297,22 @@ export async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<
         if (!trimmed.startsWith('data:')) continue;
         const data = trimmed.replace(/^data:\s*/, '');
         if (data === '[DONE]') {
-          return answer;
+          return { answer, tokenUsage };
         }
         try {
           const json = JSON.parse(data) as DeepSeekStreamChunk;
           const delta = json?.choices?.[0]?.delta?.content;
           if (delta) answer += delta;
+          
+          // Capture token usage from the chunk (typically in final chunk)
+          if (json?.usage) {
+            tokenUsage = {
+              inputTokens: json.usage.prompt_tokens || 0,
+              outputTokens: json.usage.completion_tokens || 0,
+              totalTokens: json.usage.total_tokens || 0
+            };
+            console.log('ai: ✓ stream token usage captured', tokenUsage);
+          }
         } catch {
           // ignore parse errors
         }
@@ -269,7 +320,7 @@ export async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<
     }
   }
 
-  return answer;
+  return { answer, tokenUsage };
 }
 
 /**

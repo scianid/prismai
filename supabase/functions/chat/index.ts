@@ -10,6 +10,7 @@ import { extractCachedSuggestions, getArticleById, insertArticle, updateCacheAns
 import { insertFreeformQuestion, updateFreeformAnswer } from "../_shared/dao/freeformQaDao.ts";
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH } from "../_shared/constants.ts";
 import { getOrCreateConversation, appendMessagesToConversation, type ConversationMessage } from "../_shared/dao/conversationDao.ts";
+import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -209,13 +210,37 @@ Deno.serve(async (req: Request) => {
 
     // Collect answer and store in conversation
     readDeepSeekStreamAndCollectAnswer(cacheStream)
-      .then(async (answer) => {
+      .then(async (result) => {
+        const { answer, tokenUsage } = result;
         console.log('chat: collected answer, appending to conversation', {
           conversationId: conversation.id,
           questionLength: resolvedQuestion.length,
           answerLength: answer.length,
-          existingMessageCount: messages.length
+          existingMessageCount: messages.length,
+          tokenUsage
         });
+
+        // Track token usage (async, don't block)
+        if (tokenUsage) {
+          console.log('chat: inserting token usage', tokenUsage);
+          insertTokenUsage(supabase, {
+            projectId,
+            conversationId: conversation.id,
+            visitorId: visitor_id,
+            sessionId: session_id,
+            inputTokens: tokenUsage.inputTokens,
+            outputTokens: tokenUsage.outputTokens,
+            model: undefined, // Will be populated from env in future
+            endpoint: 'chat',
+            metadata: {
+              question_id: questionId,
+              question_type: questionType,
+              article_url: url
+            }
+          }).then(() => console.log('chat: token usage tracked successfully')).catch(err => console.error('chat: failed to track tokens', err));
+        } else {
+          console.log('chat: no token usage data from AI provider');
+        }
 
         // Create message objects
         const userMessage: ConversationMessage = {
