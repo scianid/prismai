@@ -103,22 +103,18 @@
                 localStorage.setItem('divee_visitor_id', visitorId);
             }
 
-            // Session ID (Per Session)
-            let sessionId = sessionStorage.getItem('divee_session_id');
-            if (!sessionId) {
-                sessionId = this.generateUUID();
-                sessionStorage.setItem('divee_session_id', sessionId);
-            }
+            // Session ID (Per Page Load - new conversation on each page visit)
+            let sessionId = this.generateUUID();
 
             this.state.visitorId = visitorId;
             this.state.sessionId = sessionId;
 
-            // Conversation ID (per article, persists in sessionStorage)
+            // Clear any old conversation IDs from sessionStorage
             const conversationKey = `divee_conversation_${window.location.href}`;
-            let conversationId = sessionStorage.getItem(conversationKey);
-            if (conversationId) {
-                this.state.conversationId = conversationId;
-            }
+            sessionStorage.removeItem(conversationKey);
+
+            // Conversation ID starts null - new conversation on each page load
+            // Server will assign conversation_id on first question
 
             return { visitorId, sessionId };
         }
@@ -1278,12 +1274,10 @@
                 throw new Error(`Chat request failed: ${response.status}`);
             }
 
-            // Store conversation ID from response header
+            // Store conversation ID from response header (per page session only)
             const conversationId = response.headers.get('X-Conversation-Id');
             if (conversationId && !this.state.conversationId) {
                 this.state.conversationId = conversationId;
-                const conversationKey = `divee_conversation_${window.location.href}`;
-                sessionStorage.setItem(conversationKey, conversationId);
             }
 
             const contentType = response.headers.get('content-type') || '';
