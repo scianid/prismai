@@ -3,9 +3,8 @@
 ## Current Issues Identified
 
 1. **Fixed 1-second delay** before displaying ads - may cause missed impressions or unnecessary blanks
-2. **No refresh strategy** for expanded view ads
-4. **Missing targeting parameters** - no contextual data passed to ad requests
-5. **No viewability optimization** - ads may render off-screen
+2. **Missing targeting parameters** - no contextual data passed to ad requests
+3. **No viewability optimization** - ads may render off-screen
 
 ---
 
@@ -87,16 +86,19 @@ googletag.pubads().addEventListener('slotRenderEnded', (event) => {
 
 ---
 
-### 6. Refresh Ads on Expand (with Throttle)
+### 6. Refresh Ads Automatically (Every 60 Seconds)
 
-Refresh ads when user expands widget, but throttle to respect Google policies:
+Automatically refresh visible ads every minute to increase impressions from engaged users:
 
 ```javascript
-// Refresh expanded ads, but not more than once per 30s
-googletag.pubads().refresh([expandedSlot]);
+// Auto-refresh visible ads every 60 seconds
+setInterval(() => {
+    const visibleSlots = getVisibleAdSlots();
+    googletag.pubads().refresh(visibleSlots);
+}, 60000);
 ```
 
-**Impact:** Additional impressions from engaged users
+**Impact:** Additional impressions from users actively engaging with content, increased revenue
 
 ---
 
@@ -126,12 +128,18 @@ desktopSlot.defineSizeMapping(sizeMapping);
 | 3 | Size Mapping | Medium | Medium | ✅ Done |
 | 4 | GPT Ready Check | Low | Medium | ✅ Done |
 | 5 | Page-Level Targeting | Medium | Medium | ✅ Done |
-| 6 | Ad Refresh on Expand | Low | Low | ✅ Done |
+| 6 | Auto-Refresh Every 60s | Low | Medium | ✅ Done |
 | 7 | Empty Slot Handling | Low | Low | ✅ Done |
 
 ---
 
 ## Additional Considerations
+
+### Ad Refresh Policies
+- Auto-refresh is enabled every 60 seconds for visible ads only
+- Only slots currently in the viewport are refreshed to comply with Google policies
+- Refresh interval is cleared on page unload to avoid memory leaks
+- Each refresh is tracked for analytics purposes
 
 ### Ad Density Guidelines
 - Ensure ad-to-content ratio stays reasonable
@@ -154,4 +162,6 @@ File: `src/widget.js`
 Key methods:
 - `initGoogleAds()` - Ad initialization (lines 125-220)
 - `displayAdsIfNeeded()` - Ad display logic (lines 787-902)
+- `startAdAutoRefresh()` - Auto-refresh visible ads every 60s
+- `stopAdAutoRefresh()` - Cleanup for ad refresh interval
 - `displayExpandedAds()` - Expanded view ads (lines 907-932)
