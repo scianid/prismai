@@ -35,13 +35,14 @@ export async function getOrCreateConversation(
   articleTitle: string,
   articleContent: string
 ): Promise<ConversationRecord | null> {
-  // Try to find existing conversation
+  // Try to find existing conversation (by visitor, article, session)
   const { data: existing, error: fetchError } = await supabase
     .from('conversations')
     .select('*')
     .eq('visitor_id', visitorId)
     .eq('article_unique_id', articleUniqueId)
     .eq('project_id', projectId)
+    .eq('session_id', sessionId)
     .single();
 
   // Return existing if found (ignore PGRST116 = not found error)
