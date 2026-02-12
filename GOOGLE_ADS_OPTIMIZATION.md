@@ -3,8 +3,7 @@
 ## Current Issues Identified
 
 1. **Fixed 1-second delay** before displaying ads - may cause missed impressions or unnecessary blanks
-2. **No lazy loading** - ads load even if widget isn't visible
-3. **No refresh strategy** for expanded view ads
+2. **No refresh strategy** for expanded view ads
 4. **Missing targeting parameters** - no contextual data passed to ad requests
 5. **No viewability optimization** - ads may render off-screen
 
@@ -122,7 +121,7 @@ desktopSlot.defineSizeMapping(sizeMapping);
 
 | Priority | Recommendation | Effort | Impact | Status |
 |----------|---------------|--------|--------|--------|
-| 1 | Lazy Loading | Medium | High | ⏸️ Disabled (caused delays) |
+| 1 | Lazy Loading | Medium | High | ✅ Done |
 | 2 | SRA + slotRenderEnded listener | Low | High | ✅ Done |
 | 3 | Size Mapping | Medium | Medium | ✅ Done |
 | 4 | GPT Ready Check | Low | Medium | ✅ Done |

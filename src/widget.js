@@ -32,7 +32,8 @@
                 conversationId: null,
                 aiResponseCount: 0,
                 suggestionsSuppressed: false,
-                widgetVisibleTracked: false    // Track if widget_visible event has been fired
+                widgetVisibleTracked: false,   // Track if widget_visible event has been fired
+                adRefreshInterval: null        // Interval ID for auto-refreshing ads
             };
 
             // Analytics batching
@@ -218,10 +219,13 @@
                 googletag.pubads().collapseEmptyDivs();
                 self.log('[Divee DEBUG] Configured to collapse empty ad divs');
 
-                // Note: Lazy loading disabled for faster ad display
-                // Since the widget is intentionally placed in content, we want ads ready
-                // immediately when users scroll to the widget position
-                // googletag.pubads().enableLazyLoad({...});
+                // Enable lazy loading for better viewability and fill rates
+                googletag.pubads().enableLazyLoad({
+                    fetchMarginPercent: 200,  // Fetch 2 viewports ahead
+                    renderMarginPercent: 100, // Render 1 viewport ahead
+                    mobileScaling: 2          // Double margins on mobile
+                });
+                self.log('[Divee DEBUG] ✓ Lazy loading enabled');
 
                 // Note: SRA disabled to allow expanded ads to be requested separately
                 // when the widget is expanded, not at initial page load
@@ -935,12 +939,86 @@
                         googletag.pubads().addEventListener('slotResponseReceived', function (event) {
                             self.log('[Divee DEBUG] Ad slot response received:', event.slot.getSlotElementId());
                         });
+
+                        // Start auto-refresh for ads
+                        self.startAdAutoRefresh();
                     });
             } else {
                 this.log('[Divee WARNING] Ads NOT displayed!');
                 this.log('[Divee WARNING] Reason:', !config.show_ad ? 'show_ad is false in config' : 'googletag not available');
                 this.log('[Divee WARNING] config.show_ad:', config.show_ad);
                 this.log('[Divee WARNING] window.googletag:', !!window.googletag);
+            }
+        }
+
+        startAdAutoRefresh() {
+            // Clear any existing refresh interval
+            if (this.state.adRefreshInterval) {
+                clearInterval(this.state.adRefreshInterval);
+            }
+
+            const self = this;
+            const REFRESH_INTERVAL = 60000; // 1 minute in milliseconds
+
+            this.log('[Divee DEBUG] Starting ad auto-refresh (every 60s)');
+
+            this.state.adRefreshInterval = setInterval(() => {
+                if (!window.googletag || !window.googletag.pubads) {
+                    self.log('[Divee DEBUG] Auto-refresh skipped - googletag not available');
+                    return;
+                }
+
+                googletag.cmd.push(function () {
+                    // Get all Divee ad slots
+                    const allSlots = googletag.pubads().getSlots();
+                    const diveeSlots = allSlots.filter(slot => {
+                        const slotId = slot.getSlotElementId();
+                        return slotId.startsWith('div-gpt-ad-');
+                    });
+
+                    // Only refresh slots that are currently visible
+                    const visibleSlots = diveeSlots.filter(slot => {
+                        const element = document.getElementById(slot.getSlotElementId());
+                        if (!element) return false;
+
+                        // Check if element is visible (not display: none and has dimensions)
+                        const style = window.getComputedStyle(element);
+                        if (style.display === 'none' || style.visibility === 'hidden') {
+                            return false;
+                        }
+
+                        // Check if element is in viewport
+                        const rect = element.getBoundingClientRect();
+                        return (
+                            rect.top < window.innerHeight &&
+                            rect.bottom > 0 &&
+                            rect.width > 0 &&
+                            rect.height > 0
+                        );
+                    });
+
+                    if (visibleSlots.length > 0) {
+                        googletag.pubads().refresh(visibleSlots);
+                        self.log('[Divee DEBUG] ✓ Auto-refreshed', visibleSlots.length, 'visible ad slots');
+                        
+                        // Track refresh event
+                        self.trackEvent('ad_auto_refresh', {
+                            slots_refreshed: visibleSlots.map(s => s.getSlotElementId()),
+                            count: visibleSlots.length,
+                            interval_ms: REFRESH_INTERVAL
+                        });
+                    } else {
+                        self.log('[Divee DEBUG] Auto-refresh skipped - no visible slots');
+                    }
+                });
+            }, REFRESH_INTERVAL);
+        }
+
+        stopAdAutoRefresh() {
+            if (this.state.adRefreshInterval) {
+                clearInterval(this.state.adRefreshInterval);
+                this.state.adRefreshInterval = null;
+                this.log('[Divee DEBUG] Ad auto-refresh stopped');
             }
         }
 
@@ -1697,6 +1775,9 @@
         setupPageUnloadFlush() {
             // Flush analytics on page unload
             const flushOnUnload = () => {
+                // Stop ad auto-refresh
+                this.stopAdAutoRefresh();
+
                 if (this.analyticsQueue.length > 0) {
                     const events = [...this.analyticsQueue];
                     this.analyticsQueue = [];
