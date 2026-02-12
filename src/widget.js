@@ -81,7 +81,7 @@
 
         log(...args) {
             if (this.isDebugMode()) {
-                console.log(...args);
+                console.log('[Divee]', ...args);
             }
         }
 
@@ -124,15 +124,12 @@
         }
 
         initGoogleAds() {
-            this.log('[Divee DEBUG] initGoogleAds called');
-            this.log('[Divee DEBUG] window.googletag exists:', !!window.googletag);
-            
             if (window.googletag && window.googletag._initialized_by_divee) {
-                this.log('[Divee DEBUG] Google Ads already initialized by Divee, skipping');
+                this.log('Ads already initialized, skipping');
                 return;
             }
 
-            this.log('[Divee DEBUG] Initializing Google Ads...');
+            this.log('Initializing Google Ads...');
             const self = this; // Capture widget instance
             
             // Get ad tag ID from config or use default fallback
@@ -143,18 +140,13 @@
             // First numbers differ by platform
             const accountId = '22065771467';
             
-            // /23335681243,227399588/Divee.AI/desktop/Divee.AI_banner
-            this.log('[Divee DEBUG] Using ad tag ID:', adTagId);
-            
-            // Build ad paths: /{firstId},{adTagId}/Divee.AI/{platform}/{ad_name}
+            // Build ad paths: /{accountId},{adTagId}/Divee.AI/{platform}/{ad_name}
             const desktopAdPath = `/${accountId},${adTagId}/Divee.AI/desktop/Divee.AI_banner`;
             const mobileAdPath = `/${accountId},${adTagId}/Divee.AI/mobileweb/Divee.AI_cube`;
-            this.log('[Divee DEBUG] Desktop ad path:', desktopAdPath);
-            this.log('[Divee DEBUG] Mobile ad path:', mobileAdPath);
             
             // Check if GPT is already loaded by the page
             const gptAlreadyLoaded = window.googletag && window.googletag.apiReady;
-            this.log('[Divee DEBUG] GPT already loaded by page:', gptAlreadyLoaded);
+            this.log('GPT preloaded:', gptAlreadyLoaded, 'Ad tag:', adTagId);
             this._gptAlreadyLoaded = gptAlreadyLoaded;
             
             window.googletag = window.googletag || { cmd: [] };
@@ -167,22 +159,12 @@
                 gptScript.src = 'https://securepubads.g.doubleclick.net/tag/js/gpt.js';
                 gptScript.crossOrigin = 'anonymous';
 
-                gptScript.onload = function () {
-                    self.log('[Divee DEBUG] ✓ Google Ads script loaded successfully');
-                };
-
-                gptScript.onerror = function () {
-                    console.error('[Divee] Failed to load Google Ads script');
-                };
-
+                gptScript.onload = () => self.log('✓ GPT script loaded');
+                gptScript.onerror = () => console.error('[Divee] Failed to load GPT script');
                 document.head.appendChild(gptScript);
-                this.log('[Divee DEBUG] Google Ads script tag added to head');
-            } else {
-                this.log('[Divee DEBUG] Using existing GPT instance from page');
             }
 
             googletag.cmd.push(function () {
-                self.log('[Divee DEBUG] Defining ad slots...');
 
                 // Collapsed view ads - with responsive size mapping
                 const desktopSizeMapping = googletag.sizeMapping()
@@ -200,60 +182,42 @@
                 if (desktopSlot) {
                     desktopSlot.defineSizeMapping(desktopSizeMapping);
                     desktopSlot.addService(googletag.pubads());
-                    self.log('[Divee DEBUG] ✓ Desktop ad slot defined');
                 } else {
-                    console.error('[Divee] Failed to define desktop ad slot');
+                    console.error('[Divee] Failed to define desktop slot');
                 }
 
                 const mobileSlot = googletag.defineSlot(mobileAdPath, [[336, 280], [300, 250]], 'div-gpt-ad-1768979511037-0');
                 if (mobileSlot) {
                     mobileSlot.defineSizeMapping(mobileSizeMapping);
                     mobileSlot.addService(googletag.pubads());
-                    self.log('[Divee DEBUG] ✓ Mobile ad slot defined');
                 } else {
-                    console.error('[Divee] Failed to define mobile ad slot');
+                    console.error('[Divee] Failed to define mobile slot');
                 }
 
-                self.log('[Divee DEBUG] Ad slots defined (shared for both collapsed and expanded states).');
+                self.log('✓ Ad slots defined');
 
                 googletag.pubads().collapseEmptyDivs();
-                self.log('[Divee DEBUG] Configured to collapse empty ad divs');
-
-                // Enable lazy loading for better viewability and fill rates
                 googletag.pubads().enableLazyLoad({
-                    fetchMarginPercent: 200,  // Fetch 2 viewports ahead
-                    renderMarginPercent: 100, // Render 1 viewport ahead
-                    mobileScaling: 2          // Double margins on mobile
+                    fetchMarginPercent: 200,
+                    renderMarginPercent: 100,
+                    mobileScaling: 2
                 });
-                self.log('[Divee DEBUG] ✓ Lazy loading enabled');
-
-                // Note: SRA disabled to allow expanded ads to be requested separately
-                // when the widget is expanded, not at initial page load
-                // googletag.pubads().enableSingleRequest();
-                self.log('[Divee DEBUG] ✓ SRA disabled for independent slot requests');
-
-                // Page-level targeting for better ad relevance and fill rates
                 googletag.pubads().setTargeting('content_type', 'article');
                 googletag.pubads().setTargeting('display_mode', self.config.displayMode || 'anchored');
-                self.log('[Divee DEBUG] ✓ Page-level targeting set');
-
-                // Check if services are already enabled (page's GPT might have already called this)
-                // When GPT is already loaded by page, we need to refresh newly defined slots
-                const gptAlreadyLoaded = self._gptAlreadyLoaded || false;
-                
                 googletag.enableServices();
-                self.log('[Divee DEBUG] ✓ Services enabled');
                 
                 // If GPT was already loaded, mark slots for refresh
+                const gptAlreadyLoaded = self._gptAlreadyLoaded || false;
                 if (gptAlreadyLoaded) {
-                    self.log('[Divee DEBUG] GPT pre-loaded - slots will be refreshed after display');
                     self._needsSlotRefresh = true;
                 }
+                
+                self.log('✓ Ads initialized');
             });
         }
 
         async init() {
-            this.log('[Divee] Initializing widget...', this.config);
+            this.log('Initializing widget...', this.config);
 
             // Initialize Analytics IDs
             this.getAnalyticsIds();
@@ -265,7 +229,7 @@
             this.initGoogleAds();
 
             if (!this.state.serverConfig) {
-                this.log('[Divee] Widget disabled due to config load failure');
+                this.log('Widget disabled due to config load failure');
                 return;
             }
 
@@ -303,24 +267,24 @@
                 });
 
                 this.state.serverConfig = serverConfig;
-                this.log('[Divee] Server config loaded:', this.state.serverConfig);
+                this.log('Server config loaded:', this.state.serverConfig);
 
                 // Apply display settings from server config (override data attributes)
                 if (serverConfig.display_mode) {
                     this.config.displayMode = serverConfig.display_mode;
-                    this.log('[Divee] Display mode from config:', serverConfig.display_mode);
+                    this.log('Display mode from config:', serverConfig.display_mode);
                 }
                 if (serverConfig.display_position) {
                     // Apply position based on display mode
                     if (this.config.displayMode === 'floating') {
                         this.config.floatingPosition = serverConfig.display_position;
-                        this.log('[Divee] Floating position from config:', serverConfig.display_position);
+                        this.log('Floating position from config:', serverConfig.display_position);
                     } else {
                         // Anchored mode: only allow 'top' or 'bottom'
                         this.config.anchoredPosition = ['top', 'bottom'].includes(serverConfig.display_position) 
                             ? serverConfig.display_position 
                             : 'bottom';
-                        this.log('[Divee] Anchored position from config:', this.config.anchoredPosition);
+                        this.log('Anchored position from config:', this.config.anchoredPosition);
                     }
                 }
                 if (serverConfig.anchored_position) {
@@ -328,15 +292,15 @@
                     this.config.anchoredPosition = ['top', 'bottom'].includes(serverConfig.anchored_position) 
                         ? serverConfig.anchored_position 
                         : 'bottom';
-                    this.log('[Divee] Anchored position override from config:', this.config.anchoredPosition);
+                    this.log('Anchored position override from config:', this.config.anchoredPosition);
                 }
                 if (serverConfig.article_class) {
                     this.config.articleClass = serverConfig.article_class;
-                    this.log('[Divee] Article class from config:', serverConfig.article_class);
+                    this.log('Article class from config:', serverConfig.article_class);
                 }
                 if (serverConfig.widget_container_class) {
                     this.config.containerSelector = serverConfig.widget_container_class;
-                    this.log('[Divee] Container selector from config:', serverConfig.widget_container_class);
+                    this.log('Container selector from config:', serverConfig.widget_container_class);
                 }
 
                 // Apply direction and language
@@ -359,7 +323,7 @@
                 
                 // Always log overrides (not just in debug mode)
                 if (overrideDisplayMode || overrideDisplayPosition || overrideArticleClass || overrideContainerSelector) {
-                    this.log('[Divee] URL param overrides detected:', {
+                    this.log('URL param overrides detected:', {
                         displayMode: overrideDisplayMode,
                         displayPosition: overrideDisplayPosition,
                         articleClass: overrideArticleClass,
@@ -369,7 +333,7 @@
                 
                 if (overrideDisplayMode) {
                     this.config.displayMode = overrideDisplayMode;
-                    this.log('[Divee] Display mode overridden by URL param:', overrideDisplayMode);
+                    this.log('Display mode overridden by URL param:', overrideDisplayMode);
                 }
                 if (overrideDisplayPosition) {
                     // For floating mode positions (bottom-right, bottom-left, etc.)
@@ -378,19 +342,19 @@
                     if (['top', 'bottom'].includes(overrideDisplayPosition)) {
                         this.config.anchoredPosition = overrideDisplayPosition;
                     }
-                    this.log('[Divee] Display position overridden by URL param:', overrideDisplayPosition);
+                    this.log('Display position overridden by URL param:', overrideDisplayPosition);
                 }
                 if (overrideArticleClass) {
                     this.config.articleClass = overrideArticleClass;
-                    this.log('[Divee] Article class overridden by URL param:', overrideArticleClass);
+                    this.log('Article class overridden by URL param:', overrideArticleClass);
                 }
                 if (overrideContainerSelector) {
                     this.config.containerSelector = overrideContainerSelector;
-                    this.log('[Divee] Container selector overridden by URL param:', overrideContainerSelector);
+                    this.log('Container selector overridden by URL param:', overrideContainerSelector);
                 }
                 
                 // Log final config after all overrides
-                this.log('[Divee] Final config after overrides:', {
+                this.log('Final config after overrides:', {
                     displayMode: this.config.displayMode,
                     floatingPosition: this.config.floatingPosition,
                     anchoredPosition: this.config.anchoredPosition,
@@ -411,7 +375,7 @@
             if (Array.isArray(colors) && colors.length >= 2) {
                 this.elements.container.style.setProperty('--divee-color-primary', colors[0]);
                 this.elements.container.style.setProperty('--divee-color-secondary', colors[1]);
-                this.log('[Divee] Applied theme colors:', colors[0], colors[1]);
+                this.log('Applied theme colors:', colors[0], colors[1]);
             }
         }
 
@@ -451,7 +415,7 @@
         extractArticleContent() {
             // Check if content is already cached
             if (this.contentCache.extracted) {
-                this.log('[Divee] Using cached content');
+                this.log('Using cached content');
                 this.articleTitle = this.contentCache.title;
                 this.articleContent = this.contentCache.content;
                 return;
@@ -503,7 +467,7 @@
                     extracted: true
                 };
 
-                this.log('[Divee] Article extracted and cached:', {
+                this.log('Article extracted and cached:', {
                     title: this.articleTitle,
                     url: this.articleUrl,
                     contentLength: this.articleContent.length,
@@ -530,7 +494,7 @@
 
         createWidget() {
             // Debug: Log config values at widget creation time
-            this.log('[Divee] createWidget called with config:', {
+            this.log('createWidget called with config:', {
                 displayMode: this.config.displayMode,
                 floatingPosition: this.config.floatingPosition,
                 anchoredPosition: this.config.anchoredPosition
@@ -543,11 +507,11 @@
             
             // Apply display mode
             if (this.config.displayMode === 'floating') {
-                this.log('[Divee] Applying floating mode with position:', this.config.floatingPosition);
+                this.log('Applying floating mode with position:', this.config.floatingPosition);
                 container.classList.add('divee-widget-floating');
                 container.setAttribute('data-floating-position', this.config.floatingPosition);
             } else {
-                this.log('[Divee] Anchored mode, position:', this.config.anchoredPosition);
+                this.log('Anchored mode, position:', this.config.anchoredPosition);
             }
 
             // Apply direction from config
@@ -599,9 +563,6 @@
             const config = this.state.serverConfig || this.getDefaultConfig();
             // Hide ads in floating mode collapsed view
             const showAd = (config.show_ad && this.config.displayMode !== 'floating') ? '' : 'style="display: none;"';
-
-            this.log('[Divee DEBUG] Creating collapsed view with showAd:', showAd);
-            this.log('[Divee DEBUG] config.show_ad:', config.show_ad);
             
             view.innerHTML = `
                 <div class="divee-powered-by-collapsed">
@@ -750,17 +711,17 @@
         }
 
         insertWidget(container) {
-            this.log('[Divee] insertWidget called with config:', {
+            this.log('insertWidget called with config:', {
                 displayMode: this.config.displayMode,
                 anchoredPosition: this.config.anchoredPosition,
                 containerSelector: this.config.containerSelector
             });
-            this.log('[Divee] Display mode:', this.config.displayMode);
-            this.log('[Divee] Config containerSelector (from server):', this.config.containerSelector);
+            this.log('Display mode:', this.config.displayMode);
+            this.log('Config containerSelector (from server):', this.config.containerSelector);
 
             // For floating mode, always append to body
             if (this.config.displayMode === 'floating') {
-                this.log('[Divee] Floating mode: appending to body');
+                this.log('Floating mode: appending to body');
                 document.body.appendChild(container);
                 this.displayAdsIfNeeded();
                 return;
@@ -770,11 +731,11 @@
 
             // First, try custom container selector if provided
             if (this.config.containerSelector) {
-                this.log('[Divee] ✓ Using containerSelector from server config:', this.config.containerSelector);
-                this.log('[Divee] Attempting to find element with querySelector:', this.config.containerSelector);
+                this.log('✓ Using containerSelector from server config:', this.config.containerSelector);
+                this.log('Attempting to find element with querySelector:', this.config.containerSelector);
                 targetElement = document.querySelector(this.config.containerSelector);
                 if (targetElement) {
-                    this.log('[Divee] ✓ Found custom container element:', {
+                    this.log('✓ Found custom container element:', {
                         selector: this.config.containerSelector,
                         tagName: targetElement.tagName,
                         className: targetElement.className,
@@ -784,35 +745,35 @@
                     this.log(`[Divee] ✗ Container selector "${this.config.containerSelector}" not found in DOM, falling back to default behavior`);
                 }
             } else {
-                this.log('[Divee] No containerSelector from server config, using default auto-detection');
+                this.log('No containerSelector from server config, using default auto-detection');
             }
 
             // Fallback to default behavior
             if (!targetElement) {
-                this.log('[Divee] Looking for default containers (article, [role="article"], main)');
+                this.log('Looking for default containers (article, [role="article"], main)');
                 targetElement = document.querySelector('article') ||
                     document.querySelector('[role="article"]') ||
                     document.querySelector('main');
                 if (targetElement) {
-                    this.log('[Divee] ✓ Found default container:', targetElement.tagName, targetElement.className);
+                    this.log('✓ Found default container:', targetElement.tagName, targetElement.className);
                 } else {
-                    this.log('[Divee] ✗ No default container found, will append to body');
+                    this.log('✗ No default container found, will append to body');
                 }
             }
 
             // Insert widget based on anchored position
             if (targetElement) {
-                this.log('[Divee] Inserting widget to target element, position:', this.config.anchoredPosition);
+                this.log('Inserting widget to target element, position:', this.config.anchoredPosition);
                 if (this.config.anchoredPosition === 'top') {
-                    this.log('[Divee] Using prepend() for top position');
+                    this.log('Using prepend() for top position');
                     targetElement.prepend(container);
                 } else {
-                    this.log('[Divee] Using appendChild() for bottom position');
+                    this.log('Using appendChild() for bottom position');
                     targetElement.appendChild(container);
                 }
             } else {
                 // Final fallback: append to body if nothing found
-                this.log('[Divee] No suitable container found, appending to body as fallback');
+                this.log('No suitable container found, appending to body as fallback');
                 if (this.config.anchoredPosition === 'top') {
                     document.body.prepend(container);
                 } else {
@@ -820,134 +781,77 @@
                 }
             }
 
-            this.log('[Divee] Widget inserted successfully');
-
             this.displayAdsIfNeeded();
         }
 
         displayAdsIfNeeded() {
             // Display ads after widget is in DOM
             const config = this.state.serverConfig || this.getDefaultConfig();
-            this.log('[Divee DEBUG] displayAdsIfNeeded: show_ad =', config.show_ad);
 
             if (config.show_ad && window.googletag) {
                 const self = this; // Capture widget instance
                 
                 // Use googletag.cmd.push instead of setTimeout - it automatically waits for GPT to be ready
                 googletag.cmd.push(function () {
-                    self.log('[Divee DEBUG] Displaying ad slots...');
+                    googletag.display('div-gpt-ad-1768979426842-0');
+                    googletag.display('div-gpt-ad-1768979511037-0');
+                    self.log('✓ Ad slots displayed');
 
-                        googletag.display('div-gpt-ad-1768979426842-0');
-                        googletag.display('div-gpt-ad-1768979511037-0');
-                        self.log('[Divee DEBUG] ✓ Ad slots displayed');
-
-                        // If GPT was already loaded, refresh newly defined slots
-                        if (self._needsSlotRefresh) {
-                            const collapsedSlots = googletag.pubads().getSlots().filter(slot => {
-                                const slotId = slot.getSlotElementId();
-                                return slotId === 'div-gpt-ad-1768979426842-0' || slotId === 'div-gpt-ad-1768979511037-0';
-                            });
-                            if (collapsedSlots.length > 0) {
-                                googletag.pubads().refresh(collapsedSlots);
-                                self.log('[Divee DEBUG] ✓ Refreshed slots (GPT pre-loaded)');
-                            }
-                            self._needsSlotRefresh = false;
+                    // If GPT was already loaded, refresh newly defined slots
+                    if (self._needsSlotRefresh) {
+                        const collapsedSlots = googletag.pubads().getSlots().filter(slot => {
+                            const slotId = slot.getSlotElementId();
+                            return slotId === 'div-gpt-ad-1768979426842-0' || slotId === 'div-gpt-ad-1768979511037-0';
+                        });
+                        if (collapsedSlots.length > 0) {
+                            googletag.pubads().refresh(collapsedSlots);
+                            self.log('✓ Refreshed pre-loaded slots');
                         }
+                        self._needsSlotRefresh = false;
+                    }
 
-                        // Listen for ad slot rendering events
-                        let emptyAdCount = 0;
-                        
-                        // Only track Divee's own ad slots
-                        const diveeAdSlotIds = [
-                            'div-gpt-ad-1768979426842-0',
-                            'div-gpt-ad-1768979511037-0'
-                        ];
-                        
-                        googletag.pubads().addEventListener('slotRenderEnded', function (event) {
-                            const slotId = event.slot.getSlotElementId();
-                            
-                            // Ignore ads that aren't ours
-                            if (!diveeAdSlotIds.includes(slotId)) {
-                                self.log('[Divee DEBUG] Ignoring non-Divee ad slot:', slotId);
-                                return;
-                            }
-                            
-                            const adElement = document.getElementById(slotId);
+                    // Listen for ad slot rendering events
+                    let emptyAdCount = 0;
+                    const diveeAdSlotIds = ['div-gpt-ad-1768979426842-0', 'div-gpt-ad-1768979511037-0'];
+                    
+                    googletag.pubads().addEventListener('slotRenderEnded', function (event) {
+                        const slotId = event.slot.getSlotElementId();
+                        if (!diveeAdSlotIds.includes(slotId)) return;
+                        const adElement = document.getElementById(slotId);
 
-                            self.log('[Divee DEBUG] AD RENDER EVENT:', {
-                                slotId,
-                                isEmpty: event.isEmpty,
-                                size: event.size,
-                                advertiserId: event.advertiserId,
-                                lineItemId: event.lineItemId,
-                                creativeId: event.creativeId,
-                                element_exists: !!adElement,
-                                adElement
+                        if (event.isEmpty && adElement) {
+                            adElement.style.display = 'none';
+                            emptyAdCount++;
+                            self.trackEvent('ad_unfilled', {
+                                ad_unit: slotId,
+                                position: slotId.includes('expanded') ? 'expanded' : 'collapsed',
+                                reason: 'no_fill'
                             });
-
-                            if (event.isEmpty && adElement) {
-                                adElement.style.display = 'none';
-                                emptyAdCount++;
-                                self.log('[Divee DEBUG] Ad slot hidden (empty):', slotId, `(${emptyAdCount}/2 empty)`);
-
-                                // Track unfilled ad impression for analytics
-                                self.trackEvent('ad_unfilled', {
-                                    ad_unit: slotId,
-                                    position: slotId.includes('expanded') ? 'expanded' : 'collapsed',
-                                    reason: 'no_fill'
-                                });
-
-                                // If both ads are empty, hide the entire ad slot container
-                                if (emptyAdCount === 2) {
-                                    const adSlot = document.querySelector('.divee-ad-slot');
-                                    if (adSlot) {
-                                        adSlot.style.display = 'none';
-                                        self.log('[Divee DEBUG] Ad slot container hidden (all ads empty)');
-                                    }
-                                }
-                            } else if (!event.isEmpty) {
-                                self.log('[Divee DEBUG] Ad successfully rendered:', slotId);
-                                
-                                // Track ad impression
-                                self.trackEvent('ad_impression', {
+                            if (emptyAdCount === 2) {
+                                const adSlot = document.querySelector('.divee-ad-slot');
+                                if (adSlot) adSlot.style.display = 'none';
+                            }
+                        } else if (!event.isEmpty) {
+                            self.trackEvent('ad_impression', {
                                     ad_unit: slotId,
                                     position: slotId.includes('expanded') ? 'expanded' : 'collapsed',
                                     size: event.size ? `${event.size[0]}x${event.size[1]}` : 'unknown',
-                                    advertiser_id: event.advertiserId || null,
-                                    creative_id: event.creativeId || null,
-                                    line_item_id: event.lineItemId || null
-                                });
-                                
-                                // Add click tracking to the ad element
-                                if (adElement) {
-                                    self.setupAdClickTracking(adElement, slotId, event);
-                                }
-                            }
-                        });
+                                advertiser_id: event.advertiserId || null,
+                                creative_id: event.creativeId || null,
+                                line_item_id: event.lineItemId || null
+                            });
+                            if (adElement) self.setupAdClickTracking(adElement, slotId, event);
+                        }
+                    });
 
-                        // Listen for slot loaded
-                        googletag.pubads().addEventListener('slotOnload', function (event) {
-                            self.log('[Divee DEBUG] Ad slot loaded:', event.slot.getSlotElementId());
-                        });
-
-                        // Listen for slot requested
-                        googletag.pubads().addEventListener('slotRequested', function (event) {
-                            self.log('[Divee DEBUG] Ad slot requested:', event.slot.getSlotElementId());
-                        });
-
-                        // Listen for slot response received
-                        googletag.pubads().addEventListener('slotResponseReceived', function (event) {
-                            self.log('[Divee DEBUG] Ad slot response received:', event.slot.getSlotElementId());
-                        });
-
-                        // Start auto-refresh for ads
+                    // Start auto-refresh for ads
                         self.startAdAutoRefresh();
                     });
             } else {
-                this.log('[Divee WARNING] Ads NOT displayed!');
-                this.log('[Divee WARNING] Reason:', !config.show_ad ? 'show_ad is false in config' : 'googletag not available');
-                this.log('[Divee WARNING] config.show_ad:', config.show_ad);
-                this.log('[Divee WARNING] window.googletag:', !!window.googletag);
+                this.log('WARNING: Ads NOT displayed!');
+                this.log('WARNING: Reason:', !config.show_ad ? 'show_ad is false in config' : 'googletag not available');
+                this.log('WARNING: config.show_ad:', config.show_ad);
+                this.log('WARNING: window.googletag:', !!window.googletag);
             }
         }
 
@@ -960,13 +864,8 @@
             const self = this;
             const REFRESH_INTERVAL = 60000; // 1 minute in milliseconds
 
-            this.log('[Divee DEBUG] Starting ad auto-refresh (every 60s)');
-
             this.state.adRefreshInterval = setInterval(() => {
-                if (!window.googletag || !window.googletag.pubads) {
-                    self.log('[Divee DEBUG] Auto-refresh skipped - googletag not available');
-                    return;
-                }
+                if (!window.googletag || !window.googletag.pubads) return;
 
                 googletag.cmd.push(function () {
                     // Get all Divee ad slots
@@ -999,16 +898,12 @@
 
                     if (visibleSlots.length > 0) {
                         googletag.pubads().refresh(visibleSlots);
-                        self.log('[Divee DEBUG] ✓ Auto-refreshed', visibleSlots.length, 'visible ad slots');
-                        
-                        // Track refresh event
+                        self.log('✓ Auto-refreshed', visibleSlots.length, 'ad(s)');
                         self.trackEvent('ad_auto_refresh', {
                             slots_refreshed: visibleSlots.map(s => s.getSlotElementId()),
                             count: visibleSlots.length,
                             interval_ms: REFRESH_INTERVAL
                         });
-                    } else {
-                        self.log('[Divee DEBUG] Auto-refresh skipped - no visible slots');
                     }
                 });
             }, REFRESH_INTERVAL);
@@ -1018,7 +913,6 @@
             if (this.state.adRefreshInterval) {
                 clearInterval(this.state.adRefreshInterval);
                 this.state.adRefreshInterval = null;
-                this.log('[Divee DEBUG] Ad auto-refresh stopped');
             }
         }
 
@@ -1615,25 +1509,18 @@
         setupAdClickTracking(adElement, slotId, eventData) {
             const self = this;
             
-            // Track clicks on the ad container (debug logging only, no analytics event)
-            adElement.addEventListener('click', function(e) {
-                self.log('[Divee DEBUG] Ad clicked:', slotId);
+            // Track clicks on the ad container
+            adElement.addEventListener('click', () => {
+                // Click detected - event tracking happens in analytics
             });
             
-            // Also track clicks on any links inside the ad (for additional granularity)
+            // Also track clicks on any links inside the ad
             setTimeout(() => {
                 const iframe = adElement.querySelector('iframe');
                 if (iframe) {
-                    try {
-                        // Note: Due to cross-origin restrictions, we can't directly access iframe content
-                        // But we can detect when the iframe loses focus (indicating a click)
-                        iframe.addEventListener('load', function() {
-                            self.log('[Divee DEBUG] Ad iframe loaded:', slotId);
-                        });
-                    } catch (e) {
-                        // Expected for cross-origin iframes
-                        self.log('[Divee DEBUG] Cannot access iframe content (cross-origin)');
-                    }
+                    iframe.addEventListener('load', () => {
+                        // Iframe loaded
+                    });
                 }
             }, 100);
         }
@@ -1759,7 +1646,7 @@
                             viewport_height: window.innerHeight
                         });
                         
-                        this.log('[Divee] Widget visible event fired');
+                        this.log('Widget visible event fired');
                         
                         // Disconnect observer after firing once
                         observer.disconnect();
@@ -1813,10 +1700,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const isDebug = urlParams.get('diveeDebug') === 'true';
 
-        if (isDebug) {
-            console.log('[Divee DEBUG] Found', scripts.length, 'widget script(s)');
-        }
-
         scripts.forEach((script, index) => {
             const config = {
                 projectId: script.getAttribute('data-project-id'),
@@ -1826,22 +1709,17 @@
 
             // Show deprecation warnings if data attributes are used
             if (isDebug) {
-                if (script.getAttribute('data-display-mode')) {
-                    console.warn('[Divee] DEPRECATED: data-display-mode is deprecated. Configure display_mode in your project settings.');
+                const deprecated = [
+                    { attr: 'data-display-mode', msg: 'Use display_mode in project settings' },
+                    { attr: 'data-floating-position', msg: 'Use display_position in project settings' },
+                    { attr: 'data-article-class', msg: 'Use article_class in project settings' },
+                    { attr: 'data-container-selector', msg: 'Use widget_container_class in project settings' }
+                ].filter(d => script.getAttribute(d.attr));
+                
+                if (deprecated.length > 0) {
+                    console.warn('[Divee] Deprecated attributes:', deprecated.map(d => d.attr).join(', '));
                 }
-                if (script.getAttribute('data-floating-position')) {
-                    console.warn('[Divee] DEPRECATED: data-floating-position is deprecated. Configure display_position in your project settings.');
-                }
-                if (script.getAttribute('data-article-class')) {
-                    console.warn('[Divee] DEPRECATED: data-article-class is deprecated. Configure article_class in your project settings.');
-                }
-                if (script.getAttribute('data-container-selector')) {
-                    console.warn('[Divee] DEPRECATED: data-container-selector is deprecated. Configure widget_container_class in your project settings.');
-                }
-            }
-
-            if (isDebug) {
-                console.log(`[Divee] Auto-init config [${index}]:`, config);
+                console.log(`[Divee] Auto-init [${index}]:`, config);
             }
             new DiveeWidget(config);
         });
