@@ -861,9 +861,20 @@
             const REFRESH_INTERVAL = 60000; // 1 minute in milliseconds
 
             this.state.adRefreshInterval = setInterval(() => {
-                if (!window.googletag || !window.googletag.pubads) return;
+                if (!this.isWidgetInViewport()) {
+                    this.log('Ad refresh skipped: widget not near viewport');
+                    return;
+                }
+                if (!window.googletag || !window.googletag.pubads) {
+                    this.log('Ad refresh skipped: googletag not ready');
+                    return;
+                }
 
                 googletag.cmd.push(function () {
+                    if (!self.isWidgetInViewport()) {
+                        self.log('Ad refresh skipped: widget not near viewport (cmd)');
+                        return;
+                    }
                     // Get all Divee ad slots
                     const allSlots = googletag.pubads().getSlots();
                     const diveeSlots = allSlots.filter(slot => {
@@ -903,6 +914,29 @@
                     }
                 });
             }, REFRESH_INTERVAL);
+        }
+
+        isWidgetInViewport(paddingPx = 200) {
+            const container = this.elements.container;
+            if (!container) return false;
+
+            const style = window.getComputedStyle(container);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+                return false;
+            }
+
+            const rect = container.getBoundingClientRect();
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+
+            return (
+                rect.bottom > -paddingPx &&
+                rect.right > -paddingPx &&
+                rect.top < viewportHeight + paddingPx &&
+                rect.left < viewportWidth + paddingPx &&
+                rect.width > 0 &&
+                rect.height > 0
+            );
         }
 
         stopAdAutoRefresh() {
