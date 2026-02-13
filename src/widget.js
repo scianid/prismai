@@ -133,12 +133,12 @@
             const defaultAdTagId = '227399588';
             const adTagId = this.state.serverConfig?.ad_tag_id || defaultAdTagId;
             
-            // First numbers differ by platform
-            const accountId = '22065771467';
+            // account ID for Divee
+            const accountId = '22247219933';
             
-            // Build ad paths: /{accountId},{adTagId}/Divee.AI/{platform}/{ad_name}
-            const desktopAdPath = `/${accountId},${adTagId}/Divee.AI/desktop/Divee.AI_banner`;
-            const mobileAdPath = `/${accountId},${adTagId}/Divee.AI/mobileweb/Divee.AI_cube`;
+            // Build ad paths: /{accountId},{adTagId}/Divee/{platform}
+            const desktopAdPath = `/${accountId},${adTagId}/Divee/Desktop`;
+            const mobileAdPath = `/${accountId},${adTagId}/Divee/mobileweb`;
             
             // Check if GPT is already loaded by the page
             const gptAlreadyLoaded = window.googletag && window.googletag.apiReady;
@@ -164,17 +164,17 @@
 
                 // Collapsed view ads - with responsive size mapping
                 const desktopSizeMapping = googletag.sizeMapping()
-                    .addSize([1024, 0], [[728, 90], [650, 100]])  // Desktop: standard banner sizes
-                    .addSize([768, 0], [[650, 100]])              // Tablet: slightly smaller
-                    .addSize([0, 0], [])                          // Mobile: don't show desktop ad
+                    .addSize([1024, 0], [[970, 250], [728, 90], [468, 60], [300, 250]])
+                    .addSize([768, 0], [[728, 90], [468, 60], [300, 250]])
+                    .addSize([0, 0], [])
                     .build();
                 
                 const mobileSizeMapping = googletag.sizeMapping()
-                    .addSize([768, 0], [])                        // Desktop/Tablet: don't show mobile ad
-                    .addSize([0, 0], [[300, 250], [336, 280]])    // Mobile: cube sizes
+                    .addSize([768, 0], [])
+                    .addSize([0, 0], [[336, 280], [320, 250], [300, 250], [320, 100], [300, 100], [320, 50], [300, 50]])
                     .build();
 
-                const desktopSlot = googletag.defineSlot(desktopAdPath, [[650, 100], [728, 90]], 'div-gpt-ad-1768979426842-0');
+                const desktopSlot = googletag.defineSlot(desktopAdPath, [[468, 60], [300, 250], [728, 90], [970, 250]], 'div-gpt-ad-1770993606680-0');
                 if (desktopSlot) {
                     desktopSlot.defineSizeMapping(desktopSizeMapping);
                     desktopSlot.addService(googletag.pubads());
@@ -182,7 +182,7 @@
                     console.error('[Divee] Failed to define desktop slot');
                 }
 
-                const mobileSlot = googletag.defineSlot(mobileAdPath, [[336, 280], [300, 250]], 'div-gpt-ad-1768979511037-0');
+                const mobileSlot = googletag.defineSlot(mobileAdPath, [[320, 100], [320, 50], [300, 100], [300, 50], [300, 250], [320, 250], [336, 280]], 'div-gpt-ad-1770993160534-0');
                 if (mobileSlot) {
                     mobileSlot.defineSizeMapping(mobileSizeMapping);
                     mobileSlot.addService(googletag.pubads());
@@ -532,9 +532,9 @@
             adContainer.innerHTML = `
                 <div class="divee-ad-slot divee-ad-slot-shared" ${showAd}>
                     <!-- Desktop Ad -->
-                    <div id='div-gpt-ad-1768979426842-0' class='divee-ad-desktop' style='min-width: 650px; min-height: 90px; margin: 0 !important;'></div>
+                    <div id='div-gpt-ad-1770993606680-0' class='divee-ad-desktop' style='min-width: 300px; min-height: 60px; margin: 0 !important;'></div>
                     <!-- Mobile Ad -->
-                    <div id='div-gpt-ad-1768979511037-0' class='divee-ad-mobile' style='min-width: 300px; min-height: 250px;'></div>
+                    <div id='div-gpt-ad-1770993160534-0' class='divee-ad-mobile' style='min-width: 300px; min-height: 50px;'></div>
                 </div>
             `;
             container.appendChild(adContainer);
@@ -789,15 +789,15 @@
                 
                 // Use googletag.cmd.push instead of setTimeout - it automatically waits for GPT to be ready
                 googletag.cmd.push(function () {
-                    googletag.display('div-gpt-ad-1768979426842-0');
-                    googletag.display('div-gpt-ad-1768979511037-0');
+                    googletag.display('div-gpt-ad-1770993606680-0');
+                    googletag.display('div-gpt-ad-1770993160534-0');
                     self.log('✓ Ad slots displayed');
 
                     // If GPT was already loaded, refresh newly defined slots
                     if (self._needsSlotRefresh) {
                         const collapsedSlots = googletag.pubads().getSlots().filter(slot => {
                             const slotId = slot.getSlotElementId();
-                            return slotId === 'div-gpt-ad-1768979426842-0' || slotId === 'div-gpt-ad-1768979511037-0';
+                            return slotId === 'div-gpt-ad-1770993606680-0' || slotId === 'div-gpt-ad-1770993160534-0';
                         });
                         if (collapsedSlots.length > 0) {
                             googletag.pubads().refresh(collapsedSlots);
@@ -808,7 +808,7 @@
 
                     // Listen for ad slot rendering events
                     let emptyAdCount = 0;
-                    const diveeAdSlotIds = ['div-gpt-ad-1768979426842-0', 'div-gpt-ad-1768979511037-0'];
+                    const diveeAdSlotIds = ['div-gpt-ad-1770993606680-0', 'div-gpt-ad-1770993160534-0'];
                     
                     googletag.pubads().addEventListener('slotRenderEnded', function (event) {
                         const slotId = event.slot.getSlotElementId();

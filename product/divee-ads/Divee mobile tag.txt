@@ -1,0 +1,16 @@
+<script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" crossorigin="anonymous"></script>
+<script>
+  window.googletag = window.googletag || {cmd: []};
+  googletag.cmd.push(function() {
+    googletag.defineSlot('/22247219933,227399588/Divee/mobileweb', [[320, 100], [320, 50], [300, 100], [300, 50], [300, 250], [320, 250], [336, 280]], 'div-gpt-ad-1770993160534-0').addService(googletag.pubads());
+    googletag.pubads().enableSingleRequest();
+    googletag.pubads().collapseEmptyDivs();
+    googletag.enableServices();
+  });
+</script>
+<!-- /22247219933,227399588/Divee/mobileweb -->
+<div id='div-gpt-ad-1770993160534-0' style='min-width: 300px; min-height: 50px;'>
+  <script>
+    googletag.cmd.push(function() { googletag.display('div-gpt-ad-1770993160534-0'); });
+  </script>
+</div>
