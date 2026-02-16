@@ -21,7 +21,8 @@ CREATE TABLE public.account_collaborator (
   CONSTRAINT account_collaborator_pkey PRIMARY KEY (id),
   CONSTRAINT account_collaborator_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.account(id),
   CONSTRAINT account_collaborator_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT account_collaborator_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES auth.users(id)
+  CONSTRAINT account_collaborator_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES auth.users(id),
+  CONSTRAINT account_collaborator_account_id_fkey1 FOREIGN KEY (account_id) REFERENCES public.account(id)
 );
 CREATE TABLE public.admin_users (
   user_id uuid NOT NULL,
@@ -43,6 +44,19 @@ CREATE TABLE public.analytics_events (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT analytics_events_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.analytics_events_hourly_agg (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  project_id text NOT NULL,
+  event_type text NOT NULL,
+  event_label text,
+  hour_bucket timestamp with time zone NOT NULL,
+  event_count bigint NOT NULL DEFAULT 0,
+  unique_visitors bigint NOT NULL DEFAULT 0,
+  unique_sessions bigint NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT analytics_events_hourly_agg_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.analytics_impressions (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   project_id text NOT NULL,
@@ -60,6 +74,20 @@ CREATE TABLE public.analytics_impressions (
   platform text,
   CONSTRAINT analytics_impressions_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.analytics_impressions_hourly_agg (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  project_id text NOT NULL,
+  hour_bucket timestamp with time zone NOT NULL,
+  platform text,
+  geo_country text,
+  impression_count bigint NOT NULL DEFAULT 0,
+  unique_visitors bigint NOT NULL DEFAULT 0,
+  unique_sessions bigint NOT NULL DEFAULT 0,
+  unique_urls bigint NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT analytics_impressions_hourly_agg_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.article (
   url text NOT NULL,
   title text NOT NULL,
@@ -68,7 +96,69 @@ CREATE TABLE public.article (
   project_id text NOT NULL,
   unique_id text NOT NULL UNIQUE,
   image_url text,
+  created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT article_pkey PRIMARY KEY (unique_id)
+);
+CREATE TABLE public.contact_submissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  email text NOT NULL,
+  phone text,
+  company_name text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  ip_address text,
+  user_agent text,
+  CONSTRAINT contact_submissions_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.conversation_analysis (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL UNIQUE,
+  project_id text NOT NULL,
+  interest_score integer CHECK (interest_score >= 0 AND interest_score <= 100),
+  engagement_score numeric,
+  business_score numeric,
+  content_score numeric,
+  sentiment_score numeric,
+  ai_summary text,
+  key_insights jsonb,
+  analyzed_at timestamp with time zone NOT NULL DEFAULT now(),
+  analysis_version character varying,
+  CONSTRAINT conversation_analysis_pkey PRIMARY KEY (id),
+  CONSTRAINT conversation_analysis_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id)
+);
+CREATE TABLE public.conversation_percentiles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id text NOT NULL,
+  date date NOT NULL,
+  messages_p10 integer,
+  messages_p25 integer,
+  messages_p50 integer,
+  messages_p75 integer,
+  messages_p90 integer,
+  messages_p99 integer,
+  duration_p10 integer,
+  duration_p25 integer,
+  duration_p50 integer,
+  duration_p75 integer,
+  duration_p90 integer,
+  duration_p99 integer,
+  questions_p10 integer,
+  questions_p25 integer,
+  questions_p50 integer,
+  questions_p75 integer,
+  questions_p90 integer,
+  questions_p99 integer,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT conversation_percentiles_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.conversation_tags (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL,
+  tag character varying NOT NULL,
+  confidence numeric,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT conversation_tags_pkey PRIMARY KEY (id),
+  CONSTRAINT conversation_tags_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id)
 );
 CREATE TABLE public.conversations (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -84,8 +174,20 @@ CREATE TABLE public.conversations (
   message_count integer DEFAULT 0,
   total_chars integer DEFAULT 0,
   suggestion_index integer DEFAULT 0,
+  analyzed_at timestamp with time zone,
+  url text,
   CONSTRAINT conversations_pkey PRIMARY KEY (id),
   CONSTRAINT conversations_article_unique_id_fkey FOREIGN KEY (article_unique_id) REFERENCES public.article(unique_id)
+);
+CREATE TABLE public.dashboard_metrics (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id text NOT NULL,
+  metric_date date NOT NULL,
+  metric_type character varying NOT NULL,
+  numeric_value numeric,
+  json_value jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT dashboard_metrics_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.freeform_qa (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -131,8 +233,26 @@ CREATE TABLE public.project_config (
   updated_at timestamp with time zone DEFAULT now(),
   deleted_at timestamp with time zone,
   deleted_by uuid,
+  revenue_share_percentage integer NOT NULL DEFAULT 50 CHECK (revenue_share_percentage >= 0 AND revenue_share_percentage <= 100),
+  override_mobile_ad_size text,
+  override_desktop_ad_size text,
   CONSTRAINT project_config_pkey PRIMARY KEY (id),
   CONSTRAINT project_config_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(project_id),
   CONSTRAINT project_config_ad_tag_id_updated_by_fkey FOREIGN KEY (ad_tag_id_updated_by) REFERENCES auth.users(id),
   CONSTRAINT project_config_deleted_by_fkey FOREIGN KEY (deleted_by) REFERENCES auth.users(id)
+);
+CREATE TABLE public.token_usage (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  project_id text NOT NULL,
+  conversation_id uuid,
+  visitor_id uuid,
+  session_id uuid,
+  input_tokens integer NOT NULL DEFAULT 0,
+  output_tokens integer NOT NULL DEFAULT 0,
+  total_tokens integer DEFAULT (input_tokens + output_tokens),
+  model text,
+  endpoint text,
+  metadata jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT token_usage_pkey PRIMARY KEY (id)
 );

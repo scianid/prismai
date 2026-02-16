@@ -162,19 +162,52 @@
 
             googletag.cmd.push(function () {
 
+                // Get ad size overrides from config or use defaults
+                let desktopSizes = [[970, 250], [728, 90], [468, 60], [300, 250]];
+                let desktopSizes768 = [[728, 90], [468, 60], [300, 250]];
+                let mobileSizes = [[336, 280], [320, 250], [300, 250], [320, 100], [300, 100], [320, 50], [300, 50]];
+                
+                // Parse override_desktop_ad_size if provided
+                if (self.state.serverConfig?.override_desktop_ad_size) {
+                    try {
+                        const parsed = JSON.parse(self.state.serverConfig.override_desktop_ad_size);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            desktopSizes = parsed;
+                            // Also use for 768+ breakpoint, filtering out sizes larger than 728px wide
+                            desktopSizes768 = parsed.filter(size => size[0] <= 728);
+                            self.log('Using override desktop ad sizes:', desktopSizes);
+                        }
+                    } catch (e) {
+                        console.error('[Divee] Failed to parse override_desktop_ad_size:', e);
+                    }
+                }
+                
+                // Parse override_mobile_ad_size if provided
+                if (self.state.serverConfig?.override_mobile_ad_size) {
+                    try {
+                        const parsed = JSON.parse(self.state.serverConfig.override_mobile_ad_size);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            mobileSizes = parsed;
+                            self.log('Using override mobile ad sizes:', mobileSizes);
+                        }
+                    } catch (e) {
+                        console.error('[Divee] Failed to parse override_mobile_ad_size:', e);
+                    }
+                }
+
                 // Collapsed view ads - with responsive size mapping
                 const desktopSizeMapping = googletag.sizeMapping()
-                    .addSize([1024, 0], [[970, 250], [728, 90], [468, 60], [300, 250]])
-                    .addSize([768, 0], [[728, 90], [468, 60], [300, 250]])
+                    .addSize([1024, 0], desktopSizes)
+                    .addSize([768, 0], desktopSizes768)
                     .addSize([0, 0], [])
                     .build();
                 
                 const mobileSizeMapping = googletag.sizeMapping()
                     .addSize([768, 0], [])
-                    .addSize([0, 0], [[336, 280], [320, 250], [300, 250], [320, 100], [300, 100], [320, 50], [300, 50]])
+                    .addSize([0, 0], mobileSizes)
                     .build();
 
-                const desktopSlot = googletag.defineSlot(desktopAdPath, [[468, 60], [300, 250], [728, 90], [970, 250]], 'div-gpt-ad-1770993606680-0');
+                const desktopSlot = googletag.defineSlot(desktopAdPath, desktopSizes, 'div-gpt-ad-1770993606680-0');
                 if (desktopSlot) {
                     desktopSlot.defineSizeMapping(desktopSizeMapping);
                     desktopSlot.addService(googletag.pubads());
@@ -182,7 +215,7 @@
                     console.error('[Divee] Failed to define desktop slot');
                 }
 
-                const mobileSlot = googletag.defineSlot(mobileAdPath, [[320, 100], [320, 50], [300, 100], [300, 50], [300, 250], [320, 250], [336, 280]], 'div-gpt-ad-1770993160534-0');
+                const mobileSlot = googletag.defineSlot(mobileAdPath, mobileSizes, 'div-gpt-ad-1770993160534-0');
                 if (mobileSlot) {
                     mobileSlot.defineSizeMapping(mobileSizeMapping);
                     mobileSlot.addService(googletag.pubads());
