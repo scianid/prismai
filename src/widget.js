@@ -341,10 +341,17 @@
                     this.config.articleClass = serverConfig.article_class;
                     this.log('Article class from config:', serverConfig.article_class);
                 }
-                if (serverConfig.widget_container_class) {
+                
+                // Handle container selector with mobile override support
+                const isMobile = window.innerWidth < 768;
+                if (isMobile && serverConfig.override_mobile_container_selector) {
+                    this.config.containerSelector = serverConfig.override_mobile_container_selector;
+                    this.log('Container selector from mobile override:', serverConfig.override_mobile_container_selector);
+                } else if (serverConfig.widget_container_class) {
                     this.config.containerSelector = serverConfig.widget_container_class;
                     this.log('Container selector from config:', serverConfig.widget_container_class);
                 }
+
 
                 // Apply direction and language
                 if (serverConfig.direction) {

@@ -219,6 +219,7 @@ CREATE TABLE public.project (
   display_position USER-DEFINED NOT NULL DEFAULT 'bottom-right'::display_position,
   article_class text DEFAULT '.article'::text,
   widget_container_class text,
+  override_mobile_container_selector text,
   CONSTRAINT project_pkey PRIMARY KEY (project_id),
   CONSTRAINT project_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.account(id)
 );

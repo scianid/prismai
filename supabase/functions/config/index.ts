@@ -49,6 +49,7 @@ Deno.serve(async (req: Request) => {
       anchored_position: ['top', 'bottom'].includes(project.display_position) ? project.display_position : 'bottom',
       article_class: project.article_class || null,
       widget_container_class: project.widget_container_class || null,
+      override_mobile_container_selector: project.override_mobile_container_selector || null,
       // Merge project_config fields (e.g., ad tag ID, ad size overrides)
       ...(projectConfig && {
         ad_tag_id: projectConfig.ad_tag_id || null,
