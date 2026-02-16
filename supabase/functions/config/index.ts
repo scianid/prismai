@@ -45,8 +45,8 @@ Deno.serve(async (req: Request) => {
         'Ask anything about this article...'
       ],
       display_mode: project.display_mode || 'anchored',
-      display_position: project.display_position || 'bottom-right',
-      anchored_position: ['top', 'bottom'].includes(project.anchored_position) ? project.anchored_position : 'bottom',
+      display_position: ['bottom-left', 'bottom-right'].includes(project.display_position) ? project.display_position : 'bottom-right',
+      anchored_position: ['top', 'bottom'].includes(project.display_position) ? project.display_position : 'bottom',
       article_class: project.article_class || null,
       widget_container_class: project.widget_container_class || null,
       // Merge project_config fields (e.g., ad tag ID, ad size overrides)
