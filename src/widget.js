@@ -54,7 +54,8 @@
                 url: null,
                 image_url: null,
                 og_image: null,
-                extracted: false
+                extracted: false,
+                articleFound: false
             };
 
             // Check if suggestions are suppressed for this session
@@ -263,7 +264,20 @@
             }
 
             // Extract article content
-            this.extractArticleContent();
+            const articleFound = this.extractArticleContent();
+            
+            // Don't render widget if article element not found or content is empty
+            if (!articleFound) {
+                this.log('Widget disabled: article element not found');
+                return;
+            }
+            
+            if (!this.articleContent || this.articleContent.trim().length < 100) {
+                this.log('Widget disabled: article content is empty or too short', {
+                    contentLength: this.articleContent?.length || 0
+                });
+                return;
+            }
 
             // Create widget DOM
             this.createWidget();
@@ -447,10 +461,11 @@
                 this.log('Using cached content');
                 this.articleTitle = this.contentCache.title;
                 this.articleContent = this.contentCache.content;
-                return;
+                return this.contentCache.articleFound;
             }
 
             // Extract content using functions from content.js
+            let articleFound = false;
             try {
                 // Use getContentTitle() if available
                 if (typeof getContentTitle === 'function') {
@@ -459,15 +474,33 @@
                     this.articleTitle = document.title || document.querySelector('h1')?.textContent || 'Untitled Article';
                 }
 
+                // Check if article element exists
+                let articleElement = null;
+                if (this.config.articleClass) {
+                    articleElement = document.querySelector(this.config.articleClass);
+                }
+                
+                if (!articleElement) {
+                    // Try default selectors
+                    articleElement = document.querySelector('article') ||
+                        document.querySelector('[role="article"]') ||
+                        document.querySelector('main');
+                }
+
+                // If no article element found, don't render widget
+                if (!articleElement) {
+                    this.log('No article element found, widget will not render');
+                    articleFound = false;
+                } else {
+                    articleFound = true;
+                }
+
                 // Use getContent() if available
                 if (typeof getContent === 'function') {
                     this.articleContent = getContent(this.config.articleClass);
                 } else {
                     // Fallback to simple extraction
-                    const article = document.querySelector('article') ||
-                        document.querySelector('[role="article"]') ||
-                        document.querySelector('main');
-                    this.articleContent = article ? article.textContent.trim() : document.body.textContent.trim();
+                    this.articleContent = articleElement ? articleElement.textContent.trim() : '';
                 }
 
                 // Use getContentUrl() if available
@@ -493,31 +526,32 @@
                     url: this.articleUrl,
                     image_url: articleImage,
                     og_image: ogImage,
-                    extracted: true
+                    extracted: true,
+                    articleFound: articleFound
                 };
 
                 this.log('Article extracted and cached:', {
                     title: this.articleTitle,
                     url: this.articleUrl,
                     contentLength: this.articleContent.length,
+                    articleFound: articleFound,
                     hasOgImage: !!ogImage,
                     hasArticleImage: !!articleImage
                 });
+
+                return articleFound;
             } catch (error) {
                 console.error('[Divee] Error extracting content:', error);
-                // Fallback to basic extraction
-                this.articleTitle = document.title || 'Untitled Article';
-                this.articleContent = document.body.textContent.trim();
-                this.articleUrl = window.location.href;
-                
                 this.contentCache = {
-                    content: this.articleContent,
-                    title: this.articleTitle,
-                    url: this.articleUrl,
+                    content: '',
+                    title: document.title || 'Untitled Article',
+                    url: window.location.href,
                     image_url: null,
                     og_image: null,
-                    extracted: true
+                    extracted: true,
+                    articleFound: false
                 };
+                return false;
             }
         }
 
