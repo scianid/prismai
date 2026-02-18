@@ -129,10 +129,12 @@
             this.log('Initializing Google Ads...');
             const self = this; // Capture widget instance
             
-            // Get ad tag ID from config or use default fallback
-            // Server sends only the second number (e.g., "227399588")
-            const defaultAdTagId = '227399588';
-            const adTagId = this.state.serverConfig?.ad_tag_id || defaultAdTagId;
+            // Get ad tag ID from server config - required to show ads
+            const adTagId = this.state.serverConfig?.ad_tag_id;
+            if (!adTagId) {
+                this.log('No ad_tag_id in server config, skipping ads');
+                return;
+            }
             
             // account ID for Divee
             const accountId = '22247219933';
@@ -599,16 +601,17 @@
             expandedView.style.display = 'none';
             container.appendChild(expandedView);
 
-            // Create shared ad container at the bottom (always visible)
-            const showAd = (config.show_ad && this.config.displayMode !== 'floating') ? '' : 'style="display: none;"';
+            // Create shared ad container - starts hidden, revealed only when an ad fills
+            const hasAds = config.show_ad && config.ad_tag_id && this.config.displayMode !== 'floating';
             const adContainer = document.createElement('div');
             adContainer.className = 'divee-ad-container-shared';
+            adContainer.style.display = hasAds ? 'none' : 'none'; // always start hidden; shown on ad fill
             adContainer.innerHTML = `
-                <div class="divee-ad-slot divee-ad-slot-shared" ${showAd}>
+                <div class="divee-ad-slot divee-ad-slot-shared" ${hasAds ? '' : 'style="display: none;"'}>
                     <!-- Desktop Ad -->
-                    <div id='div-gpt-ad-1770993606680-0' class='divee-ad-desktop' style='min-width: 300px; min-height: 60px; margin: 0 !important;'></div>
+                    <div id='div-gpt-ad-1770993606680-0' class='divee-ad-desktop' style='display: none; min-width: 300px; min-height: 60px; margin: 0 !important;'></div>
                     <!-- Mobile Ad -->
-                    <div id='div-gpt-ad-1770993160534-0' class='divee-ad-mobile' style='min-width: 300px; min-height: 50px;'></div>
+                    <div id='div-gpt-ad-1770993160534-0' class='divee-ad-mobile' style='display: none; min-width: 300px; min-height: 50px;'></div>
                 </div>
             `;
             container.appendChild(adContainer);
@@ -632,7 +635,7 @@
 
             const config = this.state.serverConfig || this.getDefaultConfig();
             // Hide ads in floating mode collapsed view
-            const showAd = (config.show_ad && this.config.displayMode !== 'floating') ? '' : 'style="display: none;"';
+            const showAd = (config.show_ad && config.ad_tag_id && this.config.displayMode !== 'floating') ? '' : 'style="display: none;"';
             
             view.innerHTML = `
                 <div class="divee-powered-by-collapsed">
@@ -884,28 +887,40 @@
                     let emptyAdCount = 0;
                     const diveeAdSlotIds = ['div-gpt-ad-1770993606680-0', 'div-gpt-ad-1770993160534-0'];
                     
+                    const adSlotContainer = document.querySelector('.divee-ad-slot-shared');
+                    const adOuterContainer = document.querySelector('.divee-ad-container-shared');
+                    const renderedSlots = {};
+
                     googletag.pubads().addEventListener('slotRenderEnded', function (event) {
                         const slotId = event.slot.getSlotElementId();
                         if (!diveeAdSlotIds.includes(slotId)) return;
                         const adElement = document.getElementById(slotId);
 
-                        if (event.isEmpty && adElement) {
-                            adElement.style.display = 'none';
+                        renderedSlots[slotId] = !event.isEmpty;
+
+                        if (event.isEmpty) {
+                            if (adElement) adElement.style.display = 'none';
                             emptyAdCount++;
                             self.trackEvent('ad_unfilled', {
                                 ad_unit: slotId,
-                                position: slotId.includes('expanded') ? 'expanded' : 'collapsed',
+                                position: 'collapsed',
                                 reason: 'no_fill'
                             });
-                            if (emptyAdCount === 2) {
-                                const adSlot = document.querySelector('.divee-ad-slot');
-                                if (adSlot) adSlot.style.display = 'none';
+                            // If all tracked slots are empty, hide the whole container
+                            if (Object.keys(renderedSlots).length === diveeAdSlotIds.length &&
+                                Object.values(renderedSlots).every(filled => !filled)) {
+                                if (adSlotContainer) adSlotContainer.style.display = 'none';
+                                if (adOuterContainer) adOuterContainer.style.display = 'none';
                             }
-                        } else if (!event.isEmpty) {
+                        } else {
+                            // Ad filled — reveal it
+                            if (adElement) adElement.style.display = '';
+                            if (adSlotContainer) adSlotContainer.style.display = '';
+                            if (adOuterContainer) adOuterContainer.style.display = '';
                             self.trackEvent('ad_impression', {
-                                    ad_unit: slotId,
-                                    position: slotId.includes('expanded') ? 'expanded' : 'collapsed',
-                                    size: event.size ? `${event.size[0]}x${event.size[1]}` : 'unknown',
+                                ad_unit: slotId,
+                                position: 'collapsed',
+                                size: event.size ? `${event.size[0]}x${event.size[1]}` : 'unknown',
                                 advertiser_id: event.advertiserId || null,
                                 creative_id: event.creativeId || null,
                                 line_item_id: event.lineItemId || null
