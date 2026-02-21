@@ -727,19 +727,24 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  flex: 0 0 100%;
   margin-top: 0;
+  gap: 8px;
 }
 
 .divee-warning {
   font-size: 11px;
   color: #9ca3af;
   text-align: left;
+  margin: 5px;
 }
 
 .divee-counter {
   font-size: 11px;
   color: #9ca3af;
   text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .divee-widget .divee-input {
