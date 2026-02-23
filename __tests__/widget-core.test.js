@@ -174,6 +174,33 @@ describe('DiveeWidget Core', () => {
     });
   });
 
+  describe('Visitor Token Storage (C-2)', () => {
+    test('should initialise visitorToken state as null when no token in localStorage', () => {
+      // localStorage.getItem returns null by default (jsdom)
+      const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
+      eval(widgetJs);
+
+      const widget = new DiveeWidget(mockConfig);
+      widget.getAnalyticsIds();
+
+      // No stored token — state should be falsy
+      expect(widget.state.visitorToken).toBeFalsy();
+    });
+
+    test('should restore visitorToken from localStorage on getAnalyticsIds', () => {
+      const storedToken = 'visitor-abc|proj-123|9999999999999|cafebabe';
+      localStorage.setItem('divee_visitor_token', storedToken);
+
+      const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
+      eval(widgetJs);
+
+      const widget = new DiveeWidget(mockConfig);
+      widget.getAnalyticsIds();
+
+      expect(widget.state.visitorToken).toBe(storedToken);
+    });
+  });
+
   describe('Default Config', () => {
     test('should return valid default config', () => {
       const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');

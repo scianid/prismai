@@ -8,6 +8,7 @@ import {
   resetConversation,
   deleteConversation
 } from "../_shared/dao/conversationDao.ts";
+import { verifyVisitorToken } from '../_shared/visitorAuth.ts';
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -17,6 +18,18 @@ Deno.serve(async (req: Request) => {
 
   const url = new URL(req.url);
   const pathParts = url.pathname.split('/').filter(Boolean);
+
+  // --- C-2 fix: require a valid visitor ownership token on every request ---
+  // The token is obtained from the X-Visitor-Token header returned by /chat.
+  // Clients may also pass it as the `visitor_token` query parameter.
+  const rawToken =
+    req.headers.get('x-visitor-token') ??
+    url.searchParams.get('visitor_token');
+
+  const tokenData = await verifyVisitorToken(rawToken);
+  if (!tokenData) {
+    return errorResp('Unauthorized — missing or invalid visitor token', 401);
+  }
 
   try {
     const supabase = await supabaseClient();
@@ -28,6 +41,11 @@ Deno.serve(async (req: Request) => {
 
       if (!visitorId || !projectId) {
         return errorResp('Missing visitor_id or project_id', 400);
+      }
+
+      // Ownership check: token must belong to the exact visitor + project requested
+      if (tokenData.visitorId !== visitorId || tokenData.projectId !== projectId) {
+        return errorResp('Forbidden', 403);
       }
 
       const conversations = await listConversationsByVisitor(supabase, visitorId, projectId);
@@ -54,6 +72,11 @@ Deno.serve(async (req: Request) => {
         return errorResp('Conversation not found', 404);
       }
 
+      // Ownership check: conversation must belong to the token's visitor
+      if (conversation.visitor_id !== tokenData.visitorId) {
+        return errorResp('Forbidden', 403);
+      }
+
       return successResp({ messages: conversation.messages || [] });
     }
 
@@ -63,6 +86,11 @@ Deno.serve(async (req: Request) => {
 
       if (!visitor_id || !article_unique_id || !project_id) {
         return errorResp('Missing required fields', 400);
+      }
+
+      // Ownership check: token must match body's visitor + project
+      if (tokenData.visitorId !== visitor_id || tokenData.projectId !== project_id) {
+        return errorResp('Forbidden', 403);
       }
 
       const conversationId = await resetConversation(supabase, visitor_id, article_unique_id, project_id);
@@ -77,6 +105,17 @@ Deno.serve(async (req: Request) => {
     // DELETE /conversations/:id - Delete conversation
     if (req.method === 'DELETE' && pathParts.length === 2) {
       const conversationId = pathParts[1];
+
+      // Fetch first to verify ownership before destructive action
+      const conversation = await getConversationById(supabase, conversationId);
+      if (!conversation) {
+        return errorResp('Conversation not found', 404);
+      }
+
+      // Ownership check: conversation must belong to the token's visitor
+      if (conversation.visitor_id !== tokenData.visitorId) {
+        return errorResp('Forbidden', 403);
+      }
 
       const success = await deleteConversation(supabase, conversationId);
       

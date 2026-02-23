@@ -30,6 +30,7 @@
                 messages: [],
                 serverConfig: null,
                 conversationId: null,
+                visitorToken: null,          // HMAC ownership token, set after first chat
                 aiResponseCount: 0,
                 suggestionsSuppressed: false,
                 widgetVisibleTracked: false,   // Track if widget_visible event has been fired
@@ -109,6 +110,12 @@
 
             this.state.visitorId = visitorId;
             this.state.sessionId = sessionId;
+
+            // Restore persisted visitor token (issued by /chat, proves visitor ownership)
+            const storedToken = localStorage.getItem('divee_visitor_token');
+            if (storedToken) {
+                this.state.visitorToken = storedToken;
+            }
 
             // Clear any old conversation IDs from sessionStorage
             const conversationKey = `divee_conversation_${window.location.href}`;
@@ -1401,6 +1408,13 @@
             const conversationId = response.headers.get('X-Conversation-Id');
             if (conversationId && !this.state.conversationId) {
                 this.state.conversationId = conversationId;
+            }
+
+            // Store visitor ownership token for authenticating /conversations calls (C-2 fix)
+            const visitorToken = response.headers.get('X-Visitor-Token');
+            if (visitorToken) {
+                this.state.visitorToken = visitorToken;
+                localStorage.setItem('divee_visitor_token', visitorToken);
             }
 
             const contentType = response.headers.get('content-type') || '';

@@ -17,7 +17,7 @@
 
 | Severity | Count | Fixed |
 |----------|-------|-------|
-| Critical | 2 | 1 |
+| Critical | 2 | 2 |
 | High | 5 | 0 |
 | Medium | 6 | 2 |
 | Low / Info | 5 | 0 |
@@ -46,12 +46,20 @@ The widget sent full article `title` and `content` to the backend, which stored 
 
 ---
 
-### C-2 — Unauthenticated Access to Any Conversation by Visitor ID Spoofing
+### ~~C-2 — Unauthenticated Access to Any Conversation by Visitor ID Spoofing~~ ✅ FIXED
 
 **Component:** `supabase/functions/conversations/index.ts`, `supabase/functions/_shared/dao/conversationDao.ts`  
-**OWASP:** A01 Broken Access Control
+**OWASP:** A01 Broken Access Control  
+**Fixed:** 2026-02-23
 
-**Description:**  
+**Fix applied:**
+- Added `supabase/functions/_shared/visitorAuth.ts` — issues and verifies short-lived (24 h) HMAC-SHA256 tokens that cryptographically bind a `visitor_id` to a `project_id`. The secret key is stored in the `VISITOR_TOKEN_SECRET` environment variable (set via `supabase secrets set`).
+- The `/chat` endpoint signs a token after every successful request and returns it in the `X-Visitor-Token` response header.
+- The widget captures `X-Visitor-Token` from chat responses, stores it in memory and `localStorage` (`divee_visitor_token`), and restores it on page reload.
+- Every `/conversations` endpoint now requires the token (from the `X-Visitor-Token` request header or `visitor_token` query parameter). A missing or invalid token returns `401 Unauthorized`.
+- Per-resource ownership is enforced: `GET /conversations` checks the token's `visitorId` matches the `visitor_id` param; `GET /:id/messages` and `DELETE /:id` fetch the conversation row first and compare `conversation.visitor_id` against the token; `POST /reset` cross-checks `visitor_id` and `project_id` against the token before any write.
+
+**Original description:**  
 The `/conversations` endpoint returns all conversations for a `visitor_id` without any authentication:
 
 ```typescript
@@ -416,7 +424,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | ID  | Title                                          | Likelihood | Impact   | Severity | Status |
 |-----|------------------------------------------------|------------|----------|----------|--------|
 | C-1 | Stored Prompt Injection via Article Content    | Medium     | Critical | Critical | ✅ Fixed |
-| C-2 | Unauthenticated Conversation Access            | High       | Critical | Critical | Open |
+| C-2 | Unauthenticated Conversation Access            | High       | Critical | Critical | ✅ Fixed |
 | H-1 | IP Spoofing in Analytics                       | High       | High     | High     | Open |
 | H-2 | No Rate Limiting on AI Endpoints               | High       | High     | High     | Open |
 | H-3 | CORS Wildcard + Authorization Header           | Medium     | High     | High     | Open |

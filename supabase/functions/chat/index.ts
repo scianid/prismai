@@ -11,6 +11,7 @@ import { insertFreeformQuestion, updateFreeformAnswer } from "../_shared/dao/fre
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH, sanitizeContent } from "../_shared/constants.ts";
 import { getOrCreateConversation, appendMessagesToConversation, type ConversationMessage } from "../_shared/dao/conversationDao.ts";
 import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
+import { issueVisitorToken } from '../_shared/visitorAuth.ts';
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -290,6 +291,17 @@ Deno.serve(async (req: Request) => {
         console.error('chat: failed to cache answer', err);
       });
 
+    // Issue a signed visitor token so the client can prove ownership of this
+    // visitor_id when accessing /conversations (C-2 fix).
+    let visitorToken = '';
+    try {
+      if (visitor_id && projectId) {
+        visitorToken = await issueVisitorToken(visitor_id, projectId);
+      }
+    } catch (e) {
+      console.error('chat: failed to issue visitor token', e);
+    }
+
     return new Response(clientStream, {
       status: 200,
       headers: {
@@ -297,7 +309,8 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'X-Conversation-Id': conversation.id
+        'X-Conversation-Id': conversation.id,
+        ...(visitorToken && { 'X-Visitor-Token': visitorToken }),
       }
     });
   } catch (error) {

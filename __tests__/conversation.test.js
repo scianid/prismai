@@ -428,4 +428,213 @@ describe('Conversation Feature', () => {
       expect(response.headers.get('X-Conversation-Id')).toBeDefined();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // C-2 fix: Visitor ownership token tests
+  // ---------------------------------------------------------------------------
+  describe('Visitor Token — Issuance', () => {
+    test('chat response should include X-Visitor-Token header', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({
+          'X-Conversation-Id': 'conv-abc-123',
+          'X-Visitor-Token': 'visitor-123|test-project|9999999999999|abc123def456',
+          'Content-Type': 'text/event-stream'
+        }),
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Answer"}}]}\n\n'));
+            controller.close();
+          }
+        })
+      });
+
+      const response = await fetch(`${baseUrl}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: testProjectId,
+          questionId: 'q1',
+          question: 'Test question',
+          title: 'Test Article',
+          content: 'Article content',
+          url: testUrl,
+          visitor_id: testVisitorId,
+          session_id: testSessionId
+        })
+      });
+
+      expect(response.ok).toBe(true);
+      expect(response.headers.get('X-Visitor-Token')).toBeTruthy();
+    });
+  });
+
+  describe('Visitor Token — Authentication (C-2)', () => {
+    test('GET /conversations should return 401 without visitor token', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized — missing or invalid visitor token' })
+      });
+
+      const response = await fetch(
+        `${baseUrl}/conversations?visitor_id=${testVisitorId}&project_id=${testProjectId}`,
+        { method: 'GET' }  // No X-Visitor-Token header
+      );
+
+      expect(response.status).toBe(401);
+      const data = await response.json();
+      expect(data.error).toMatch(/unauthorized/i);
+    });
+
+    test('GET /conversations should return 403 when token visitor does not match', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'Forbidden' })
+      });
+
+      // Token is for a different visitor
+      const response = await fetch(
+        `${baseUrl}/conversations?visitor_id=${testVisitorId}&project_id=${testProjectId}`,
+        {
+          method: 'GET',
+          headers: { 'x-visitor-token': 'other-visitor|test-project|9999999999999|fakesig' }
+        }
+      );
+
+      expect(response.status).toBe(403);
+    });
+
+    test('GET /conversations/:id/messages should return 401 without visitor token', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized — missing or invalid visitor token' })
+      });
+
+      const response = await fetch(
+        `${baseUrl}/conversations/conv-abc-123/messages`,
+        { method: 'GET' }  // No token
+      );
+
+      expect(response.status).toBe(401);
+    });
+
+    test('GET /conversations/:id/messages should return 403 when conversation belongs to another visitor', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'Forbidden' })
+      });
+
+      const response = await fetch(
+        `${baseUrl}/conversations/conv-abc-123/messages`,
+        {
+          method: 'GET',
+          headers: { 'x-visitor-token': 'other-visitor|test-project|9999999999999|fakesig' }
+        }
+      );
+
+      expect(response.status).toBe(403);
+    });
+
+    test('DELETE /conversations/:id should return 401 without visitor token', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized — missing or invalid visitor token' })
+      });
+
+      const response = await fetch(
+        `${baseUrl}/conversations/conv-abc-123`,
+        { method: 'DELETE' }  // No token
+      );
+
+      expect(response.status).toBe(401);
+    });
+
+    test('DELETE /conversations/:id should return 403 when conversation belongs to another visitor', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'Forbidden' })
+      });
+
+      const response = await fetch(
+        `${baseUrl}/conversations/conv-abc-123`,
+        {
+          method: 'DELETE',
+          headers: { 'x-visitor-token': 'other-visitor|test-project|9999999999999|fakesig' }
+        }
+      );
+
+      expect(response.status).toBe(403);
+    });
+
+    test('POST /conversations/reset should return 401 without visitor token', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized — missing or invalid visitor token' })
+      });
+
+      const response = await fetch(`${baseUrl}/conversations/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visitor_id: testVisitorId,
+          article_unique_id: testUrl + testProjectId,
+          project_id: testProjectId
+        })
+        // No X-Visitor-Token header
+      });
+
+      expect(response.status).toBe(401);
+    });
+
+    test('POST /conversations/reset should return 403 when token visitor does not match body', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'Forbidden' })
+      });
+
+      const response = await fetch(`${baseUrl}/conversations/reset`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-visitor-token': 'other-visitor|test-project|9999999999999|fakesig'
+        },
+        body: JSON.stringify({
+          visitor_id: testVisitorId,
+          article_unique_id: testUrl + testProjectId,
+          project_id: testProjectId
+        })
+      });
+
+      expect(response.status).toBe(403);
+    });
+
+    test('GET /conversations should succeed with valid token matching visitor', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ conversations: [] })
+      });
+
+      const response = await fetch(
+        `${baseUrl}/conversations?visitor_id=${testVisitorId}&project_id=${testProjectId}`,
+        {
+          method: 'GET',
+          headers: { 'x-visitor-token': `${testVisitorId}|${testProjectId}|9999999999999|validhmac` }
+        }
+      );
+
+      expect(response.ok).toBe(true);
+      const data = await response.json();
+      expect(data.conversations).toBeDefined();
+    });
+  });
 });
