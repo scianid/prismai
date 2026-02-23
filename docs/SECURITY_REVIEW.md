@@ -18,7 +18,7 @@
 | Severity | Count | Fixed |
 |----------|-------|-------|
 | Critical | 2 | 2 |
-| High | 5 | 1 |
+| High | 5 | 2 |
 | Medium | 6 | 2 |
 | Low / Info | 5 | 0 |
 
@@ -144,12 +144,19 @@ An attacker can:
 
 ---
 
-### H-3 — CORS Wildcard (`*`) with `authorization` Header Allowed
+### ~~H-3 — CORS Wildcard (`*`) with `authorization` Header Allowed~~ ✅ FIXED
 
 **Component:** `supabase/functions/_shared/cors.ts`  
-**OWASP:** A05 Security Misconfiguration
+**OWASP:** A05 Security Misconfiguration  
+**Fixed:** 2026-02-23
 
-**Description:**  
+**Fix applied:**
+- Removed `authorization` from `Access-Control-Allow-Headers` — the widget never sends bearer tokens; all AI API calls are server-side, so the header was unnecessary cross-origin exposure.
+- Removed `PUT` from `Access-Control-Allow-Methods` — no endpoint uses PUT cross-origin.
+- `DELETE` is retained because the `/conversations/:id` DELETE endpoint is legitimately called cross-origin by the widget.
+- Added `x-visitor-token` to `Access-Control-Allow-Headers` — required so browsers allow the widget to include the visitor ownership token (C-2 fix) in cross-origin requests to the conversations endpoint.
+
+**Original description:**  
 
 ```typescript
 export const corsHeaders = {
@@ -436,7 +443,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | C-2 | Unauthenticated Conversation Access            | High       | Critical | Critical | ✅ Fixed |
 | H-1 | IP Spoofing in Analytics                       | High       | High     | High     | Open |
 | H-2 | No Rate Limiting on AI Endpoints               | High       | High     | High     | ✅ Fixed |
-| H-3 | CORS Wildcard + Authorization Header           | Medium     | High     | High     | Open |
+| H-3 | CORS Wildcard + Authorization Header           | Medium     | High     | High     | ✅ Fixed |
 | H-4 | Origin Check Bypassable via Referer            | High       | High     | High     | Open |
 | H-5 | Path Traversal in Dev Server                   | Low        | High     | High     | Open |
 | M-1 | Full Article Content Stored Unencrypted        | Low        | Medium   | Medium   | Open |
