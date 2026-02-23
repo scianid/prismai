@@ -18,7 +18,7 @@
 | Severity | Count | Fixed |
 |----------|-------|-------|
 | Critical | 2 | 2 |
-| High | 5 | 2 |
+| High | 5 | 3 |
 | Medium | 6 | 2 |
 | Low / Info | 5 | 0 |
 
@@ -175,12 +175,18 @@ export const corsHeaders = {
 
 ---
 
-### H-4 — Origin Check Bypassable via Referer Header Manipulation
+### ~~H-4 — Origin Check Bypassable via Referer Header Manipulation~~ ✅ FIXED
 
 **Component:** `supabase/functions/_shared/origin.ts`  
-**OWASP:** A01 Broken Access Control
+**OWASP:** A01 Broken Access Control  
+**Fixed:** 2026-02-23
 
-**Description:**  
+**Fix applied:**
+- Removed the `Referer` fallback from `getRequestOriginUrl()` entirely. The function now returns only the `Origin` header value (or `null` if absent).
+- Any request without an `Origin` header (curl, server-side scripts, Postman) now yields `null`, which `isAllowedOrigin()` correctly rejects with a `403`.
+- All legitimate browser cross-origin requests (from embedded widgets) always include `Origin` — browsers inject it automatically and it cannot be spoofed from a web page context.
+
+**Original description:**  
 
 ```typescript
 export function getRequestOriginUrl(req: Request): string | null {
@@ -444,7 +450,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | H-1 | IP Spoofing in Analytics                       | High       | High     | High     | Open |
 | H-2 | No Rate Limiting on AI Endpoints               | High       | High     | High     | ✅ Fixed |
 | H-3 | CORS Wildcard + Authorization Header           | Medium     | High     | High     | ✅ Fixed |
-| H-4 | Origin Check Bypassable via Referer            | High       | High     | High     | Open |
+| H-4 | Origin Check Bypassable via Referer            | High       | High     | High     | ✅ Fixed |
 | H-5 | Path Traversal in Dev Server                   | Low        | High     | High     | Open |
 | M-1 | Full Article Content Stored Unencrypted        | Low        | Medium   | Medium   | Open |
 | M-2 | Persistent Tracking Without Consent            | High       | Medium   | Medium   | Open |

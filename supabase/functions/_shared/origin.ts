@@ -12,12 +12,12 @@ export function normalizeHost(host: string): string {
     return host.replace(/^www\./i, '').toLowerCase();
 }
 
+// H-4 fix: only trust the browser-injected Origin header.
+// Referer is client-controlled and forgeable — never use it for security decisions.
+// Any cross-origin request from a real browser always includes Origin;
+// server-side/script requests without Origin are correctly rejected by isAllowedOrigin.
 export function getRequestOriginUrl(req: Request): string | null {
-    const origin = req.headers.get('origin');
-    if (origin) return origin;
-    const referer = req.headers.get('referer');
-    if (referer) return referer;
-    return null;
+    return req.headers.get('origin');
 }
 
 export function isAllowedOrigin(rawUrl: string | null | undefined, allowedUrls: string[] | null | undefined): boolean {
