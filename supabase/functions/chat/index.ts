@@ -12,6 +12,7 @@ import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH, sanitizeContent } from "../_share
 import { getOrCreateConversation, appendMessagesToConversation, type ConversationMessage } from "../_shared/dao/conversationDao.ts";
 import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
 import { issueVisitorToken } from '../_shared/visitorAuth.ts';
+import { checkRateLimit } from '../_shared/rateLimit.ts';
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -42,13 +43,21 @@ Deno.serve(async (req: Request) => {
 
     const supabase = await supabaseClient();
     const project = await getProjectById(projectId, supabase);
-    
 
     // Verify origin
     const requestUrl = getRequestOriginUrl(req);
 
     if (!isAllowedOrigin(requestUrl, project?.allowed_urls))
         return errorResp('Origin not allowed', 403);
+
+    // H-2 fix: enforce per-visitor and per-project rate limits before hitting the AI
+    const rateLimit = await checkRateLimit(supabase, 'chat', visitor_id, projectId);
+    if (rateLimit.limited) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests', retryAfter: rateLimit.retryAfterSeconds }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      );
+    }
 
     // Ensure article exists first (required for conversation foreign key)
     let article = await getArticleById(url, projectId, supabase);

@@ -9,6 +9,7 @@ import { extractCachedSuggestions, getArticleById, insertArticle, updateArticleC
 import { supabaseClient } from '../_shared/supabaseClient.ts';
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH, sanitizeContent } from "../_shared/constants.ts";
 import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
+import { checkRateLimit } from '../_shared/rateLimit.ts';
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -53,12 +54,21 @@ Deno.serve(async (req: Request) => {
       article = await insertArticle(url, title, content, projectId, supabase, metadata);
     }
 
-    // Return cached suggestions if available
+    // Return cached suggestions if available — cache hits are cheap and don't consume rate limit quota
     const cachedSuggestions = extractCachedSuggestions(article);
     
     if (cachedSuggestions)
       return successResp({ suggestions: cachedSuggestions });
-    
+
+    // H-2 fix: enforce per-visitor and per-project rate limits before hitting the AI
+    // Only runs when a real AI call is needed (cache miss)
+    const rateLimit = await checkRateLimit(supabase, 'suggestions', visitor_id, projectId);
+    if (rateLimit.limited) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests', retryAfter: rateLimit.retryAfterSeconds }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      );
+    }
 
     // Fallback: generate hard-coded suggestions
     console.log('suggestions: cache miss, generating');

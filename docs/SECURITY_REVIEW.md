@@ -18,7 +18,7 @@
 | Severity | Count | Fixed |
 |----------|-------|-------|
 | Critical | 2 | 2 |
-| High | 5 | 0 |
+| High | 5 | 1 |
 | Medium | 6 | 2 |
 | Low / Info | 5 | 0 |
 
@@ -113,12 +113,21 @@ If the deployment environment is not Cloudflare (or the Cloudflare proxy is bypa
 
 ---
 
-### H-2 — No Rate Limiting on AI Endpoints (Cost Amplification / DoS)
+### ~~H-2 — No Rate Limiting on AI Endpoints (Cost Amplification / DoS)~~ ✅ FIXED
 
 **Component:** `supabase/functions/chat/index.ts`, `supabase/functions/suggestions/index.ts`  
-**OWASP:** A05 Security Misconfiguration
+**OWASP:** A05 Security Misconfiguration  
+**Fixed:** 2026-02-23
 
-**Description:**  
+**Fix applied:**
+- Added `supabase/migrations/20260223_add_ai_rate_limits.sql` — creates the `ai_rate_limits` table (primary key `(key, window_start)`) and the `increment_rate_limit(key, window_start)` Postgres function that performs an atomic `INSERT … ON CONFLICT DO UPDATE`, eliminating any read-then-write race condition.
+- Added `supabase/functions/_shared/rateLimit.ts` — `checkRateLimit(supabase, endpoint, visitorId, projectId)` computes the current 1-minute tumbling-window key, calls the DB function for both the visitor-level and project-level counters, and returns `{ limited: true, retryAfterSeconds }` if either is exceeded.
+- Applied in both AI endpoints **before** any AI provider call, returning `429 Too Many Requests` with a `Retry-After` header.
+- Limits: `/chat` — 20 req/min per `visitor_id`, 500 req/min per `project_id`; `/suggestions` — 5 req/min per `visitor_id`, 200 req/min per `project_id`.
+- DB errors in the rate-limit path are logged and silently ignored (fail-open) to avoid blocking legitimate traffic on transient DB issues.
+- A `cleanup_rate_limits()` Postgres function is provided to prune windows older than 5 minutes; wire it to `pg_cron` or a scheduled Edge Function.
+
+**Original description:**  
 Both the `chat` and `suggestions` endpoints call paid AI APIs (OpenAI / DeepSeek) without any rate limiting per visitor, per project, or globally. The only throttle is the conversation message limit of 200, which only applies after a conversation is created.
 
 An attacker can:
@@ -426,7 +435,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | C-1 | Stored Prompt Injection via Article Content    | Medium     | Critical | Critical | ✅ Fixed |
 | C-2 | Unauthenticated Conversation Access            | High       | Critical | Critical | ✅ Fixed |
 | H-1 | IP Spoofing in Analytics                       | High       | High     | High     | Open |
-| H-2 | No Rate Limiting on AI Endpoints               | High       | High     | High     | Open |
+| H-2 | No Rate Limiting on AI Endpoints               | High       | High     | High     | ✅ Fixed |
 | H-3 | CORS Wildcard + Authorization Header           | Medium     | High     | High     | Open |
 | H-4 | Origin Check Bypassable via Referer            | High       | High     | High     | Open |
 | H-5 | Path Traversal in Dev Server                   | Low        | High     | High     | Open |
