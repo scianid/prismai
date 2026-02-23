@@ -18,7 +18,7 @@
 | Severity | Count | Fixed |
 |----------|-------|-------|
 | Critical | 2 | 2 |
-| High | 5 | 4 |
+| High | 5 | 5 |
 | Medium | 6 | 3 |
 | Low / Info | 5 | 0 |
 
@@ -87,13 +87,19 @@ The DELETE and reset endpoints are equally unprotected — any caller can wipe a
 
 ---
 
-### H-1 — IP Address Spoofing Enables Geo-bypass and False Analytics
+### ~~H-1 — IP Address Spoofing Enables Geo-bypass and False Analytics~~ ✅ FIXED
 
-**Component:** `supabase/functions/_shared/analytics.ts`  
-**OWASP:** A05 Security Misconfiguration
+**Component:** `supabase/functions/analytics/index.ts`  
+**OWASP:** A05 Security Misconfiguration  
+**Fixed:** 2026-02-23
 
-**Description:**  
-Client IP is extracted by trusting a chain of headers in priority order:
+**Fix applied:**
+- Replaced the untrusted header chain (`cf-connecting-ip`, `true-client-ip`, `x-client-ip`, `x-real-ip`, `x-forwarded-for`) with the single Fastly-injected header `Fastly-Client-IP`, which Fastly sets and clients cannot spoof (Fastly strips any incoming `Fastly-Client-IP` header from the request before forwarding).
+- Applied in both the batch (`processEvent`) and single-event paths in `analytics/index.ts`.
+- Added `__tests__/ipExtraction.test.js` with regression guards confirming all formerly-trusted spoofable headers are ignored.
+
+**Original description:**  
+Client IP was extracted by trusting a chain of headers in priority order:
 
 ```typescript
 const clientIp = req.headers.get('cf-connecting-ip')
@@ -104,12 +110,7 @@ const clientIp = req.headers.get('cf-connecting-ip')
     || undefined;
 ```
 
-If the deployment environment is not Cloudflare (or the Cloudflare proxy is bypassed by a direct hit to the Supabase edge URL), an attacker can freely set `X-Forwarded-For: 1.2.3.4` and impersonate any IP address. This breaks geo-enrichment accuracy, can fraudulently inflate impression counts from specific regions, and may allow bypassing any future IP-based rate limiting.
-
-**Remediation:**
-- Trust only the header injected by the infrastructure you control (e.g., only `cf-connecting-ip` when behind Cloudflare).
-- Reject or ignore requests that set both `cf-connecting-ip` and `x-forwarded-for` with different values.
-- Document which headers are trusted and enforce this in infrastructure configuration.
+Because the deployment uses Fastly (not Cloudflare), all headers other than `Fastly-Client-IP` were client-controllable, allowing an attacker to set `X-Forwarded-For: 1.2.3.4` and impersonate any IP address. This broke geo-enrichment accuracy, could fraudulently inflate impression counts from specific regions, and could bypass any future IP-based rate limiting.
 
 ---
 
@@ -463,7 +464,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 |-----|------------------------------------------------|------------|----------|----------|--------|
 | C-1 | Stored Prompt Injection via Article Content    | Medium     | Critical | Critical | ✅ Fixed |
 | C-2 | Unauthenticated Conversation Access            | High       | Critical | Critical | ✅ Fixed |
-| H-1 | IP Spoofing in Analytics                       | High       | High     | High     | Open |
+| H-1 | IP Spoofing in Analytics                       | High       | High     | High     | ✅ Fixed |
 | H-2 | No Rate Limiting on AI Endpoints               | High       | High     | High     | ✅ Fixed |
 | H-3 | CORS Wildcard + Authorization Header           | Medium     | High     | High     | ✅ Fixed |
 | H-4 | Origin Check Bypassable via Referer            | High       | High     | High     | ✅ Fixed |

@@ -104,12 +104,10 @@ async function processEvent(
 
     // M-6 fix: sanitize event_data before use
     const safeEventData = sanitizeEventData(event_data);
-    const clientIp = req.headers.get('cf-connecting-ip') // Cloudflare
-        || req.headers.get('true-client-ip') // Akamai/Cloudflare Enterprise
-        || req.headers.get('x-client-ip') // Some proxies
-        || req.headers.get('x-real-ip') // Common proxy header
-        || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() // First IP in chain
-        || undefined;
+    // H-1 fix: trust only cf-connecting-ip, which Cloudflare injects and clients cannot spoof.
+    // Supabase Edge Functions always run on Cloudflare Workers, making this the correct
+    // authoritative header regardless of any upstream CDN in front of the origin site.
+    const clientIp = req.headers.get('cf-connecting-ip') ?? undefined;
 
     // Extract analytics context from request
     const context: AnalyticsContext = {
@@ -250,13 +248,10 @@ serve(async (req: Request) => {
         // M-6 fix: sanitize event_data in single-event path
         const safeEventData = sanitizeEventData(event_data);
 
-        // Extract client IP - try multiple headers used by different proxies/CDNs
-        const clientIp = req.headers.get('cf-connecting-ip') // Cloudflare
-            || req.headers.get('true-client-ip') // Akamai/Cloudflare Enterprise
-            || req.headers.get('x-client-ip') // Some proxies
-            || req.headers.get('x-real-ip') // Common proxy header
-            || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() // First IP in chain
-            || undefined;
+        // H-1 fix: trust only cf-connecting-ip, which Cloudflare injects and clients cannot spoof.
+        // Supabase Edge Functions always run on Cloudflare Workers, making this the correct
+        // authoritative header regardless of any upstream CDN in front of the origin site.
+        const clientIp = req.headers.get('cf-connecting-ip') ?? undefined;
 
         // Extract analytics context from request
         const context: AnalyticsContext = {
