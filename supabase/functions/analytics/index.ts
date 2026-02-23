@@ -29,6 +29,9 @@ const ALLOWED_EVENT_TYPES = [
     'ad_impression',
     'ad_unfilled',
     'ad_refresh',
+    'ad_auto_refresh',
+    'conversation_started',
+    'conversation_continued',
 ] as const;
 
 type AllowedEventType = typeof ALLOWED_EVENT_TYPES[number];

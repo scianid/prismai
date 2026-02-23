@@ -20,7 +20,7 @@
 | Critical | 2 | 2 |
 | High | 5 | 5 |
 | Medium | 6 | 3 |
-| Low / Info | 5 | 0 |
+| Low / Info | 5 | 2 |
 
 The most critical risks are **unauthenticated access to all conversation data** (any visitor ID is trusted without proof of ownership) and **article content stored in full in the database and AI context with no sanitization**, enabling a stored prompt injection chain that can exfiltrate future user conversations. Several high-severity findings around CORS, IP spoofing, rate limiting, and the dev server path traversal also warrant immediate attention.
 
@@ -400,20 +400,26 @@ The batch endpoint processes events in parallel with `Promise.allSettled`, meani
 
 ---
 
-### L-1 — `ad_auto_refresh` Event Type Missing from Allowlist
+### ~~L-1 — `ad_auto_refresh` Event Type Missing from Allowlist~~ ✅ FIXED
 
-**Component:** `supabase/functions/analytics/index.ts`
+**Component:** `supabase/functions/analytics/index.ts`  
+**Fixed:** 2026-02-23
 
-**Description:**  
+**Fix applied:** Added `'ad_auto_refresh'` to `ALLOWED_EVENT_TYPES`.
+
+**Original description:**  
 The widget emits `'ad_auto_refresh'` events, but the backend `ALLOWED_EVENT_TYPES` array contains `'ad_refresh'` (without `auto_`). Those events silently fail validation and are dropped. This is a logic gap that silently discards telemetry.
 
 ---
 
-### L-2 — `conversation_started` / `conversation_continued` Events Not in Allowlist
+### ~~L-2 — `conversation_started` / `conversation_continued` Events Not in Allowlist~~ ✅ FIXED
 
-**Component:** `supabase/functions/chat/index.ts`, `analytics/index.ts`
+**Component:** `supabase/functions/chat/index.ts`, `analytics/index.ts`  
+**Fixed:** 2026-02-23
 
-**Description:**  
+**Fix applied:** Added `'conversation_started'` and `'conversation_continued'` to `ALLOWED_EVENT_TYPES`.
+
+**Original description:**  
 `chat/index.ts` calls `logEvent(..., 'conversation_started')` and `'conversation_continued'`, but neither event type appears in `ALLOWED_EVENT_TYPES`. The analytics function will warn and drop them. These events have no effect but create confusing log noise.
 
 ---
@@ -475,8 +481,8 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | M-4 | Service Role Key Bypasses All RLS              | Medium     | High     | Medium   | Open |
 | M-5 | Stored Messages Re-injected Without Validation | Low        | High     | Medium   | ✅ Fixed |
 | M-6 | Unbounded event_data JSONB From Client         | High       | Medium   | Medium   | ✅ Fixed |
-| L-1 | Missing event types in allowlist               | High       | Low      | Low      | Open |
-| L-2 | Undocumented event names in chat               | High       | Low      | Low      | Open |
+| L-1 | Missing event types in allowlist               | High       | Low      | Low      | ✅ Fixed |
+| L-2 | Undocumented event names in chat               | High       | Low      | Low      | ✅ Fixed |
 | L-3 | Wildcard select on project table               | Medium     | Low      | Low      | Open |
 | L-4 | disclaimer_text innerHTML risk                 | Low        | Medium   | Low      | Open |
 | L-5 | Article unique_id collision                    | Low        | Medium   | Low      | Open |
