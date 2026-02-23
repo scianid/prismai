@@ -33,6 +33,47 @@ const ALLOWED_EVENT_TYPES = [
 
 type AllowedEventType = typeof ALLOWED_EVENT_TYPES[number];
 
+/**
+ * M-6 fix: sanitize event_data before storing.
+ *
+ * Rejects event_data that:
+ *  - exceeds 2 KB when JSON-serialised (storage amplification guard)
+ *  - contains nested objects or arrays (all legitimate widget payloads are flat)
+ * Truncates individual string values to 500 characters.
+ * Returns null if event_data is absent, not a plain object, or oversized (caller skips storing it).
+ */
+function sanitizeEventData(
+  raw: Record<string, unknown> | null | undefined
+): Record<string, string | number | boolean | null> | null {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return null;
+
+  const sanitized: Record<string, string | number | boolean | null> = {};
+
+  for (const [key, value] of Object.entries(raw)) {
+    // Reject nested objects / arrays — legitimate widget data is always flat
+    if (value !== null && typeof value === 'object') {
+      console.warn(`analytics: event_data key "${key}" contains a non-primitive value — dropped`);
+      continue;
+    }
+    // Truncate long strings
+    if (typeof value === 'string') {
+      sanitized[key] = value.length > 500 ? value.substring(0, 500) : value;
+    } else if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
+      sanitized[key] = value;
+    }
+    // Any other type (undefined, symbol, function) is silently dropped
+  }
+
+  // 2 KB hard cap on the serialised payload
+  const serialised = JSON.stringify(sanitized);
+  if (serialised.length > 2048) {
+    console.warn(`analytics: event_data exceeds 2 KB limit (${serialised.length} bytes) — dropped`);
+    return null;
+  }
+
+  return sanitized;
+}
+
 interface AnalyticsEvent {
     project_id: string;
     visitor_id?: string;
@@ -61,7 +102,8 @@ async function processEvent(
         return { success: false, error: `Invalid event_type: ${event_type}` };
     }
 
-    // Extract client IP - try multiple headers used by different proxies/CDNs
+    // M-6 fix: sanitize event_data before use
+    const safeEventData = sanitizeEventData(event_data);
     const clientIp = req.headers.get('cf-connecting-ip') // Cloudflare
         || req.headers.get('true-client-ip') // Akamai/Cloudflare Enterprise
         || req.headers.get('x-client-ip') // Some proxies
@@ -74,8 +116,8 @@ async function processEvent(
         projectId: project_id,
         visitorId: visitor_id,
         sessionId: session_id,
-        url: event_data?.url as string || req.headers.get('referer') || undefined,
-        referrer: event_data?.referrer as string || req.headers.get('referer') || undefined,
+        url: safeEventData?.url as string || req.headers.get('referer') || undefined,
+        referrer: safeEventData?.referrer as string || req.headers.get('referer') || undefined,
         userAgent: req.headers.get('user-agent') || undefined,
         ip: clientIp,
     };
@@ -85,7 +127,7 @@ async function processEvent(
         await logImpression(supabase, context);
     } else {
         // Log the event
-        await logEvent(supabase, context, event_type, event_label, event_data);
+        await logEvent(supabase, context, event_type, event_label, safeEventData ?? undefined);
     }
 
     return { success: true };
@@ -205,6 +247,9 @@ serve(async (req: Request) => {
             );
         }
 
+        // M-6 fix: sanitize event_data in single-event path
+        const safeEventData = sanitizeEventData(event_data);
+
         // Extract client IP - try multiple headers used by different proxies/CDNs
         const clientIp = req.headers.get('cf-connecting-ip') // Cloudflare
             || req.headers.get('true-client-ip') // Akamai/Cloudflare Enterprise
@@ -218,8 +263,8 @@ serve(async (req: Request) => {
             projectId: project_id,
             visitorId: visitor_id,
             sessionId: session_id,
-            url: event_data?.url || req.headers.get('referer') || undefined,
-            referrer: event_data?.referrer || req.headers.get('referer') || undefined,
+            url: safeEventData?.url as string || req.headers.get('referer') || undefined,
+            referrer: safeEventData?.referrer as string || req.headers.get('referer') || undefined,
             userAgent: req.headers.get('user-agent') || undefined,
             ip: clientIp,
         };
@@ -229,7 +274,7 @@ serve(async (req: Request) => {
             await logImpression(supabase, context);
         } else {
             // Log the event
-            await logEvent(supabase, context, event_type, event_label, event_data);
+            await logEvent(supabase, context, event_type, event_label, safeEventData ?? undefined);
         }
 
         return new Response(

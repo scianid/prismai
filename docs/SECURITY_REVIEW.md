@@ -19,7 +19,7 @@
 |----------|-------|-------|
 | Critical | 2 | 2 |
 | High | 5 | 4 |
-| Medium | 6 | 2 |
+| Medium | 6 | 3 |
 | Low / Info | 5 | 0 |
 
 The most critical risks are **unauthenticated access to all conversation data** (any visitor ID is trusted without proof of ownership) and **article content stored in full in the database and AI context with no sanitization**, enabling a stored prompt injection chain that can exfiltrate future user conversations. Several high-severity findings around CORS, IP spoofing, rate limiting, and the dev server path traversal also warrant immediate attention.
@@ -356,12 +356,22 @@ Messages from the stored `conversations.messages` JSONB array were re-injected v
 
 ---
 
-### M-6 — `event_data` JSONB Field Accepts Arbitrary Payload from Untrusted Client
+### ~~M-6 — `event_data` JSONB Field Accepts Arbitrary Payload from Untrusted Client~~ ✅ FIXED
 
 **Component:** `supabase/functions/analytics/index.ts`  
-**OWASP:** A03 Injection / A04 Insecure Design
+**OWASP:** A03 Injection / A04 Insecure Design  
+**Fixed:** 2026-02-23
 
-**Description:**  
+**Fix applied:**
+- Added `sanitizeEventData()` in `analytics/index.ts` that enforces:
+  - **2 KB hard cap**: if the JSON-serialised payload exceeds 2048 bytes, `event_data` is dropped entirely and a warning is logged.
+  - **Flat object only**: nested objects and arrays are rejected per-key (all legitimate widget payloads are flat primitives). Any nested key is silently dropped.
+  - **Primitive values only**: strings, numbers, booleans, and null are accepted; any other type is dropped.
+  - **500-char string truncation**: individual string values are truncated to 500 characters before storage.
+- Applied in both the `processEvent` function (batch path) and the single-event path, before `logEvent` / `logImpression` is called.
+- `url` and `referrer` context extraction also uses the sanitized value, preventing unsanitized data from leaking into the analytics context.
+
+**Original description:**  
 
 ```typescript
 interface AnalyticsEvent {
@@ -463,7 +473,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | M-3 | Verbose AI Error Logging                       | Medium     | Medium   | Medium   | ✅ Fixed |
 | M-4 | Service Role Key Bypasses All RLS              | Medium     | High     | Medium   | Open |
 | M-5 | Stored Messages Re-injected Without Validation | Low        | High     | Medium   | ✅ Fixed |
-| M-6 | Unbounded event_data JSONB From Client         | High       | Medium   | Medium   | Open |
+| M-6 | Unbounded event_data JSONB From Client         | High       | Medium   | Medium   | ✅ Fixed |
 | L-1 | Missing event types in allowlist               | High       | Low      | Low      | Open |
 | L-2 | Undocumented event names in chat               | High       | Low      | Low      | Open |
 | L-3 | Wildcard select on project table               | Medium     | Low      | Low      | Open |
