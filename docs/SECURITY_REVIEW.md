@@ -20,7 +20,7 @@
 | Critical | 2 | 2 |
 | High | 5 | 5 |
 | Medium | 6 | 3 |
-| Low / Info | 5 | 2 |
+| Low / Info | 5 | 3 |
 
 The most critical risks are **unauthenticated access to all conversation data** (any visitor ID is trusted without proof of ownership) and **article content stored in full in the database and AI context with no sanitization**, enabling a stored prompt injection chain that can exfiltrate future user conversations. Several high-severity findings around CORS, IP spoofing, rate limiting, and the dev server path traversal also warrant immediate attention.
 
@@ -424,15 +424,17 @@ The widget emits `'ad_auto_refresh'` events, but the backend `ALLOWED_EVENT_TYPE
 
 ---
 
-### L-3 — Wildcard `select('*')` on Project Table Exposes All Columns
+### ~~L-3 — Wildcard `select('*')` on Project Table Exposes All Columns~~ ✅ FIXED
 
-**Component:** `supabase/functions/_shared/dao/projectDao.ts`
+**Component:** `supabase/functions/_shared/dao/projectDao.ts`  
+**Fixed:** 2026-02-23
 
-**Description:**  
+**Fix applied:**
+- `getProjectById` now selects only the 15 columns consumed by edge functions: `project_id, allowed_urls, direction, language, icon_url, client_name, client_description, highlight_color, show_ad, input_text_placeholders, display_mode, display_position, article_class, widget_container_class, override_mobile_container_selector`. Internal fields `account_id` and `created_at` are excluded.
+- `getProjectConfigById` now selects only `project_id, ad_tag_id, override_mobile_ad_size, override_desktop_ad_size`. Excluded: `revenue_share_percentage`, `ad_tag_id_locked`, `deleted_at`, `deleted_by`, `ad_tag_id_updated_by`, `ad_tag_id_updated_at`, `created_at`, `updated_at`.
+
+**Original description:**  
 `getProjectById` and `getProjectConfigById` fetch all columns (`select('*')`), including potentially sensitive internal fields (e.g., `revenue_share_percentage`, `ad_tag_id_locked`, `deleted_at`). If any edge function accidentally exposes the project object in a response, internal commercial data is disclosed.
-
-**Remediation:**  
-Select only the columns needed by each function. Apply principle of least privilege at the query level.
 
 ---
 
@@ -483,7 +485,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | M-6 | Unbounded event_data JSONB From Client         | High       | Medium   | Medium   | ✅ Fixed |
 | L-1 | Missing event types in allowlist               | High       | Low      | Low      | ✅ Fixed |
 | L-2 | Undocumented event names in chat               | High       | Low      | Low      | ✅ Fixed |
-| L-3 | Wildcard select on project table               | Medium     | Low      | Low      | Open |
+| L-3 | Wildcard select on project table               | Medium     | Low      | Low      | ✅ Fixed |
 | L-4 | disclaimer_text innerHTML risk                 | Low        | Medium   | Low      | Open |
 | L-5 | Article unique_id collision                    | Low        | Medium   | Low      | Open |
 
