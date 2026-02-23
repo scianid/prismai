@@ -19,7 +19,7 @@ describe('DiveeWidget Core', () => {
     // Mock config
     mockConfig = {
       projectId: 'test-project-123',
-      apiBaseUrl: 'https://api.test.com'
+      nonCacheBaseUrl: 'https://api.test.com'
     };
     
     // Mock fetch responses
@@ -141,20 +141,20 @@ describe('DiveeWidget Core', () => {
   });
 
   describe('Configuration', () => {
-    test('should use provided apiBaseUrl', () => {
+    test('should use provided nonCacheBaseUrl', () => {
       const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
       eval(widgetJs);
       
       const widget = new DiveeWidget(mockConfig);
-      expect(widget.config.apiBaseUrl).toBe('https://api.test.com');
+      expect(widget.config.nonCacheBaseUrl).toBe('https://api.test.com');
     });
 
-    test('should use default apiBaseUrl if not provided', () => {
+    test('should use default nonCacheBaseUrl if not provided', () => {
       const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
       eval(widgetJs);
       
       const widget = new DiveeWidget({ projectId: 'test' });
-      expect(widget.config.apiBaseUrl).toBe('http://localhost:3000/api/v1');
+      expect(widget.config.nonCacheBaseUrl).toBe('https://srv.divee.ai/functions/v1');
     });
 
     test('should have default display mode as anchored', () => {

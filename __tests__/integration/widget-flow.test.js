@@ -320,7 +320,7 @@ describe('Widget Integration Tests', () => {
 
       const widget = new DiveeWidget({
         projectId: 'test-project-123',
-        apiBaseUrl: 'https://api.test.com'
+        nonCacheBaseUrl: 'https://api.test.com'
       });
 
       // Wait for init to complete
