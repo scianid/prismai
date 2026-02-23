@@ -97,6 +97,12 @@
             });
         }
 
+        // L-4 fix: escape server-config strings before inserting into innerHTML.
+        escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+        }
+
         getAnalyticsIds() {
             // Visitor ID (Persistent)
             let visitorId = localStorage.getItem('divee_visitor_id');
@@ -740,7 +746,7 @@
                             <img class="divee-icon-site-collapsed" src="https://srv.divee.ai/storage/v1/object/public/public-files/ai.png" alt="AI icon" />
                             <img class="divee-icon-site" src="${config.icon_url}" alt="Site icon" />
                         </div>
-                        <span class="divee-title">${config.client_name}</span>
+                        <span class="divee-title">${this.escapeHtml(config.client_name)}</span>
                         <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
                         <button class="divee-close" aria-label="Close">✕</button>
                     </div>
@@ -765,7 +771,7 @@
               </svg>
             </button>
             <div class="divee-input-footer">
-                <div class="divee-warning">${config.disclaimer_text || 'This is an AI driven tool, results might not always be accurate'}</div>
+                <div class="divee-warning">${this.escapeHtml(config.disclaimer_text) || 'This is an AI driven tool, results might not always be accurate'}</div>
                 <div class="divee-counter">0/200</div>
             </div>
           </div>

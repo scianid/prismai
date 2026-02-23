@@ -20,7 +20,7 @@
 | Critical | 2 | 2 |
 | High | 5 | 5 |
 | Medium | 6 | 3 |
-| Low / Info | 5 | 3 |
+| Low / Info | 5 | 4 |
 
 The most critical risks are **unauthenticated access to all conversation data** (any visitor ID is trusted without proof of ownership) and **article content stored in full in the database and AI context with no sanitization**, enabling a stored prompt injection chain that can exfiltrate future user conversations. Several high-severity findings around CORS, IP spoofing, rate limiting, and the dev server path traversal also warrant immediate attention.
 
@@ -438,14 +438,17 @@ The widget emits `'ad_auto_refresh'` events, but the backend `ALLOWED_EVENT_TYPE
 
 ---
 
-### L-4 — `disclaimer_text` Field Rendered via `innerHTML` (Potential XSS)
+### ~~L-4 — `disclaimer_text` Field Rendered via `innerHTML` (Potential XSS)~~ ✅ FIXED
 
-**Component:** `src/widget.js`
+**Component:** `src/widget.js`  
+**Fixed:** 2026-02-23
 
-**Description:**  
-Search for `disclaimer_text` usage in the widget's DOM construction — if this field (which comes from server config) is ever rendered via `.innerHTML` rather than `.textContent`, a malicious project owner or a DB compromise could inject scripts into the widget's shadow DOM that execute on partner publisher sites.
+**Fix applied:**
+- Added `escapeHtml(str)` helper on `DiveeWidget` that replaces `&`, `<`, `>`, `"`, and `'` with their HTML entity equivalents.
+- Applied `this.escapeHtml()` to `config.disclaimer_text` and `config.client_name` where they are interpolated into `innerHTML` template strings.
 
-Verify all server-config-derived strings are set via `.textContent` or properly escaped before DOM insertion.
+**Original description:**  
+`disclaimer_text` (and `client_name`) from server config were interpolated directly into `innerHTML` template strings without escaping. A malicious project owner or a DB compromise could inject scripts into the widget's shadow DOM that execute on partner publisher sites.
 
 ---
 
@@ -486,7 +489,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | L-1 | Missing event types in allowlist               | High       | Low      | Low      | ✅ Fixed |
 | L-2 | Undocumented event names in chat               | High       | Low      | Low      | ✅ Fixed |
 | L-3 | Wildcard select on project table               | Medium     | Low      | Low      | ✅ Fixed |
-| L-4 | disclaimer_text innerHTML risk                 | Low        | Medium   | Low      | Open |
+| L-4 | disclaimer_text innerHTML risk                 | Low        | Medium   | Low      | ✅ Fixed |
 | L-5 | Article unique_id collision                    | Low        | Medium   | Low      | Open |
 
 ---
