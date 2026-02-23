@@ -18,7 +18,7 @@
 | Severity | Count | Fixed |
 |----------|-------|-------|
 | Critical | 2 | 2 |
-| High | 5 | 3 |
+| High | 5 | 4 |
 | Medium | 6 | 2 |
 | Low / Info | 5 | 0 |
 
@@ -218,12 +218,18 @@ Additionally, if `origin` is `null` and `referer` is `null`, `isAllowedOrigin` r
 
 ---
 
-### H-5 — Path Traversal in Development Server Static File Serving
+### ~~H-5 — Path Traversal in Development Server Static File Serving~~ ✅ FIXED
 
 **Component:** `server.js`  
-**OWASP:** A01 Broken Access Control
+**OWASP:** A01 Broken Access Control  
+**Fixed:** 2026-02-23
 
-**Description:**  
+**Fix applied:**
+- `path.resolve(PROJECT_ROOT, '.' + urlPath)` is used instead of string concatenation, so `%2e%2e` and `../` sequences are fully normalised by the OS path resolver before any file access.
+- After resolving, the path is checked with `filePath.startsWith(PROJECT_ROOT + path.sep)` — any path that escapes the project root receives a `403 Forbidden` immediately, before `fs.readFile` is called.
+- Added a prominent `WARNING` comment at the top of the file that this server must not be used in production.
+
+**Original description:**  
 
 ```javascript
 const urlPath = req.url.split('?')[0];
@@ -451,7 +457,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | H-2 | No Rate Limiting on AI Endpoints               | High       | High     | High     | ✅ Fixed |
 | H-3 | CORS Wildcard + Authorization Header           | Medium     | High     | High     | ✅ Fixed |
 | H-4 | Origin Check Bypassable via Referer            | High       | High     | High     | ✅ Fixed |
-| H-5 | Path Traversal in Dev Server                   | Low        | High     | High     | Open |
+| H-5 | Path Traversal in Dev Server                   | Low        | High     | High     | ✅ Fixed |
 | M-1 | Full Article Content Stored Unencrypted        | Low        | Medium   | Medium   | Open |
 | M-2 | Persistent Tracking Without Consent            | High       | Medium   | Medium   | Open |
 | M-3 | Verbose AI Error Logging                       | Medium     | Medium   | Medium   | ✅ Fixed |

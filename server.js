@@ -1,8 +1,13 @@
+// WARNING: This is a development-only server. Do NOT expose it on a public
+// network or use it in production — it serves local files and has no auth.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = 3000;
+
+// H-5 fix: project root used for path traversal containment
+const PROJECT_ROOT = path.resolve(__dirname);
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -35,11 +40,18 @@ const server = http.createServer((req, res) => {
   }
 
   // Static file serving
-  // Remove query string from URL
+  // Remove query string and decode percent-encoding before resolving
   const urlPath = req.url.split('?')[0];
-  let filePath = '.' + urlPath;
-  if (filePath === './') {
-    filePath = './test/index.html';
+  let filePath = path.resolve(PROJECT_ROOT, '.' + urlPath);
+  if (urlPath === '/') {
+    filePath = path.resolve(PROJECT_ROOT, 'test/index.html');
+  }
+
+  // H-5 fix: reject any path that escapes the project root (path traversal guard)
+  if (!filePath.startsWith(PROJECT_ROOT + path.sep) && filePath !== PROJECT_ROOT) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('403 Forbidden');
+    return;
   }
 
   const extname = String(path.extname(filePath)).toLowerCase();
