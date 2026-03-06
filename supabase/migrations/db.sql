@@ -40,7 +40,6 @@ CREATE TABLE public.analytics_events (
   session_id uuid,
   event_type text NOT NULL,
   event_label text,
-  event_data jsonb,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT analytics_events_pkey PRIMARY KEY (id)
 );
@@ -64,7 +63,6 @@ CREATE TABLE public.analytics_impressions (
   session_id uuid,
   url text,
   referrer text,
-  user_agent text,
   geo_country text,
   geo_city text,
   geo_lat double precision,

@@ -7,7 +7,6 @@ export interface AnalyticsContext {
     sessionId?: string;
     url?: string;
     referrer?: string;
-    userAgent?: string;
     ip?: string;
     geo?: {
         country?: string;
@@ -60,7 +59,6 @@ export async function logImpression(supabase: ReturnType<typeof createClient>, c
             session_id: ctx.sessionId || null,
             url: ctx.url,
             referrer: ctx.referrer,
-            user_agent: ctx.userAgent,
             ip: ctx.ip,
             geo_country: ctx.geo?.country,
             geo_city: ctx.geo?.city,
@@ -81,8 +79,7 @@ export async function logEvent(
     supabase: ReturnType<typeof createClient>,
     ctx: AnalyticsContext,
     eventType: string,
-    eventLabel?: string,
-    eventData?: Record<string, any>
+    eventLabel?: string
 ) {
     if (!ctx.projectId) return;
 
@@ -93,7 +90,6 @@ export async function logEvent(
             session_id: ctx.sessionId || null,
             event_type: eventType,
             event_label: eventLabel,
-            event_data: eventData,
         });
 
         if (error) {

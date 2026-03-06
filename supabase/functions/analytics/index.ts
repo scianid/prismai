@@ -36,54 +36,12 @@ const ALLOWED_EVENT_TYPES = [
 
 type AllowedEventType = typeof ALLOWED_EVENT_TYPES[number];
 
-/**
- * M-6 fix: sanitize event_data before storing.
- *
- * Rejects event_data that:
- *  - exceeds 2 KB when JSON-serialised (storage amplification guard)
- *  - contains nested objects or arrays (all legitimate widget payloads are flat)
- * Truncates individual string values to 500 characters.
- * Returns null if event_data is absent, not a plain object, or oversized (caller skips storing it).
- */
-function sanitizeEventData(
-  raw: Record<string, unknown> | null | undefined
-): Record<string, string | number | boolean | null> | null {
-  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return null;
-
-  const sanitized: Record<string, string | number | boolean | null> = {};
-
-  for (const [key, value] of Object.entries(raw)) {
-    // Reject nested objects / arrays — legitimate widget data is always flat
-    if (value !== null && typeof value === 'object') {
-      console.warn(`analytics: event_data key "${key}" contains a non-primitive value — dropped`);
-      continue;
-    }
-    // Truncate long strings
-    if (typeof value === 'string') {
-      sanitized[key] = value.length > 500 ? value.substring(0, 500) : value;
-    } else if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
-      sanitized[key] = value;
-    }
-    // Any other type (undefined, symbol, function) is silently dropped
-  }
-
-  // 2 KB hard cap on the serialised payload
-  const serialised = JSON.stringify(sanitized);
-  if (serialised.length > 2048) {
-    console.warn(`analytics: event_data exceeds 2 KB limit (${serialised.length} bytes) — dropped`);
-    return null;
-  }
-
-  return sanitized;
-}
-
 interface AnalyticsEvent {
     project_id: string;
     visitor_id?: string;
     session_id?: string;
     event_type: string;
     event_label?: string;
-    event_data?: Record<string, unknown>;
     timestamp?: number;
 }
 
@@ -92,7 +50,7 @@ async function processEvent(
     supabase: ReturnType<typeof supabaseClient> extends Promise<infer T> ? T : never,
     req: Request
 ): Promise<{ success: boolean; error?: string }> {
-    const { project_id, visitor_id, session_id, event_type, event_label, event_data } = event;
+    const { project_id, visitor_id, session_id, event_type, event_label } = event;
 
     if (!project_id || !event_type) {
         return { success: false, error: 'Missing required fields: project_id and event_type' };
@@ -105,8 +63,6 @@ async function processEvent(
         return { success: false, error: `Invalid event_type: ${event_type}` };
     }
 
-    // M-6 fix: sanitize event_data before use
-    const safeEventData = sanitizeEventData(event_data);
     // H-1 fix: trust only cf-connecting-ip, which Cloudflare injects and clients cannot spoof.
     // Supabase Edge Functions always run on Cloudflare Workers, making this the correct
     // authoritative header regardless of any upstream CDN in front of the origin site.
@@ -117,9 +73,8 @@ async function processEvent(
         projectId: project_id,
         visitorId: visitor_id,
         sessionId: session_id,
-        url: safeEventData?.url as string || req.headers.get('referer') || undefined,
-        referrer: safeEventData?.referrer as string || req.headers.get('referer') || undefined,
-        userAgent: req.headers.get('user-agent') || undefined,
+        url: req.headers.get('referer') || undefined,
+        referrer: req.headers.get('referer') || undefined,
         ip: clientIp,
     };
 
@@ -128,7 +83,7 @@ async function processEvent(
         await logImpression(supabase, context);
     } else {
         // Log the event
-        await logEvent(supabase, context, event_type, event_label, safeEventData ?? undefined);
+        await logEvent(supabase, context, event_type, event_label);
     }
 
     return { success: true };
@@ -211,7 +166,7 @@ serve(async (req: Request) => {
         }
 
         // Single event (backward compatible)
-        const { project_id, visitor_id, session_id, event_type, event_label, event_data } = body;
+        const { project_id, visitor_id, session_id, event_type, event_label } = body;
 
         if (!project_id || !event_type) {
             return new Response(
@@ -248,9 +203,6 @@ serve(async (req: Request) => {
             );
         }
 
-        // M-6 fix: sanitize event_data in single-event path
-        const safeEventData = sanitizeEventData(event_data);
-
         // H-1 fix: trust only cf-connecting-ip, which Cloudflare injects and clients cannot spoof.
         // Supabase Edge Functions always run on Cloudflare Workers, making this the correct
         // authoritative header regardless of any upstream CDN in front of the origin site.
@@ -261,9 +213,8 @@ serve(async (req: Request) => {
             projectId: project_id,
             visitorId: visitor_id,
             sessionId: session_id,
-            url: safeEventData?.url as string || req.headers.get('referer') || undefined,
-            referrer: safeEventData?.referrer as string || req.headers.get('referer') || undefined,
-            userAgent: req.headers.get('user-agent') || undefined,
+            url: req.headers.get('referer') || undefined,
+            referrer: req.headers.get('referer') || undefined,
             ip: clientIp,
         };
 
@@ -272,7 +223,7 @@ serve(async (req: Request) => {
             await logImpression(supabase, context);
         } else {
             // Log the event
-            await logEvent(supabase, context, event_type, event_label, safeEventData ?? undefined);
+            await logEvent(supabase, context, event_type, event_label);
         }
 
         return new Response(
