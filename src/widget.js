@@ -1831,6 +1831,31 @@
         }
     }
 
+    // Global debug API — accessible from the browser console as window.divee
+    const diveeInstances = [];
+    window.divee = {
+        article: function (index) {
+            const widget = diveeInstances[index || 0];
+            if (!widget) { console.warn('[Divee] No widget instance found'); return; }
+            console.group('[Divee] Article');
+            console.log('Title:  ', widget.contentCache.title);
+            console.log('URL:    ', widget.contentCache.url);
+            console.log('Content:', widget.contentCache.content);
+            console.log('Images: ', { og_image: widget.contentCache.og_image, article_image: widget.contentCache.image_url });
+            console.groupEnd();
+        },
+        config: function (index) {
+            const widget = diveeInstances[index || 0];
+            if (!widget) { console.warn('[Divee] No widget instance found'); return; }
+            console.group('[Divee] Config');
+            console.log('Client config:', widget.config);
+            console.log('Server config:', widget.state.serverConfig);
+            console.log('State:        ', widget.state);
+            console.groupEnd();
+        },
+        instances: function () { return diveeInstances; }
+    };
+
     // Auto-initialize from script tag
     function autoInit() {
         const scripts = document.querySelectorAll('script[data-project-id]');
@@ -1858,7 +1883,8 @@
                 }
                 console.log(`[Divee] Auto-init [${index}]:`, config);
             }
-            new DiveeWidget(config);
+            const instance = new DiveeWidget(config);
+            diveeInstances.push(instance);
         });
     }
 
