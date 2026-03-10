@@ -191,6 +191,7 @@
 .divee-icon-ai-collapsed,
 .divee-icon-site-collapsed {
   flex-shrink: 0;
+  margin: 0 !important;
 }
 
 .divee-icon-ai-collapsed {
@@ -268,6 +269,7 @@
   height: 22px;
   color: #4b5563;
   flex-shrink: 0;
+  margin: 0 !important;
   transition: all 0.3s;
 }
 
@@ -315,7 +317,10 @@
   text-decoration: none;
   padding: 0 6px;
   display: inline-block;
-  margin-left: auto;
+  margin-left: auto !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  margin-right: 0 !important;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -329,6 +334,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  margin: 0 !important;
 }
 
 .divee-icon-ai,
@@ -337,6 +343,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin: 0 !important;
 }
 
 .divee-icon-ai {
@@ -361,6 +368,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin: 0 !important;
 }
 
 .divee-close {
@@ -373,6 +381,7 @@
   line-height: 1;
   border-radius: 4px;
   transition: background 0.2s;
+  margin: 0 !important;
 }
 
 .divee-close:hover {
@@ -446,6 +455,7 @@
   min-height: 0;
   overflow: visible;
   padding: 14px;
+  margin: 0 !important;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -580,7 +590,7 @@
   overflow-y: scroll !important;
   overflow-x: hidden;
   scroll-behavior: smooth;
-  margin-bottom: 2px;
+  margin: 0 0 2px 0 !important;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 12px;
@@ -593,6 +603,7 @@
   flex-direction: column;
   gap: 12px;
   flex: 1;
+  margin: 0 !important;
 }
 
 /* Empty State */
@@ -642,6 +653,7 @@
   gap: 4px;
   animation: divee-fade-in 0.2s ease;
   max-width: 85%;
+  margin: 0 !important;
 }
 
 .divee-message-user {
@@ -667,6 +679,7 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  margin: 0 !important;
 }
 
 .divee-message-ai .divee-message-label {
@@ -690,6 +703,7 @@
   white-space: pre-wrap;
   word-wrap: break-word;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin: 0 !important;
 }
 
 .divee-message-user .divee-message-content {
@@ -720,6 +734,7 @@
   position: relative;
   flex-wrap: wrap;
   gap: 10px;
+  margin: 0 !important;
 }
 
 .divee-input-footer {
@@ -736,7 +751,7 @@
   font-size: 11px;
   color: #9ca3af;
   text-align: left;
-  margin: 5px;
+  margin: 5px !important;
 }
 
 .divee-counter {
@@ -745,6 +760,7 @@
   text-align: right;
   white-space: nowrap;
   flex-shrink: 0;
+  margin: 0 !important;
 }
 
 .divee-widget .divee-input {
@@ -796,7 +812,7 @@
   cursor: pointer;
   transition: all 0.3s;
   flex-shrink: 0;
-  margin-top: 4px;
+  margin: 4px 0 0 0 !important;
   box-shadow: 0 2px 6px rgba(104, 229, 253, 0.3);
 }
 
@@ -804,6 +820,7 @@
   width: 20px;
   height: 20px;
   fill: white;
+  margin: 0 !important;
 }
 
 .divee-send:hover {
