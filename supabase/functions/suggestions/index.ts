@@ -25,9 +25,10 @@ Deno.serve(async (req: Request) => {
     if (title) title = sanitizeContent(title.substring(0, MAX_TITLE_LENGTH));
     if (content) content = sanitizeContent(content.substring(0, MAX_CONTENT_LENGTH));
 
-    if (!projectId) 
+    if (!projectId) {
+      console.error(`suggestions: missing projectId in request, url: ${req.url}`);
       return errorResp('suggestions: missing projectId', 400, { suggestions: [] });
-  
+    }
     // Validate required fields
     if (!url || !title || !content) 
       return errorResp('suggestions: missing required fields:url,title,content', 400, { suggestions: [] });
