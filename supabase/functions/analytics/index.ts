@@ -97,7 +97,15 @@ serve(async (req: Request) => {
 
     try {
         // Parse request body
-        const body = await req.json();
+        let body: Record<string, unknown>;
+        try {
+            body = await req.json();
+        } catch {
+            return new Response(
+                JSON.stringify({ error: 'Invalid or empty request body' }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
 
         // Create Supabase client
         const supabase = await supabaseClient();
@@ -197,6 +205,7 @@ serve(async (req: Request) => {
         // Validate origin is allowed for this project
         const requestUrl = getRequestOriginUrl(req);
         if (!isAllowedOrigin(requestUrl, project.allowed_urls)) {
+            console.warn('analytics: origin not allowed (single)', { attempted: requestUrl, allowed: project.allowed_urls, projectId: project_id });
             return new Response(
                 JSON.stringify({ error: 'Origin not allowed' }),
                 { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

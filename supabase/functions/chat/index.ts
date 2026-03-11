@@ -47,8 +47,10 @@ Deno.serve(async (req: Request) => {
     // Verify origin
     const requestUrl = getRequestOriginUrl(req);
 
-    if (!isAllowedOrigin(requestUrl, project?.allowed_urls))
+    if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
+        console.error('chat: origin not allowed', { attempted: requestUrl, allowed: project?.allowed_urls, projectId });
         return errorResp('Origin not allowed', 403);
+    }
 
     // H-2 fix: enforce per-visitor and per-project rate limits before hitting the AI
     const rateLimit = await checkRateLimit(supabase, 'chat', visitor_id, projectId);

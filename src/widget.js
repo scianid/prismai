@@ -1906,7 +1906,11 @@
                     const payload = events.length === 1 ? events[0] : { batch: events };
                     
                     if (navigator.sendBeacon) {
-                        navigator.sendBeacon(endpoint, JSON.stringify(payload));
+                        // Pass a Blob so the browser sends Content-Type: application/json.
+                        // A plain string would default to text/plain, which the edge
+                        // runtime can't parse as JSON, resulting in empty-body errors.
+                        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                        navigator.sendBeacon(endpoint, blob);
                     } else {
                         // Fallback to sync XHR (blocking but reliable)
                         const xhr = new XMLHttpRequest();

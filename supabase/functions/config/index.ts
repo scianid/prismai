@@ -29,8 +29,10 @@ Deno.serve(async (req: Request) => {
     ]);
 
     const requestUrl = getRequestOriginUrl(req);
-    if (!isAllowedOrigin(requestUrl, project.allowed_urls)) 
+    if (!isAllowedOrigin(requestUrl, project.allowed_urls)) {
+      console.error('config: origin not allowed', { attempted: requestUrl, allowed: project.allowed_urls, projectId });
       return errorResp('Origin not allowed', 403);
+    }
     
     // Map database fields to widget config format
     const config = {

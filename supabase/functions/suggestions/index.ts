@@ -38,8 +38,10 @@ Deno.serve(async (req: Request) => {
     const project = await getProjectById(projectId, supabase);
     const requestUrl = getRequestOriginUrl(req);
 
-    if (!isAllowedOrigin(requestUrl, project?.allowed_urls))
+    if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
+      console.warn('suggestions: origin not allowed', { attempted: requestUrl, allowed: project?.allowed_urls, projectId });
       return errorResp('suggestions: origin not allowed', 403, { suggestions: [] });
+    }
 
     // Track Event (Async)
     logEvent(supabase, {
