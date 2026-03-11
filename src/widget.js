@@ -20,7 +20,8 @@
                 floatingPosition: 'bottom-right',
                 anchoredPosition: 'bottom',
                 articleClass: null,
-                containerSelector: null
+                containerSelector: null,
+                attentionAnimation: config.attentionAnimation || false
             };
 
             this.state = {
@@ -305,6 +306,9 @@
 
             // Setup analytics batch flush on page unload
             this.setupPageUnloadFlush();
+
+            // Setup attention animation (off by default)
+            this.setupAttentionAnimation();
 
             // Track analytics
             this.trackEvent('widget_loaded', {
@@ -1042,6 +1046,101 @@
                 clearInterval(this.state.adRefreshInterval);
                 this.state.adRefreshInterval = null;
             }
+        }
+
+        setupAttentionAnimation() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlOverride = urlParams.get('diveeOverrideAttentionAnimation') === 'true';
+            if (!this.config.attentionAnimation && !urlOverride) return;
+
+            const MAX_SEQUENCES = 3;
+            const storageKey = `divee_attention_count_${this.config.projectId}`;
+
+            if (!urlOverride) {
+                const count = parseInt(sessionStorage.getItem(storageKey) || '0', 10);
+                if (count >= MAX_SEQUENCES) return;
+            }
+
+            const searchBar = this.elements.collapsedView?.querySelector('.divee-search-container-collapsed');
+            if (!searchBar) return;
+
+            let started = false;
+            let intervalId = null;
+
+            const runSequence = () => {
+                if (this.state.isExpanded) return;
+                const count = parseInt(sessionStorage.getItem(storageKey) || '0', 10);
+                if (!urlOverride && count >= MAX_SEQUENCES) {
+                    clearInterval(intervalId);
+                    return;
+                }
+                this.playAttentionSequence(searchBar);
+                if (!urlOverride) {
+                    sessionStorage.setItem(storageKey, count + 1);
+                    if (count + 1 >= MAX_SEQUENCES) clearInterval(intervalId);
+                }
+            };
+
+            // Only animate when widget is visible in viewport
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !started) {
+                        started = true;
+                        setTimeout(() => {
+                            runSequence();
+                            intervalId = setInterval(runSequence, 8000);
+                        }, 2500);
+                    }
+                });
+            }, { threshold: 0.4 });
+
+            observer.observe(this.elements.container);
+            this.attentionObserver = observer;
+        }
+
+        playAttentionSequence(container) {
+            if (container.classList.contains('divee-attention-active')) return;
+
+            // Glow pulse via CSS class
+            container.classList.add('divee-attention-active');
+
+            // Shimmer sweep
+            const shimmer = document.createElement('span');
+            shimmer.className = 'divee-attention-shimmer';
+            container.appendChild(shimmer);
+
+            // Read actual theme colors from CSS custom properties
+            const style = getComputedStyle(this.elements.container);
+            const primary = style.getPropertyValue('--divee-color-primary').trim() || '#68E5FD';
+            const secondary = style.getPropertyValue('--divee-color-secondary').trim() || '#A389E0';
+            const paletteColors = [primary, secondary, primary, secondary, primary];
+
+            const barWidth = container.offsetWidth || 300;
+
+            // 5 firefly particles, staggered
+            for (let i = 0; i < 5; i++) {
+                const fly = document.createElement('span');
+                fly.className = 'divee-firefly';
+                const xPos = 20 + Math.random() * (barWidth - 40);
+                const driftX  = ((Math.random() - 0.5) * 60).toFixed(1);
+                const driftX2 = ((Math.random() - 0.5) * 90).toFixed(1);
+                const dur = (1.5 + Math.random() * 0.7).toFixed(2);
+                fly.style.left = xPos + 'px';
+                fly.style.bottom = '6px';
+                fly.style.setProperty('--divee-fly-x', driftX + 'px');
+                fly.style.setProperty('--divee-fly-x2', driftX2 + 'px');
+                fly.style.setProperty('--divee-fly-dur', dur + 's');
+                fly.style.setProperty('--divee-fly-delay', (i * 160) + 'ms');
+                fly.style.backgroundColor = paletteColors[i];
+                fly.style.boxShadow = `0 0 7px 3px ${paletteColors[i]}`;
+                container.appendChild(fly);
+            }
+
+            // Clean up after animations finish (~4.8s covers 2 glow cycles + all particles)
+            setTimeout(() => {
+                container.classList.remove('divee-attention-active');
+                container.querySelectorAll('.divee-firefly, .divee-attention-shimmer').forEach(el => el.remove());
+            }, 4800);
         }
 
         attachEventListeners() {
@@ -1862,7 +1961,8 @@
             const config = {
                 projectId: script.getAttribute('data-project-id'),
                 cachedBaseUrl: "https://cdn.divee.ai/functions/v1",
-                nonCacheBaseUrl: "https://srv.divee.ai/functions/v1"
+                nonCacheBaseUrl: "https://srv.divee.ai/functions/v1",
+                attentionAnimation: script.getAttribute('data-attention-animation') === 'true'
             };
 
             // Show deprecation warnings if data attributes are used
