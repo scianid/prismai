@@ -1101,45 +1101,11 @@
         playAttentionSequence(container) {
             if (container.classList.contains('divee-attention-active')) return;
 
-            // Glow pulse via CSS class
             container.classList.add('divee-attention-active');
 
-            // Shimmer sweep
-            const shimmer = document.createElement('span');
-            shimmer.className = 'divee-attention-shimmer';
-            container.appendChild(shimmer);
-
-            // Read actual theme colors from CSS custom properties
-            const style = getComputedStyle(this.elements.container);
-            const primary = style.getPropertyValue('--divee-color-primary').trim() || '#68E5FD';
-            const secondary = style.getPropertyValue('--divee-color-secondary').trim() || '#A389E0';
-            const paletteColors = [primary, secondary, primary, secondary, primary];
-
-            const barWidth = container.offsetWidth || 300;
-
-            // 5 firefly particles, staggered
-            for (let i = 0; i < 5; i++) {
-                const fly = document.createElement('span');
-                fly.className = 'divee-firefly';
-                const xPos = 20 + Math.random() * (barWidth - 40);
-                const driftX  = ((Math.random() - 0.5) * 60).toFixed(1);
-                const driftX2 = ((Math.random() - 0.5) * 90).toFixed(1);
-                const dur = (1.5 + Math.random() * 0.7).toFixed(2);
-                fly.style.left = xPos + 'px';
-                fly.style.bottom = '6px';
-                fly.style.setProperty('--divee-fly-x', driftX + 'px');
-                fly.style.setProperty('--divee-fly-x2', driftX2 + 'px');
-                fly.style.setProperty('--divee-fly-dur', dur + 's');
-                fly.style.setProperty('--divee-fly-delay', (i * 160) + 'ms');
-                fly.style.backgroundColor = paletteColors[i];
-                fly.style.boxShadow = `0 0 7px 3px ${paletteColors[i]}`;
-                container.appendChild(fly);
-            }
-
-            // Clean up after animations finish (~4.8s covers 2 glow cycles + all particles)
+            // Clean up after glow animation finishes (2.2s × 2 iterations)
             setTimeout(() => {
                 container.classList.remove('divee-attention-active');
-                container.querySelectorAll('.divee-firefly, .divee-attention-shimmer').forEach(el => el.remove());
             }, 4800);
         }
 

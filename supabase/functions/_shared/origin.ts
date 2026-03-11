@@ -26,7 +26,5 @@ export function isAllowedOrigin(rawUrl: string | null | undefined, allowedUrls: 
         ? allowedUrls.map((h) => normalizeHost(h))
         : [];
 
-    console.log({ allowedHosts }, { requestHost }, { rawUrl });
-
     return !!requestHost && allowedHosts.length > 0 && allowedHosts.includes(requestHost);
 }
