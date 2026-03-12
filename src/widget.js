@@ -15,6 +15,7 @@
                 projectId: config.projectId,
                 cachedBaseUrl: config.cachedBaseUrl || 'https://cdn.divee.ai/functions/v1',
                 nonCacheBaseUrl: config.nonCacheBaseUrl || 'https://srv.divee.ai/functions/v1',
+                analyticsBaseUrl: config.analyticsBaseUrl || 'https://analytic.divee.ai/functions/v1',
                 // These will be populated from server config
                 displayMode: 'anchored',
                 floatingPosition: 'bottom-right',
@@ -1804,13 +1805,8 @@
             if (events.length === 0) return;
             
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const analyticsOverride = urlParams.get('diveeAnalyticsOverride') === 'true';
-                const endpoint = analyticsOverride
-                    ? 'https://analytic.divee.ai/functions/v1/analytics'
-                    : `${this.config.nonCacheBaseUrl}/analytics`;
-
-                if (analyticsOverride) this.log('[Divee Analytics] Using override endpoint:', endpoint);
+                const endpoint = `${this.config.analyticsBaseUrl}/analytics`;
+                this.log('[Divee Analytics] Sending to:', endpoint);
 
                 const payload = events.length === 1 ? events[0] : { batch: events };
                 
@@ -1871,7 +1867,7 @@
                     this.analyticsQueue = [];
                     
                     // Use sendBeacon for reliable delivery on page unload
-                    const endpoint = `${this.config.nonCacheBaseUrl}/analytics`;
+                    const endpoint = `${this.config.analyticsBaseUrl}/analytics`;
                     const payload = events.length === 1 ? events[0] : { batch: events };
                     
                     if (navigator.sendBeacon) {
@@ -1935,6 +1931,7 @@
                 projectId: script.getAttribute('data-project-id'),
                 cachedBaseUrl: "https://cdn.divee.ai/functions/v1",
                 nonCacheBaseUrl: "https://srv.divee.ai/functions/v1",
+                analyticsBaseUrl: "https://analytic.divee.ai/functions/v1",
                 attentionAnimation: script.getAttribute('data-attention-animation') !== 'false'
             };
 
