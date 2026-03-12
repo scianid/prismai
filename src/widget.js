@@ -289,12 +289,18 @@
                 return;
             }
             
-            if (!this.articleContent || this.articleContent.trim().length < 100) {
-                this.log('Widget disabled: article content is empty or too short', {
+            if (!this.articleContent || this.articleContent.trim().length < 10) {
+                this.log('Widget disabled: article content is empty or too short to load', {
                     contentLength: this.articleContent?.length || 0
                 });
                 return;
             }
+
+            // Track impression only when article is present
+            this.trackEvent('impression', {
+                url: this.contentCache.url || window.location.href,
+                referrer: document.referrer
+            });
 
             // Create widget DOM
             this.createWidget();
@@ -322,12 +328,6 @@
         async loadServerConfig() {
             try {
                 const serverConfig = await this.fetchServerConfig(this.config.projectId);
-                
-                // Track impression separately
-                this.trackEvent('impression', {
-                    url: this.contentCache.url || window.location.href,
-                    referrer: document.referrer
-                });
 
                 this.state.serverConfig = serverConfig;
                 this.log('Server config loaded:', this.state.serverConfig);
