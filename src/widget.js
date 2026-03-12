@@ -21,7 +21,7 @@
                 anchoredPosition: 'bottom',
                 articleClass: null,
                 containerSelector: null,
-                attentionAnimation: config.attentionAnimation || false
+                attentionAnimation: config.attentionAnimation !== false
             };
 
             this.state = {
@@ -1050,16 +1050,15 @@
 
         setupAttentionAnimation() {
             const urlParams = new URLSearchParams(window.location.search);
-            const urlOverride = urlParams.get('diveeOverrideAttentionAnimation') === 'true';
-            if (!this.config.attentionAnimation && !urlOverride) return;
+            const urlOverride = urlParams.get('diveeOverrideAttentionAnimation');
+            // Disabled if config says false, unless URL param explicitly forces it on
+            if (!this.config.attentionAnimation && urlOverride !== 'true') return;
 
+            // Use an in-memory counter so it resets on every page load.
+            // sessionStorage was causing the animation to never show after the first
+            // tab session exhausted the cap.
             const MAX_SEQUENCES = 3;
-            const storageKey = `divee_attention_count_${this.config.projectId}`;
-
-            if (!urlOverride) {
-                const count = parseInt(sessionStorage.getItem(storageKey) || '0', 10);
-                if (count >= MAX_SEQUENCES) return;
-            }
+            let playCount = 0;
 
             const searchBar = this.elements.collapsedView?.querySelector('.divee-search-container-collapsed');
             if (!searchBar) return;
@@ -1069,16 +1068,13 @@
 
             const runSequence = () => {
                 if (this.state.isExpanded) return;
-                const count = parseInt(sessionStorage.getItem(storageKey) || '0', 10);
-                if (!urlOverride && count >= MAX_SEQUENCES) {
+                if (playCount >= MAX_SEQUENCES) {
                     clearInterval(intervalId);
                     return;
                 }
                 this.playAttentionSequence(searchBar);
-                if (!urlOverride) {
-                    sessionStorage.setItem(storageKey, count + 1);
-                    if (count + 1 >= MAX_SEQUENCES) clearInterval(intervalId);
-                }
+                playCount++;
+                if (playCount >= MAX_SEQUENCES) clearInterval(intervalId);
             };
 
             // Only animate when widget is visible in viewport
@@ -1932,7 +1928,7 @@
                 projectId: script.getAttribute('data-project-id'),
                 cachedBaseUrl: "https://cdn.divee.ai/functions/v1",
                 nonCacheBaseUrl: "https://srv.divee.ai/functions/v1",
-                attentionAnimation: script.getAttribute('data-attention-animation') === 'true'
+                attentionAnimation: script.getAttribute('data-attention-animation') !== 'false'
             };
 
             // Show deprecation warnings if data attributes are used
