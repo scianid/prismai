@@ -119,20 +119,28 @@ export async function logEvent(
     if (!ctx.projectId) return;
 
     try {
-        const { error } = await supabase.from('analytics_events').insert({
-            project_id: ctx.projectId,
-            visitor_id: ctx.visitorId || null,
-            session_id: ctx.sessionId || null,
-            event_type: eventType,
-            event_label: eventLabel,
-            article_url: ctx.articleUrl || null,
-        });
-
-        if (error) {
-            console.error('Analytics: Failed to log event', error);
+        // @ts-ignore
+        const analyticsUrl = Deno.env.get('ANALYTICS_PROXY_URL');
+        if (!analyticsUrl) {
+            console.warn('Analytics: ANALYTICS_PROXY_URL not configured, skipping event');
+            return;
         }
+
+        await fetch(analyticsUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                project_id: ctx.projectId,
+                visitor_id: ctx.visitorId || null,
+                session_id: ctx.sessionId || null,
+                event_type: eventType,
+                event_label: eventLabel || null,
+                article_url: ctx.articleUrl || null,
+                url: ctx.url || null,
+            }),
+        });
     } catch (err) {
-        console.error('Analytics: Error logging event', err);
+        console.error('Analytics: Error logging event via secondary', err);
     }
 }
 
@@ -143,6 +151,7 @@ export interface BatchEventRow {
     event_type: string;
     event_label?: string;
     article_url?: string;
+    url?: string;
 }
 
 export async function logEventBatch(
@@ -152,21 +161,29 @@ export async function logEventBatch(
     if (rows.length === 0) return;
 
     try {
-        const { error } = await supabase.from('analytics_events').insert(
-            rows.map(r => ({
-                project_id: r.project_id,
-                visitor_id: r.visitor_id || null,
-                session_id: r.session_id || null,
-                event_type: r.event_type,
-                event_label: r.event_label || null,
-                article_url: r.article_url || null,
-            }))
-        );
-
-        if (error) {
-            console.error('Analytics: Failed to bulk insert events', error);
+        // @ts-ignore
+        const analyticsUrl = Deno.env.get('ANALYTICS_PROXY_URL');
+        if (!analyticsUrl) {
+            console.warn('Analytics: ANALYTICS_PROXY_URL not configured, skipping batch events');
+            return;
         }
+
+        await fetch(analyticsUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                batch: rows.map(r => ({
+                    project_id: r.project_id,
+                    visitor_id: r.visitor_id || null,
+                    session_id: r.session_id || null,
+                    event_type: r.event_type,
+                    event_label: r.event_label || null,
+                    article_url: r.article_url || null,
+                    url: r.url || null,
+                })),
+            }),
+        });
     } catch (err) {
-        console.error('Analytics: Error bulk inserting events', err);
+        console.error('Analytics: Error bulk sending events via secondary', err);
     }
 }

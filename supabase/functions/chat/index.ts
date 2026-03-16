@@ -124,12 +124,7 @@ Deno.serve(async (req: Request) => {
       projectId,
       visitorId: visitor_id,
       sessionId: session_id
-    }, conversation.message_count === 0 ? 'conversation_started' : 'conversation_continued', undefined, {
-      question_text: question,
-      question_id: questionId,
-      conversation_id: conversation.id,
-      message_count: conversation.message_count
-    });
+    }, conversation.message_count === 0 ? 'conversation_started' : 'conversation_continued', undefined);
 
     const cacheSuggestions = extractCachedSuggestions(article);
     const cachedItem = cacheSuggestions?.find((s) => s.id === questionId);
@@ -139,14 +134,7 @@ Deno.serve(async (req: Request) => {
       projectId,
       visitorId: visitor_id,
       sessionId: session_id
-    }, `${questionType}_question_asked`, undefined, {
-      type: questionType,
-      question: question,
-      question_id: questionId,
-      conversation_id: conversation.id,
-      article_url: url,
-      article_id: article?.unique_id || null
-    });
+    }, `${questionType}_question_asked`, undefined);
 
     // @ts-ignore
     const allowFreeForm = Deno.env.get('ALLOW_FREEFORM_ASK') === 'true';

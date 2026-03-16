@@ -48,7 +48,8 @@ Deno.serve(async (req: Request) => {
     logEvent(supabase, {
       projectId,
       visitorId: visitor_id,
-      sessionId: session_id
+      sessionId: session_id,
+      url,
     }, 'get_suggestions');
 
     let article = await getArticleById(url, projectId, supabase);
