@@ -32,7 +32,11 @@ export async function logEvent(
 
         await fetch(analyticsUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(ctx.ip ? { 'cf-connecting-ip': ctx.ip } : {}),
+                ...(ctx.url ? { 'referer': ctx.url } : {}),
+            },
             body: JSON.stringify({
                 project_id: ctx.projectId,
                 visitor_id: ctx.visitorId || null,
@@ -40,7 +44,6 @@ export async function logEvent(
                 event_type: eventType,
                 event_label: eventLabel || null,
                 article_url: ctx.articleUrl || null,
-                url: ctx.url || null,
             }),
         });
     } catch (err) {
@@ -82,7 +85,6 @@ export async function logEventBatch(
                     event_type: r.event_type,
                     event_label: r.event_label || null,
                     article_url: r.article_url || null,
-                    url: r.url || null,
                 })),
             }),
         });
