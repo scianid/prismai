@@ -30,12 +30,16 @@ export async function logEvent(
             return;
         }
 
+        // @ts-ignore
+        const apiKey = Deno.env.get('CONFIG_BYPASS_KEY');
+
         console.log('Analytics: shipping event', { eventType, projectId: ctx.projectId, articleUrl: ctx.articleUrl });
 
         const res = await fetch(analyticsUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                ...(apiKey ? { 'x-api-key': apiKey } : {}),
                 ...(ctx.ip ? { 'cf-connecting-ip': ctx.ip } : {}),
                 ...(ctx.url ? { 'referer': ctx.url } : {}),
             },
@@ -81,11 +85,17 @@ export async function logEventBatch(
             return;
         }
 
+        // @ts-ignore
+        const apiKey = Deno.env.get('CONFIG_BYPASS_KEY');
+
         console.log('Analytics: shipping event batch', { count: rows.length, projectId: rows[0]?.project_id });
 
         const res = await fetch(analyticsUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(apiKey ? { 'x-api-key': apiKey } : {}),
+            },
             body: JSON.stringify({
                 batch: rows.map(r => ({
                     project_id: r.project_id,
