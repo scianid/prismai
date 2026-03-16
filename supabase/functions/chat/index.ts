@@ -123,7 +123,8 @@ Deno.serve(async (req: Request) => {
     logEvent({
       projectId,
       visitorId: visitor_id,
-      sessionId: session_id
+      sessionId: session_id,
+      articleUrl: url,
     }, conversation.message_count === 0 ? 'conversation_started' : 'conversation_continued', undefined);
 
     const cacheSuggestions = extractCachedSuggestions(article);
@@ -134,7 +135,8 @@ Deno.serve(async (req: Request) => {
     logEvent({
       projectId,
       visitorId: visitor_id,
-      sessionId: session_id
+      sessionId: session_id,
+      articleUrl: url,
     }, `${questionType}_question_asked`);
 
     // @ts-ignore

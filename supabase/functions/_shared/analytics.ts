@@ -26,11 +26,13 @@ export async function logEvent(
         // @ts-ignore
         const analyticsUrl = Deno.env.get('ANALYTICS_PROXY_URL');
         if (!analyticsUrl) {
-            console.warn('Analytics: ANALYTICS_PROXY_URL not configured, skipping event');
+            console.warn('Analytics: ANALYTICS_PROXY_URL not configured, skipping event', { eventType, projectId: ctx.projectId });
             return;
         }
 
-        await fetch(analyticsUrl, {
+        console.log('Analytics: shipping event', { eventType, projectId: ctx.projectId, articleUrl: ctx.articleUrl });
+
+        const res = await fetch(analyticsUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -46,6 +48,10 @@ export async function logEvent(
                 article_url: ctx.articleUrl || null,
             }),
         });
+
+        if (!res.ok) {
+            console.warn('Analytics: event shipping failed', { status: res.status, eventType, projectId: ctx.projectId });
+        }
     } catch (err) {
         console.error('Analytics: Error logging event via secondary', err);
     }
@@ -70,11 +76,13 @@ export async function logEventBatch(
         // @ts-ignore
         const analyticsUrl = Deno.env.get('ANALYTICS_PROXY_URL');
         if (!analyticsUrl) {
-            console.warn('Analytics: ANALYTICS_PROXY_URL not configured, skipping batch events');
+            console.warn('Analytics: ANALYTICS_PROXY_URL not configured, skipping batch events', { count: rows.length });
             return;
         }
 
-        await fetch(analyticsUrl, {
+        console.log('Analytics: shipping event batch', { count: rows.length, projectId: rows[0]?.project_id });
+
+        const res = await fetch(analyticsUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -88,6 +96,10 @@ export async function logEventBatch(
                 })),
             }),
         });
+
+        if (!res.ok) {
+            console.warn('Analytics: batch shipping failed', { status: res.status, count: rows.length, projectId: rows[0]?.project_id });
+        }
     } catch (err) {
         console.error('Analytics: Error bulk sending events via secondary', err);
     }
