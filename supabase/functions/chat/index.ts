@@ -120,7 +120,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Track Event (Async)
-    logEvent(supabase, {
+    logEvent({
       projectId,
       visitorId: visitor_id,
       sessionId: session_id
@@ -129,12 +129,13 @@ Deno.serve(async (req: Request) => {
     const cacheSuggestions = extractCachedSuggestions(article);
     const cachedItem = cacheSuggestions?.find((s) => s.id === questionId);
     const questionType: 'suggestion' | 'custom' = cachedItem ? 'suggestion' : 'custom';
+    
     // Track question_asked event
-    logEvent(supabase, {
+    logEvent({
       projectId,
       visitorId: visitor_id,
       sessionId: session_id
-    }, `${questionType}_question_asked`, undefined);
+    }, `${questionType}_question_asked`);
 
     // @ts-ignore
     const allowFreeForm = Deno.env.get('ALLOW_FREEFORM_ASK') === 'true';

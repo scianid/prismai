@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Track Event (Async)
-    logEvent(supabase, {
+    logEvent({
       projectId,
       visitorId: visitor_id,
       sessionId: session_id,

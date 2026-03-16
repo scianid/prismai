@@ -1,6 +1,3 @@
-// @ts-ignore
-import { createClient } from 'jsr:@supabase/supabase-js@2';
-
 export interface AnalyticsContext {
     projectId: string;
     visitorId?: string;
@@ -19,7 +16,6 @@ export interface AnalyticsContext {
 }
 
 export async function logEvent(
-    supabase: ReturnType<typeof createClient>,
     ctx: AnalyticsContext,
     eventType: string,
     eventLabel?: string
@@ -63,7 +59,6 @@ export interface BatchEventRow {
 }
 
 export async function logEventBatch(
-    supabase: ReturnType<typeof createClient>,
     rows: BatchEventRow[]
 ) {
     if (rows.length === 0) return;

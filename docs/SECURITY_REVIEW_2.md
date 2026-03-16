@@ -540,7 +540,7 @@ if (body.batch && Array.isArray(body.batch)) {
 }
 ```
 
-The client widget limits to 10 events per flush, but a direct API caller can submit thousands of events per request. Each `processEvent` call performs at least one DB write (`supabase.from('analytics_events').insert(...)`). A batch of 10,000 events in a single request spawns 10,000 concurrent DB operations via `Promise.allSettled`.
+The client widget limits to 10 events per flush, but a direct API caller can submit thousands of events per request. The analytics proxy forwards all events to the secondary project — an oversized batch is a single outbound HTTP request but could saturate the secondary endpoint.
 
 **Remediation:**
 
@@ -568,12 +568,12 @@ Conversations store `article_content` (up to 20,000 chars) per row, duplicating 
 ### M-2 — Persistent Visitor Tracking Without Consent Mechanism
 
 **Status: Open (unchanged)**  
-No consent gate has been added before `localStorage` UUID creation or analytics event transmission. Under GDPR Article 25, a consent-by-design obligation applies because the widget is embedded on EU-accessible publisher sites. The `analytics_impressions` table continues to store IP, user-agent, and precise geolocation indefinitely with no documented retention policy.
+No consent gate has been added before `localStorage` UUID creation or analytics event transmission. Under GDPR Article 25, a consent-by-design obligation applies because the widget is embedded on EU-accessible publisher sites. The secondary analytics project receives IP and precise geolocation data with no documented retention policy.
 
 ### M-4 — Service Role Key Used for All DB Operations (RLS Fully Bypassed)
 
 **Status: Open (unchanged)**  
-`supabaseClient.ts` continues to use `SUPABASE_SERVICE_ROLE_KEY` for all database operations. As a result, Row Level Security is universally bypassed. A bug in any Edge Function that constructs a query from user-supplied input could read or write any row in the database without any row-level guard. None of the tables (`article`, `conversations`, `analytics_events`, `freeform_qa`) have RLS policies enabled per the migration history.
+`supabaseClient.ts` continues to use `SUPABASE_SERVICE_ROLE_KEY` for all database operations. As a result, Row Level Security is universally bypassed. A bug in any Edge Function that constructs a query from user-supplied input could read or write any row in the database without any row-level guard. None of the tables (`article`, `conversations`, `freeform_qa`) have RLS policies enabled per the migration history.
 
 ### L-5 — `article_unique_id` Collision Risk (URL + projectId Concatenation)
 

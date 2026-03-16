@@ -294,12 +294,9 @@ if (!visitorId) {
 
 A persistent UUID is written to `localStorage` on first load and sent with every analytics event, impression, and chat message. This constitutes a tracking identifier under GDPR Article 4(1) and ePrivacy Directive. No consent is obtained before the identifier is created or transmitted.
 
-The `analytics_impressions` table also stores `ip`, `user_agent`, `geo_country`, `geo_city`, `geo_lat`, `geo_lng` — a combination sufficient to re-identify individuals in many jurisdictions.
-
 **Remediation:**
 - Gate `localStorage` persistence and analytics reporting behind a consent signal (IAB TCF or a custom opt-in).
-- Define and document a data retention policy; add TTL-based deletion jobs for analytics data.
-- Remove PII (IP, precise geo) from long-term storage or pseudonymize at ingestion.
+- Define and document a data retention policy in the secondary analytics project.
 
 ---
 
@@ -338,7 +335,7 @@ The service role key bypasses all PostgreSQL Row Level Security. This means a bu
 **Remediation:**
 - Use the `anon` key together with RLS policies wherever possible.
 - Reserve the service role key for privileged operations only (e.g., background jobs), isolating them in separate, minimal-surface functions.
-- Enable and enforce RLS on `article`, `conversations`, `analytics_events`, `analytics_impressions`, and `freeform_qa` tables.
+- Enable and enforce RLS on `article`, `conversations`, and `freeform_qa` tables.
 
 ---
 
