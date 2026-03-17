@@ -33,6 +33,59 @@ CREATE TABLE public.admin_users (
   CONSTRAINT admin_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT admin_users_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
 );
+CREATE TABLE public.agency (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  owner_user_id uuid NOT NULL,
+  organization_name text NOT NULL,
+  website text,
+  publisher_revshare_percentage integer NOT NULL DEFAULT 70 CHECK (publisher_revshare_percentage >= 0 AND publisher_revshare_percentage <= 100),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT agency_pkey PRIMARY KEY (id),
+  CONSTRAINT agency_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.agency_account (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  agency_id uuid NOT NULL,
+  account_id uuid NOT NULL UNIQUE,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT agency_account_pkey PRIMARY KEY (id),
+  CONSTRAINT agency_account_agency_id_fkey FOREIGN KEY (agency_id) REFERENCES public.agency(id),
+  CONSTRAINT agency_account_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.account(id)
+);
+CREATE TABLE public.agency_collaborator (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  agency_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  role text NOT NULL DEFAULT 'member'::text,
+  invited_by uuid,
+  email text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT agency_collaborator_pkey PRIMARY KEY (id),
+  CONSTRAINT agency_collaborator_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES auth.users(id),
+  CONSTRAINT agency_collaborator_agency_id_fkey FOREIGN KEY (agency_id) REFERENCES public.agency(id),
+  CONSTRAINT agency_collaborator_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.ai_rate_limits (
+  key text NOT NULL,
+  window_start timestamp with time zone NOT NULL,
+  request_count integer NOT NULL DEFAULT 1,
+  CONSTRAINT ai_rate_limits_pkey PRIMARY KEY (key, window_start)
+);
+CREATE TABLE public.analytics_articles_hourly_agg (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  project_id text NOT NULL,
+  hour_bucket timestamp with time zone NOT NULL,
+  url text NOT NULL,
+  impression_count bigint NOT NULL DEFAULT 0,
+  unique_visitors bigint NOT NULL DEFAULT 0,
+  unique_sessions bigint NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  has_article_path boolean NOT NULL DEFAULT false,
+  custom_questions bigint NOT NULL DEFAULT 0,
+  suggested_questions bigint NOT NULL DEFAULT 0,
+  CONSTRAINT analytics_articles_hourly_agg_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.analytics_events (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   project_id text NOT NULL,
@@ -40,7 +93,6 @@ CREATE TABLE public.analytics_events (
   session_id uuid,
   event_type text NOT NULL,
   event_label text,
-  article_url text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT analytics_events_pkey PRIMARY KEY (id)
 );
@@ -71,7 +123,6 @@ CREATE TABLE public.analytics_impressions (
   created_at timestamp with time zone DEFAULT now(),
   ip text,
   platform text,
-  article_url text,
   CONSTRAINT analytics_impressions_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.analytics_impressions_hourly_agg (
@@ -88,6 +139,19 @@ CREATE TABLE public.analytics_impressions_hourly_agg (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT analytics_impressions_hourly_agg_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.analytics_impressions_location_hourly_agg (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  project_id text NOT NULL,
+  hour_bucket timestamp with time zone NOT NULL,
+  geo_country text NOT NULL,
+  geo_city text NOT NULL,
+  geo_lat double precision,
+  geo_lng double precision,
+  impression_count bigint NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT analytics_impressions_location_hourly_agg_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.article (
   url text NOT NULL,
   title text NOT NULL,
@@ -97,7 +161,29 @@ CREATE TABLE public.article (
   unique_id text NOT NULL UNIQUE,
   image_url text,
   created_at timestamp with time zone DEFAULT now(),
+  tagged_at timestamp with time zone,
+  tag_attempts integer NOT NULL DEFAULT 0,
   CONSTRAINT article_pkey PRIMARY KEY (unique_id)
+);
+CREATE TABLE public.article_tag (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  article_unique_id text NOT NULL,
+  project_id text NOT NULL,
+  tag text NOT NULL,
+  tag_type text NOT NULL CHECK (tag_type = ANY (ARRAY['category'::text, 'person'::text, 'place'::text])),
+  confidence numeric,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT article_tag_pkey PRIMARY KEY (id),
+  CONSTRAINT article_tag_article_unique_id_fkey FOREIGN KEY (article_unique_id) REFERENCES public.article(unique_id),
+  CONSTRAINT article_tag_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(project_id)
+);
+CREATE TABLE public.authorized_users (
+  user_id uuid NOT NULL,
+  authorized_at timestamp with time zone DEFAULT now(),
+  authorized_by uuid,
+  CONSTRAINT authorized_users_pkey PRIMARY KEY (user_id),
+  CONSTRAINT authorized_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT authorized_users_authorized_by_fkey FOREIGN KEY (authorized_by) REFERENCES auth.users(id)
 );
 CREATE TABLE public.contact_submissions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -108,7 +194,10 @@ CREATE TABLE public.contact_submissions (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   ip_address text,
   user_agent text,
-  CONSTRAINT contact_submissions_pkey PRIMARY KEY (id)
+  notes text,
+  user_id uuid,
+  CONSTRAINT contact_submissions_pkey PRIMARY KEY (id),
+  CONSTRAINT contact_submissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.conversation_analysis (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -177,7 +266,15 @@ CREATE TABLE public.conversations (
   analyzed_at timestamp with time zone,
   url text,
   CONSTRAINT conversations_pkey PRIMARY KEY (id),
-  CONSTRAINT conversations_article_unique_id_fkey FOREIGN KEY (article_unique_id) REFERENCES public.article(unique_id)
+  CONSTRAINT conversations_article_unique_id_fkey FOREIGN KEY (article_unique_id) REFERENCES public.article(unique_id),
+  CONSTRAINT conversations_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(project_id)
+);
+CREATE TABLE public.cron_config (
+  key text NOT NULL,
+  value text NOT NULL,
+  description text,
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT cron_config_pkey PRIMARY KEY (key)
 );
 CREATE TABLE public.dashboard_metrics (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -220,6 +317,8 @@ CREATE TABLE public.project (
   article_class text DEFAULT '.article'::text,
   widget_container_class text,
   override_mobile_container_selector text,
+  disclaimer_text text,
+  id uuid NOT NULL DEFAULT gen_random_uuid() UNIQUE,
   CONSTRAINT project_pkey PRIMARY KEY (project_id),
   CONSTRAINT project_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.account(id)
 );
@@ -256,4 +355,11 @@ CREATE TABLE public.token_usage (
   metadata jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT token_usage_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.user_preferences (
+  user_id uuid NOT NULL,
+  default_account_id uuid,
+  CONSTRAINT user_preferences_pkey PRIMARY KEY (user_id),
+  CONSTRAINT user_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT user_preferences_account_id_fkey FOREIGN KEY (default_account_id) REFERENCES public.account(id)
 );
