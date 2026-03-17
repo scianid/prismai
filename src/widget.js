@@ -1601,7 +1601,7 @@
 
                 const data = await response.json();
                 console.log('[Divee Tags] Response data:', data);
-                const tags = Array.isArray(data?.tags) ? data.tags.slice(0, 3) : [];
+                const tags = Array.isArray(data?.tags) ? data.tags.slice(0, 5) : [];
                 console.log('[Divee Tags] Tags found:', tags.length, tags);
                 if (tags.length === 0) return;
 
@@ -1670,9 +1670,15 @@
                 if (!response.ok) throw new Error(`Request failed: ${response.status}`);
 
                 const data = await response.json();
+                const seen = new Set();
                 const articles = (data?.articles || []).filter(a => {
                     // Exclude current article
-                    return a.unique_id !== this.getArticleUniqueId();
+                    if (a.unique_id === this.getArticleUniqueId()) return false;
+                    // Deduplicate by base URL (strip query params and hash)
+                    const baseUrl = (a.url || '').split('?')[0].split('#')[0];
+                    if (seen.has(baseUrl)) return false;
+                    seen.add(baseUrl);
+                    return true;
                 }).slice(0, 5);
 
                 pillElement.classList.remove('loading');
