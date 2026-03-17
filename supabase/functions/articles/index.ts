@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders, corsHeadersForCache } from '../_shared/cors.ts';
 import { supabaseClient } from "../_shared/supabaseClient.ts";
+import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 
 const TAG_WEIGHTS: Record<string, number> = {
   person: 2.0,
@@ -54,15 +55,21 @@ Deno.serve(async (req: Request) => {
 
     const supabase = await supabaseClient();
 
-    // Validate projectId exists
+    // Validate projectId exists and check origin
     const { data: project, error: projectError } = await supabase
       .from('project')
-      .select('project_id')
+      .select('project_id, allowed_urls')
       .eq('project_id', projectId)
       .single();
 
     if (projectError || !project) {
       return errorResp('Invalid projectId');
+    }
+
+    const requestUrl = getRequestOriginUrl(req);
+    if (!isAllowedOrigin(requestUrl, project.allowed_urls)) {
+      console.warn('[Articles] origin not allowed', { attempted: requestUrl, allowed: project.allowed_urls, projectId });
+      return errorResp('Origin not allowed', 403);
     }
 
     const surrogateKey = `articles-${projectId}`;
@@ -92,12 +99,16 @@ async function handleTags(
     return errorResp('Missing required parameter: articleId');
   }
 
+  console.log('[Articles/tags] Query params:', { articleId, projectId });
+
   const { data, error } = await supabase
     .from('article_tag')
     .select('tag, tag_type, confidence')
     .eq('article_unique_id', articleId)
     .eq('project_id', projectId)
     .order('confidence', { ascending: false });
+
+  console.log('[Articles/tags] DB result:', { rows: data?.length, error, articleId, projectId });
 
   if (error) {
     console.error('[Articles/tags] DB error:', error);

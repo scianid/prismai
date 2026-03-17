@@ -36,7 +36,9 @@
                 aiResponseCount: 0,
                 suggestionsSuppressed: false,
                 widgetVisibleTracked: false,   // Track if widget_visible event has been fired
-                adRefreshInterval: null        // Interval ID for auto-refreshing ads
+                adRefreshInterval: null,       // Interval ID for auto-refreshing ads
+                articleTags: [],               // Tags fetched from /articles/tags API
+                activeTagPopup: null           // Currently open tag popup pill element
             };
 
             // Analytics batching
@@ -328,6 +330,14 @@
                 article_id: this.config.articleId,
                 position: this.config.position
             });
+
+            // Fetch article tags (non-blocking, only if diveeTags=true)
+            const tagsUrlParams = new URLSearchParams(window.location.search);
+            const tagsEnabled = tagsUrlParams.get('diveeTags') === 'true';
+            this.log('Tags feature check:', { diveeTags: tagsUrlParams.get('diveeTags'), enabled: tagsEnabled, search: window.location.search });
+            if (tagsEnabled) {
+                this.fetchAndRenderArticleTags();
+            }
         }
 
         async loadServerConfig() {
@@ -689,6 +699,7 @@
                     <input type="text" class="divee-search-input-collapsed" placeholder="" readonly />
                     <span class="divee-send-icon-collapsed" aria-hidden="true">&#10148;</span>
         </div>
+                <div class="divee-tag-pills divee-tag-pills-collapsed"></div>
       `;
 
             // Add typewriter effect
@@ -799,6 +810,7 @@
                 <div class="divee-warning">${this.escapeHtml(config.disclaimer_text) || 'This is an AI driven tool, results might not always be accurate'}</div>
                 <div class="divee-counter">0/200</div>
             </div>
+                        <div class="divee-tag-pills divee-tag-pills-expanded"></div>
           </div>
         </div>
       `;
@@ -1557,6 +1569,237 @@
             if (!this.state.suggestionsSuppressed && this.state.aiResponseCount % 2 === 0) {
                 await this.showSuggestionCard();
             }
+        }
+
+        // ============================================
+        // ARTICLE TAG PILLS & POPUP
+        // ============================================
+
+        getArticleUniqueId() {
+            // article unique_id = url (without query params) + projectId (matches articleDao.ts convention)
+            let url = this.contentCache.url;
+            const projectId = this.config.projectId;
+            if (!url || !projectId) return null;
+            try { url = url.split('?')[0]; } catch (e) {}
+            return url + projectId;
+        }
+
+        async fetchAndRenderArticleTags() {
+            const articleId = this.getArticleUniqueId();
+            console.log('[Divee Tags] articleId:', articleId, 'url:', this.contentCache.url, 'projectId:', this.config.projectId);
+            if (!articleId) {
+                console.log('[Divee Tags] No articleId, skipping tag fetch');
+                return;
+            }
+
+            try {
+                const url = `${this.config.nonCacheBaseUrl}/articles/tags?projectId=${encodeURIComponent(this.config.projectId)}&articleId=${encodeURIComponent(articleId)}`;
+                console.log('[Divee Tags] Fetching:', url);
+                const response = await fetch(url);
+                console.log('[Divee Tags] Response status:', response.status);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                console.log('[Divee Tags] Response data:', data);
+                const tags = Array.isArray(data?.tags) ? data.tags.slice(0, 3) : [];
+                console.log('[Divee Tags] Tags found:', tags.length, tags);
+                if (tags.length === 0) return;
+
+                this.state.articleTags = tags;
+                this.renderTagPills();
+                console.log('[Divee Tags] Pills rendered');
+            } catch (error) {
+                console.error('[Divee Tags] Failed to fetch:', error);
+            }
+        }
+
+        renderTagPills() {
+            const tags = this.state.articleTags;
+            if (!tags || tags.length === 0) return;
+
+            // Render in both collapsed and expanded pill containers
+            const containers = [
+                this.elements.collapsedView?.querySelector('.divee-tag-pills-collapsed'),
+                this.elements.expandedView?.querySelector('.divee-tag-pills-expanded')
+            ].filter(Boolean);
+
+            containers.forEach(container => {
+                container.innerHTML = '';
+                tags.forEach(tag => {
+                    const pill = document.createElement('button');
+                    pill.className = 'divee-tag-pill';
+                    pill.setAttribute('data-tag', tag.value);
+                    pill.setAttribute('data-type', tag.type);
+                    pill.textContent = tag.value.length > 20 ? tag.value.substring(0, 20) + '...' : tag.value;
+                    pill.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.handleTagPillClick(pill, tag);
+                    });
+                    container.appendChild(pill);
+                });
+            });
+        }
+
+        async handleTagPillClick(pillElement, tag) {
+            // If same pill is clicked again, close popup
+            if (pillElement.classList.contains('active')) {
+                this.closeTagPopup();
+                return;
+            }
+
+            // Close existing popup if any
+            this.closeTagPopup();
+
+            // Mark pill as active
+            pillElement.classList.add('active');
+            this.state.activeTagPopup = pillElement;
+
+            // Track analytics
+            this.trackEvent('tag_pill_click', {
+                tag: tag.value,
+                tag_type: tag.type,
+                article_id: this.getArticleUniqueId()
+            });
+
+            // Show loading state
+            pillElement.classList.add('loading');
+
+            try {
+                const url = `${this.config.cachedBaseUrl}/articles/by-tag?projectId=${encodeURIComponent(this.config.projectId)}&tag=${encodeURIComponent(tag.value)}&tagType=${encodeURIComponent(tag.type)}&limit=5`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+
+                const data = await response.json();
+                const articles = (data?.articles || []).filter(a => {
+                    // Exclude current article
+                    return a.unique_id !== this.getArticleUniqueId();
+                }).slice(0, 5);
+
+                pillElement.classList.remove('loading');
+                this.showTagPopup(pillElement, tag, articles);
+            } catch (error) {
+                this.log('[Divee] Failed to fetch articles by tag:', error);
+                pillElement.classList.remove('loading', 'active');
+                this.state.activeTagPopup = null;
+            }
+        }
+
+        showTagPopup(pillElement, tag, articles) {
+            // Create popup element
+            const popup = document.createElement('div');
+            popup.className = 'divee-tag-popup';
+            popup.setAttribute('data-type', tag.tag_type || 'category');
+
+            // Inherit widget CSS custom properties
+            const widgetEl = this.elements.container;
+            if (widgetEl) {
+                popup.style.setProperty('--divee-color-primary', getComputedStyle(widgetEl).getPropertyValue('--divee-color-primary'));
+                popup.style.setProperty('--divee-color-secondary', getComputedStyle(widgetEl).getPropertyValue('--divee-color-secondary'));
+            }
+
+            const typeLabels = { category: 'Category', person: 'Person', place: 'Place' };
+
+            const header = document.createElement('div');
+            header.className = 'divee-tag-popup-header';
+            header.innerHTML = `
+                <div>
+                    <div class="divee-tag-popup-tag-label">${typeLabels[tag.tag_type] || 'Topic'}</div>
+                    <span class="divee-tag-popup-title">${this.escapeHtml(tag.value)}</span>
+                </div>
+                <button class="divee-tag-popup-close" aria-label="Close">✕</button>
+            `;
+            popup.appendChild(header);
+
+            const articleList = document.createElement('div');
+            articleList.className = 'divee-tag-popup-articles';
+
+            if (articles.length === 0) {
+                articleList.innerHTML = '<div class="divee-tag-popup-empty">No articles found</div>';
+            } else {
+                articles.forEach(article => {
+                    const card = document.createElement('a');
+                    card.className = 'divee-tag-popup-article';
+                    card.href = article.url;
+                    card.target = '_blank';
+                    card.rel = 'noopener noreferrer';
+
+                    const imgUrl = article.image_url || 'https://srv.divee.ai/storage/v1/object/public/public-files/placeholder.jpg';
+                    let domain = '';
+                    try { domain = new URL(article.url).hostname.replace('www.', ''); } catch (e) {}
+                    card.innerHTML = `
+                        <div class="divee-tag-popup-article-img">
+                            <img src="${imgUrl}" alt="" loading="lazy" />
+                        </div>
+                        <div class="divee-tag-popup-article-info">
+                            <div class="divee-tag-popup-article-title">${this.escapeHtml(article.title)}</div>
+                            ${domain ? `<div class="divee-tag-popup-article-domain">${this.escapeHtml(domain)}</div>` : ''}
+                        </div>
+                        <span class="divee-tag-popup-article-arrow">›</span>
+                    `;
+
+                    card.addEventListener('click', () => {
+                        this.trackEvent('tag_article_click', {
+                            tag: tag.value,
+                            clicked_article_id: article.unique_id,
+                            source_article_id: this.getArticleUniqueId()
+                        });
+                    });
+
+                    articleList.appendChild(card);
+                });
+            }
+
+            popup.appendChild(articleList);
+
+            // Close button handler
+            popup.querySelector('.divee-tag-popup-close').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.closeTagPopup();
+            });
+
+            // Position popup near the pill (opens upward, on body to avoid overflow clipping)
+            document.body.appendChild(popup);
+            const pillRect = pillElement.getBoundingClientRect();
+            const popupRect = popup.getBoundingClientRect();
+            let topPos = pillRect.top - popupRect.height - 36;
+            if (topPos < 0) topPos = pillRect.bottom + 6;
+            let leftPos = pillRect.left;
+            if (leftPos + popupRect.width > window.innerWidth) {
+                leftPos = window.innerWidth - popupRect.width - 8;
+            }
+            popup.style.top = topPos + 'px';
+            popup.style.left = leftPos + 'px';
+            this._activeTagPopupElement = popup;
+
+            // Close popup on click outside
+            this._tagPopupOutsideClickHandler = (e) => {
+                if (!popup.contains(e.target) && !pillElement.contains(e.target)) {
+                    this.closeTagPopup();
+                }
+            };
+            setTimeout(() => {
+                document.addEventListener('click', this._tagPopupOutsideClickHandler, true);
+            }, 0);
+        }
+
+        closeTagPopup() {
+            // Remove active state from all pills
+            const allPills = this.elements.container?.querySelectorAll('.divee-tag-pill.active');
+            allPills?.forEach(p => p.classList.remove('active'));
+
+            // Remove popup element from body
+            if (this._activeTagPopupElement) {
+                this._activeTagPopupElement.remove();
+                this._activeTagPopupElement = null;
+            }
+
+            // Remove outside click handler
+            if (this._tagPopupOutsideClickHandler) {
+                document.removeEventListener('click', this._tagPopupOutsideClickHandler, true);
+                this._tagPopupOutsideClickHandler = null;
+            }
+
+            this.state.activeTagPopup = null;
         }
 
         async fetchSuggestedArticle() {
