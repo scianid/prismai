@@ -188,8 +188,8 @@
             googletag.cmd.push(function () {
 
                 // Get ad size overrides from config or use defaults
-                let desktopSizes = [[970, 250], [728, 90], [468, 60], [300, 250]];
-                let desktopSizes768 = [[728, 90], [468, 60], [300, 250]];
+                let desktopSizes = [[970, 250], [728, 90], [468, 60]]; //, [300, 250]
+                let desktopSizes768 = [[728, 90], [468, 60]]; // , [300, 250]
                 let mobileSizes = [[336, 280], [320, 250], [300, 250], [320, 100], [300, 100], [320, 50], [300, 50]];
                 
                 // Parse override_desktop_ad_size if provided
