@@ -331,13 +331,7 @@
                 position: this.config.position
             });
 
-            // Fetch article tags (non-blocking, only if diveeTags=true)
-            const tagsUrlParams = new URLSearchParams(window.location.search);
-            const tagsEnabled = tagsUrlParams.get('diveeTags') === 'true';
-            this.log('Tags feature check:', { diveeTags: tagsUrlParams.get('diveeTags'), enabled: tagsEnabled, search: window.location.search });
-            if (tagsEnabled) {
-                this.fetchAndRenderArticleTags();
-            }
+            this.fetchAndRenderArticleTags();
         }
 
         async loadServerConfig() {
@@ -1580,34 +1574,34 @@
             let url = this.contentCache.url;
             const projectId = this.config.projectId;
             if (!url || !projectId) return null;
-            try { url = url.split('?')[0]; } catch (e) {}
+            try { url = url.split('?')[0].split('#')[0]; } catch (e) {}
             return url + projectId;
         }
 
         async fetchAndRenderArticleTags() {
             const articleId = this.getArticleUniqueId();
-            console.log('[Divee Tags] articleId:', articleId, 'url:', this.contentCache.url, 'projectId:', this.config.projectId);
+            
             if (!articleId) {
-                console.log('[Divee Tags] No articleId, skipping tag fetch');
+                this.log('[Divee Tags] No articleId, skipping tag fetch');
                 return;
             }
 
             try {
-                const url = `${this.config.nonCacheBaseUrl}/articles/tags?projectId=${encodeURIComponent(this.config.projectId)}&articleId=${encodeURIComponent(articleId)}`;
-                console.log('[Divee Tags] Fetching:', url);
+                const url = `${this.config.cachedBaseUrl}/articles/tags?projectId=${encodeURIComponent(this.config.projectId)}&articleId=${encodeURIComponent(articleId)}`;
+                this.log('[Divee Tags] Fetching:', url);
                 const response = await fetch(url);
-                console.log('[Divee Tags] Response status:', response.status);
+                this.log('[Divee Tags] Response status:', response.status);
                 if (!response.ok) return;
 
                 const data = await response.json();
-                console.log('[Divee Tags] Response data:', data);
+                this.log('[Divee Tags] Response data:', data);
                 const tags = Array.isArray(data?.tags) ? data.tags.slice(0, 5) : [];
-                console.log('[Divee Tags] Tags found:', tags.length, tags);
+                this.log('[Divee Tags] Tags found:', tags.length, tags);
                 if (tags.length === 0) return;
 
                 this.state.articleTags = tags;
                 this.renderTagPills();
-                console.log('[Divee Tags] Pills rendered');
+                this.log('[Divee Tags] Pills rendered');
             } catch (error) {
                 console.error('[Divee Tags] Failed to fetch:', error);
             }
