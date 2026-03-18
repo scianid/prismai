@@ -1759,13 +1759,16 @@
 
             // Position popup near the pill (opens upward, on body to avoid overflow clipping)
             document.body.appendChild(popup);
+
             const pillRect = pillElement.getBoundingClientRect();
             const popupRect = popup.getBoundingClientRect();
-            let topPos = pillRect.top - popupRect.height - 36;
-            if (topPos < 0) topPos = pillRect.bottom + 6;
-            let leftPos = pillRect.left;
-            if (leftPos + popupRect.width > window.innerWidth) {
-                leftPos = window.innerWidth - popupRect.width - 8;
+            const scrollTop = window.scrollY || document.documentElement.scrollTop;
+            const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+            let topPos = pillRect.top + scrollTop - popupRect.height - 36;
+            if (topPos - scrollTop < 0) topPos = pillRect.bottom + scrollTop + 6;
+            let leftPos = pillRect.left + scrollLeft;
+            if (pillRect.left + popupRect.width > window.innerWidth) {
+                leftPos = scrollLeft + window.innerWidth - popupRect.width - 8;
             }
             popup.style.top = topPos + 'px';
             popup.style.left = leftPos + 'px';
