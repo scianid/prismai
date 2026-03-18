@@ -107,6 +107,11 @@ async function handleTags(
     confidence: row.confidence,
   }));
 
+  // Don't cache empty results — article may not be indexed yet
+  if (tags.length === 0) {
+    return sharedErrorResp('No tags found', 404);
+  }
+
   // Cache 1 hour
   return cachedResp({ tags }, 3600, 3600, surrogateKey);
 }
