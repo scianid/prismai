@@ -25,7 +25,6 @@
 
 /* Reset all child elements to prevent host page style inheritance */
 .divee-widget * {
-  all: revert;
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
