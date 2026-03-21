@@ -679,6 +679,29 @@
                 return this.contentCache.articleFound;
             }
 
+            // Check if window.diveeArticle is provided (e.g., by WordPress plugin)
+            if (typeof window.diveeArticle !== 'undefined' && window.diveeArticle) {
+                const diveeArticle = window.diveeArticle;
+                if (diveeArticle.title || diveeArticle.content) {
+                    this.log('Using article data from window.diveeArticle (WordPress plugin)');
+                    this.articleTitle = diveeArticle.title || document.title || 'Untitled Article';
+                    this.articleContent = diveeArticle.content || '';
+                    this.articleUrl = diveeArticle.url || window.location.href;
+                    
+                    // Cache the provided content
+                    this.contentCache = {
+                        content: this.articleContent,
+                        title: this.articleTitle,
+                        url: this.articleUrl,
+                        image_url: diveeArticle.image || null,
+                        og_image: null,
+                        extracted: true,
+                        articleFound: true
+                    };
+                    return true;
+                }
+            }
+
             // Extract content using functions from content.js
             let articleFound = false;
             try {
