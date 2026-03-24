@@ -1115,9 +1115,14 @@
                 
                 // Use googletag.cmd.push instead of setTimeout - it automatically waits for GPT to be ready
                 googletag.cmd.push(function () {
-                    googletag.display('div-gpt-ad-1770993606680-0');
-                    googletag.display('div-gpt-ad-1770993160534-0');
-                    self.log('✓ Ad slots displayed');
+                    const isDesktop = window.innerWidth >= 768;
+                    if (isDesktop) {
+                        googletag.display('div-gpt-ad-1770993606680-0');
+                        self.log('✓ Desktop ad slot displayed');
+                    } else {
+                        googletag.display('div-gpt-ad-1770993160534-0');
+                        self.log('✓ Mobile ad slot displayed');
+                    }
 
                     // If GPT was already loaded, refresh newly defined slots
                     if (self._needsSlotRefresh) {
@@ -1133,9 +1138,7 @@
                     }
 
                     // Listen for ad slot rendering events
-                    let emptyAdCount = 0;
                     const diveeAdSlotIds = ['div-gpt-ad-1770993606680-0', 'div-gpt-ad-1770993160534-0'];
-                    const renderedSlots = {};
 
                     googletag.pubads().addEventListener('slotRenderEnded', function (event) {
                         const slotId = event.slot.getSlotElementId();
@@ -1146,29 +1149,21 @@
                         const adSlotContainer = adElement?.closest('.divee-ad-slot-shared');
                         const adOuterContainer = adElement?.closest('.divee-ad-container-shared');
 
-                        renderedSlots[slotId] = !event.isEmpty;
-
                         if (event.isEmpty) {
                             if (adElement) adElement.style.display = 'none';
-                            emptyAdCount++;
-                            self.log('[Divee Ad] Slot empty, hiding:', slotId);
+                            if (adOuterContainer) adOuterContainer.style.display = 'none';
+                            self.log('[Divee Ad] Slot empty, hiding container:', slotId);
                             self.trackEvent('ad_unfilled', {
                                 ad_unit: slotId,
                                 position: 'collapsed',
                                 reason: 'no_fill'
                             });
-                            // If all tracked slots are empty, hide the whole container
-                            if (Object.keys(renderedSlots).length === diveeAdSlotIds.length &&
-                                Object.values(renderedSlots).every(filled => !filled)) {
-                                if (adSlotContainer) adSlotContainer.style.display = 'none';
-                                if (adOuterContainer) adOuterContainer.style.display = 'none';
-                                self.log('[Divee Ad] All slots empty, hiding containers');
-                            }
                         } else {
                             // Ad filled — reveal it
-                            if (adElement) adElement.style.display = '';
+                            if (adElement) adElement.style.setProperty('display', 'block', 'important');
                             if (adSlotContainer) adSlotContainer.style.display = '';
-                            if (adOuterContainer) adOuterContainer.style.display = '';
+                            if (adOuterContainer) adOuterContainer.style.display = 'block';
+                            self.log('[Divee Ad] Slot filled, showing container:', slotId);
                             self.trackEvent('ad_impression', {
                                 ad_unit: slotId,
                                 position: 'collapsed',

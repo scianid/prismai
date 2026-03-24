@@ -430,15 +430,6 @@
   overflow: hidden;
 }
 
-/* Keep ads visible in both collapsed and expanded states */
-.divee-widget[data-state="collapsed"] .divee-ad-container-shared {
-  display: block !important;
-}
-
-.divee-widget[data-state="expanded"] .divee-ad-container-shared {
-  display: block !important;
-}
-
 .divee-ad-desktop {
   display: block;
   width: 100% !important;
