@@ -396,6 +396,17 @@
                     }
                 }
 
+                // Filter ad sizes to only those that fit within the actual slot width.
+                // GPT's sizeMapping uses viewport width, not slot width — on narrow containers
+                // (e.g. AMP pages) a wide creative can overflow and appear cut.
+                const slotEl = document.getElementById('div-gpt-ad-1770993606680-0');
+                const slotWidth = slotEl ? (slotEl.closest('.divee-widget') || slotEl).offsetWidth : Infinity;
+                if (slotWidth > 0 && slotWidth < Infinity) {
+                    desktopSizes = desktopSizes.filter(s => s[0] <= slotWidth);
+                    desktopSizes768 = desktopSizes768.filter(s => s[0] <= slotWidth);
+                    self.log('Slot width:', slotWidth, '→ filtered desktop sizes:', desktopSizes);
+                }
+
                 // Collapsed view ads - with responsive size mapping
                 const desktopSizeMapping = googletag.sizeMapping()
                     .addSize([1024, 0], desktopSizes)
@@ -856,9 +867,9 @@
                 adContainer.innerHTML = `
                     <div class="divee-ad-slot divee-ad-slot-shared" ${hasAds ? '' : 'style="display: none;"'}>
                         <!-- Desktop Ad -->
-                        <div id='div-gpt-ad-1770993606680-0' class='divee-ad-desktop' style='display: none; min-width: 300px; min-height: 60px; margin: 0 !important;'></div>
+                        <div id='div-gpt-ad-1770993606680-0' class='divee-ad-desktop' style='display: none; min-height: 60px; margin: 0 !important;'></div>
                         <!-- Mobile Ad -->
-                        <div id='div-gpt-ad-1770993160534-0' class='divee-ad-mobile' style='display: none; min-width: 300px; min-height: 50px;'></div>
+                        <div id='div-gpt-ad-1770993160534-0' class='divee-ad-mobile' style='display: none; min-height: 50px;'></div>
                     </div>
                 `;
             }
@@ -1132,9 +1143,6 @@
                     // Listen for ad slot rendering events
                     let emptyAdCount = 0;
                     const diveeAdSlotIds = ['div-gpt-ad-1770993606680-0', 'div-gpt-ad-1770993160534-0'];
-                    
-                    const adSlotContainer = document.querySelector('.divee-ad-slot-shared');
-                    const adOuterContainer = document.querySelector('.divee-ad-container-shared');
                     const renderedSlots = {};
 
                     googletag.pubads().addEventListener('slotRenderEnded', function (event) {
@@ -1142,11 +1150,25 @@
                         if (!diveeAdSlotIds.includes(slotId)) return;
                         const adElement = document.getElementById(slotId);
 
+                        // Traverse up from the specific ad element — more reliable than document.querySelector
+                        const adSlotContainer = adElement?.closest('.divee-ad-slot-shared');
+                        const adOuterContainer = adElement?.closest('.divee-ad-container-shared');
+
+                        console.log('[Divee Ad] slotRenderEnded', {
+                            slotId,
+                            isEmpty: event.isEmpty,
+                            size: event.size,
+                            adElementFound: !!adElement,
+                            adSlotContainerFound: !!adSlotContainer,
+                            adOuterContainerFound: !!adOuterContainer,
+                        });
+
                         renderedSlots[slotId] = !event.isEmpty;
 
                         if (event.isEmpty) {
                             if (adElement) adElement.style.display = 'none';
                             emptyAdCount++;
+                            console.log('[Divee Ad] Slot empty, hiding:', slotId);
                             self.trackEvent('ad_unfilled', {
                                 ad_unit: slotId,
                                 position: 'collapsed',
@@ -1157,10 +1179,25 @@
                                 Object.values(renderedSlots).every(filled => !filled)) {
                                 if (adSlotContainer) adSlotContainer.style.display = 'none';
                                 if (adOuterContainer) adOuterContainer.style.display = 'none';
+                                console.log('[Divee Ad] All slots empty, hiding containers');
                             }
                         } else {
-                            // Ad filled — reveal it
+                            // Ad filled — reveal it and constrain container to the exact ad width
                             if (adElement) adElement.style.display = '';
+                            if (event.size && event.size[0]) {
+                                const adWidth = event.size[0];
+                                console.log('[Divee Ad] Setting width to', adWidth + 'px', 'for', slotId);
+                                if (adElement) adElement.style.width = adWidth + 'px';
+                                if (adSlotContainer) adSlotContainer.style.width = adWidth + 'px';
+                                if (adOuterContainer) adOuterContainer.style.width = adWidth + 'px';
+                                console.log('[Divee Ad] Widths set —',
+                                    'adElement.style.width:', adElement?.style.width,
+                                    'adSlotContainer.style.width:', adSlotContainer?.style.width,
+                                    'adOuterContainer.style.width:', adOuterContainer?.style.width
+                                );
+                            } else {
+                                console.warn('[Divee Ad] No size in event, cannot set width. event.size:', event.size);
+                            }
                             if (adSlotContainer) adSlotContainer.style.display = '';
                             if (adOuterContainer) adOuterContainer.style.display = '';
                             self.trackEvent('ad_impression', {
