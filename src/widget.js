@@ -396,17 +396,6 @@
                     }
                 }
 
-                // Filter ad sizes to only those that fit within the actual slot width.
-                // GPT's sizeMapping uses viewport width, not slot width — on narrow containers
-                // (e.g. AMP pages) a wide creative can overflow and appear cut.
-                const slotEl = document.getElementById('div-gpt-ad-1770993606680-0');
-                const slotWidth = slotEl ? (slotEl.closest('.divee-widget') || slotEl).offsetWidth : Infinity;
-                if (slotWidth > 0 && slotWidth < Infinity) {
-                    desktopSizes = desktopSizes.filter(s => s[0] <= slotWidth);
-                    desktopSizes768 = desktopSizes768.filter(s => s[0] <= slotWidth);
-                    self.log('Slot width:', slotWidth, '→ filtered desktop sizes:', desktopSizes);
-                }
-
                 // Collapsed view ads - with responsive size mapping
                 const desktopSizeMapping = googletag.sizeMapping()
                     .addSize([1024, 0], desktopSizes)

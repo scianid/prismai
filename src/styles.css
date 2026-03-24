@@ -441,13 +441,13 @@
 
 .divee-ad-desktop {
   display: block;
-  max-width: 100% !important;
+  width: 100% !important;
   overflow: hidden !important;
 }
 
 .divee-ad-mobile {
   display: none;
-  max-width: 100% !important;
+  width: 100% !important;
   overflow: hidden !important;
 }
 
