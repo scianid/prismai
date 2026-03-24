@@ -46,8 +46,20 @@ async function build() {
   // 3. Combine parts
   // Order: CSS Injection -> content.js (globals) -> widget.js (logic)
   // Wrap everything in an IIFE to prevent global scope pollution
+
+  // Generate timestamp (DD-MM-YY-HHMMSS)
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = String(now.getFullYear()).slice(-2);
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const timestamp = `${day}-${month}-${year}-${hours}${minutes}${seconds}`;
+
   const combinedJs = `
 (function() {
+const DIVEE_BUILD_VERSION = '${timestamp}';
 ${cssInjection}
 ${contentJs}
 ${widgetJs}
@@ -66,16 +78,6 @@ ${widgetJs}
   if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir);
   }
-
-  // Generate timestamp (DD-MM-YY-HHMMSS)
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const year = String(now.getFullYear()).slice(-2);
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  const timestamp = `${day}-${month}-${year}-${hours}${minutes}${seconds}`;
 
   // Write latest version
   const latestPath = path.join(distDir, 'divee.sdk.latest.js');

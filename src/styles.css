@@ -440,13 +440,13 @@
 }
 
 .divee-ad-desktop {
-  display: none;
+  display: block;
   width: 100% !important;
   overflow: hidden !important;
 }
 
 .divee-ad-mobile {
-  display: none;
+  display: block;
   width: 100% !important;
   overflow: hidden !important;
 }

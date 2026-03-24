@@ -447,7 +447,8 @@
         }
 
         async init() {
-            this.log('Initializing widget...', this.config);
+            this.log('Initializing widget... build:', typeof DIVEE_BUILD_VERSION !== 'undefined' ? DIVEE_BUILD_VERSION : 'dev', this.config);
+            console.log('[Divee] SDK build:', typeof DIVEE_BUILD_VERSION !== 'undefined' ? DIVEE_BUILD_VERSION : 'dev');
 
             // Initialize Analytics IDs
             this.getAnalyticsIds();
@@ -858,9 +859,9 @@
                 adContainer.innerHTML = `
                     <div class="divee-ad-slot divee-ad-slot-shared" ${hasAds ? '' : 'style="display: none;"'}>
                         <!-- Desktop Ad -->
-                        <div id='div-gpt-ad-1770993606680-0' class='divee-ad-desktop' style='display: none; min-height: 60px; margin: 0 !important; max-width: 100%; overflow: hidden;'></div>
+                        <div id='div-gpt-ad-1770993606680-0' class='divee-ad-desktop'></div>
                         <!-- Mobile Ad -->
-                        <div id='div-gpt-ad-1770993160534-0' class='divee-ad-mobile' style='display: none; min-height: 50px; max-width: 100%; overflow: hidden;'></div>
+                        <div id='div-gpt-ad-1770993160534-0' class='divee-ad-mobile'></div>
                     </div>
                 `;
             }
@@ -1145,21 +1146,12 @@
                         const adSlotContainer = adElement?.closest('.divee-ad-slot-shared');
                         const adOuterContainer = adElement?.closest('.divee-ad-container-shared');
 
-                        console.log('[Divee Ad] slotRenderEnded', {
-                            slotId,
-                            isEmpty: event.isEmpty,
-                            size: event.size,
-                            adElementFound: !!adElement,
-                            adSlotContainerFound: !!adSlotContainer,
-                            adOuterContainerFound: !!adOuterContainer,
-                        });
-
                         renderedSlots[slotId] = !event.isEmpty;
 
                         if (event.isEmpty) {
                             if (adElement) adElement.style.display = 'none';
                             emptyAdCount++;
-                            console.log('[Divee Ad] Slot empty, hiding:', slotId);
+                            self.log('[Divee Ad] Slot empty, hiding:', slotId);
                             self.trackEvent('ad_unfilled', {
                                 ad_unit: slotId,
                                 position: 'collapsed',
@@ -1170,7 +1162,7 @@
                                 Object.values(renderedSlots).every(filled => !filled)) {
                                 if (adSlotContainer) adSlotContainer.style.display = 'none';
                                 if (adOuterContainer) adOuterContainer.style.display = 'none';
-                                console.log('[Divee Ad] All slots empty, hiding containers');
+                                self.log('[Divee Ad] All slots empty, hiding containers');
                             }
                         } else {
                             // Ad filled — reveal it
