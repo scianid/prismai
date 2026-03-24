@@ -16,7 +16,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:all": "npm run test && npm run test:e2e",
-    "build": "node build.js",
+    "build": "jest && node build.js",
     "start": "node server.js"
   },
   "repository": {
