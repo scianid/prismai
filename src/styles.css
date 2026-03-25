@@ -14,11 +14,11 @@
   width: 100% !important;
   max-width: 800px !important;
   margin: 40px auto !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-  border-radius: 12px !important;
-  overflow: hidden !important;
-  background: white !important;
-  border: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border: none !important;
   display: block !important;
   box-sizing: border-box !important;
 }
@@ -160,15 +160,24 @@
 
 /* Collapsed View */
 .divee-collapsed {
-  background: white;
-  padding: 24px;
+  background: transparent;
+  padding: 24px 0;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   opacity: 1;
 }
 
 .divee-collapsed:hover {
-  background: #fafafa;
+  background: transparent;
+}
+
+/* In collapsed view, powered-by link should be dark since bg is white */
+.divee-collapsed .divee-powered-by {
+  color: #9ca3af;
+}
+
+.divee-collapsed .divee-powered-by:hover {
+  color: #6b7280;
 }
 
 .divee-search-container-collapsed {
@@ -177,56 +186,60 @@
   gap: 12px;
   position: relative;
   overflow: visible;
-  background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box;
+  background: linear-gradient(135deg,
+      color-mix(in srgb, var(--divee-color-primary) 6%, white) 0%,
+      white 50%,
+      color-mix(in srgb, var(--divee-color-secondary) 6%, white) 100%) padding-box,
+    linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box;
   border: 2px solid transparent;
   border-radius: 40px;
   padding: 12px 16px;
   margin-bottom: 16px;
   transition: all 0.3s;
-  box-shadow: 0 2px 6px rgba(104, 229, 253, 0.08),
-              0 1px 2px rgba(163, 137, 224, 0.05);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.04),
+    0 6px 16px rgba(0, 0, 0, 0.07),
+    0 16px 32px rgba(0, 0, 0, 0.05);
 }
 
 .divee-search-container-collapsed:hover {
-  background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box;
+  background: linear-gradient(135deg,
+      color-mix(in srgb, var(--divee-color-primary) 10%, white) 0%,
+      white 50%,
+      color-mix(in srgb, var(--divee-color-secondary) 10%, white) 100%) padding-box,
+    linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box;
   border: 2px solid transparent;
-  box-shadow: 0 4px 12px rgba(104, 229, 253, 0.15),
-              0 2px 4px rgba(163, 137, 224, 0.08);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.05),
+    0 8px 20px rgba(0, 0, 0, 0.09),
+    0 20px 40px rgba(0, 0, 0, 0.07);
   transform: translateY(-1px);
 }
 
-.divee-icon-ai-collapsed,
-.divee-icon-site-collapsed {
+/* AI identity badge — replaces the old dual-icon approach */
+.divee-ai-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary));
+  border-radius: 20px;
+  padding: 5px 11px;
   flex-shrink: 0;
-  margin: 0 !important;
 }
 
-.divee-icon-ai-collapsed {
-  width: 24px;
-  height: 24px;
-  color: var(--divee-color-secondary);
-  transition: all 0.3s;
+.divee-ai-identity-sparkle {
+  width: 13px;
+  height: 13px;
+  color: white;
+  display: block;
 }
 
-.divee-search-container-collapsed:hover .divee-icon-ai-collapsed {
-  filter: drop-shadow(0 0 4px rgba(163, 137, 224, 0.3));
-  transform: rotate(5deg) scale(1.1);
-}
-
-.divee-icon-site-collapsed {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-  transition: all 0.3s;
-}
-
-.divee-search-container-collapsed:hover .divee-icon-site-collapsed {
-  border-color: #FD3C4F;
-  box-shadow: 0 2px 6px rgba(253, 60, 79, 0.15);
-  transform: scale(1.1);
+.divee-ai-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .divee-widget .divee-search-input-collapsed {
@@ -274,32 +287,26 @@
 }
 
 .divee-send-icon-collapsed {
-  font-size: 24px;
-  line-height: 1;
-  color: var(--divee-color-primary, #68E5FD) !important;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  margin: 0 !important;
   transition: all 0.3s;
-  display: inline-block;
+  color: white;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .divee-search-container-collapsed:hover .divee-send-icon-collapsed {
-  filter: drop-shadow(0 0 4px var(--divee-color-primary, #68E5FD));
-  transform: translateX(2px) scale(1.15);
+  box-shadow: 0 4px 12px rgba(104, 229, 253, 0.4);
+  transform: scale(1.08);
 }
 
-/* ── Attention animation ────────────────────────────────────────── */
-@keyframes divee-glow-pulse {
-  0%   { box-shadow: 0 2px 6px rgba(104, 229, 253, 0.09), 0 1px 2px rgba(163, 137, 224, 0.08); }
-  25%  { box-shadow: 0 0 22px rgba(104, 229, 253, 0.7), 0 0 52px rgba(163, 137, 224, 0.6), 0 6px 24px rgba(104, 229, 253, 0.5); }
-  55%  { box-shadow: 0 0 26px rgba(163, 137, 224, 0.66), 0 0 60px rgba(104, 229, 253, 0.55), 0 6px 28px rgba(163, 137, 224, 0.45); }
-  80%  { box-shadow: 0 0 18px rgba(104, 229, 253, 0.55), 0 0 36px rgba(163, 137, 224, 0.4), 0 4px 16px rgba(104, 229, 253, 0.3); }
-  100% { box-shadow: 0 2px 6px rgba(104, 229, 253, 0.09), 0 1px 2px rgba(163, 137, 224, 0.08); }
-}
 
-.divee-search-container-collapsed.divee-attention-active {
-  animation: divee-glow-pulse 2.2s ease-in-out 2;
-}
 
 .divee-powered-by-collapsed {
   padding: 0 24px 6px 24px;
@@ -311,14 +318,10 @@
   display: flex;
   flex-direction: column;
   gap: 0px;
-  margin-bottom: 8px;
-  padding: 16px 20px 10px 20px;
-  border-bottom: 2px solid transparent;
-  background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box;
-  border-bottom: 2px solid transparent;
-  background-clip: padding-box, border-box;
-  background-origin: padding-box, border-box;
+  margin-bottom: 0;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #0f172a 0%, #1a2744 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .divee-header-top {
@@ -336,7 +339,7 @@
 
 .divee-powered-by {
   font-size: 12px;
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.4);
   text-decoration: none;
   padding: 0 6px;
   display: inline-block;
@@ -349,7 +352,7 @@
 }
 
 .divee-powered-by:hover {
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.75);
   text-decoration: underline;
 }
 
@@ -384,8 +387,8 @@
 
 .divee-title {
   font-weight: 600;
-  font-size: 16px;
-  color: #1f2937;
+  font-size: 15px;
+  color: white;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -397,18 +400,19 @@
 .divee-close {
   background: none;
   border: none;
-  font-size: 20px;
-  color: #6b7280;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   padding: 4px 8px;
   line-height: 1;
-  border-radius: 4px;
-  transition: background 0.2s;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
   margin: 0 !important;
 }
 
 .divee-close:hover {
-  background: #f3f4f6;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
 }
 
 /* Shared ad container - visible in both states */
@@ -460,7 +464,7 @@
   display: flex;
   flex-direction: column;
   max-height: 600px;
-  overflow: hidden !important;
+  overflow: visible;
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
   opacity: 1;
   transform: translateY(0);
@@ -472,6 +476,17 @@
 }
 
 /* Show expanded view when expanded */
+.divee-widget[data-state="expanded"] .divee-expanded {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: visible;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.04),
+    0 6px 16px rgba(0, 0, 0, 0.07),
+    0 16px 40px rgba(0, 0, 0, 0.06);
+}
+
+/* (selector continued below) */
 .divee-widget[data-state="expanded"] .divee-expanded {
   display: flex !important;
 }
@@ -622,11 +637,12 @@
   overflow-x: hidden !important;
   scroll-behavior: smooth;
   margin: 0 0 2px 0 !important;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border: none;
+  border-radius: 0;
   padding: 12px;
   display: flex;
   flex-direction: column;
+  background: white;
 }
 
 .divee-messages {
@@ -637,45 +653,53 @@
   margin: 0 !important;
 }
 
-/* Empty State */
+/* Empty State - ChatGPT-style welcome */
 .divee-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #6b7280;
   text-align: center;
-  padding: 20px;
-  gap: 12px;
-  animation: divee-fade-in 0.3s ease;
+  padding: 24px 20px;
+  gap: 8px;
+  animation: divee-fade-in 0.4s ease;
   margin: auto;
 }
 
-.divee-empty-icon {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 4px;
+.divee-welcome-sparkle {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary));
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f3f4f6;
-  border-radius: 50%;
-  color: var(--divee-color-secondary);
+  margin-bottom: 8px;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--divee-color-secondary) 35%, transparent);
 }
 
-.divee-empty-icon img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
+.divee-welcome-sparkle-icon {
+  width: 28px;
+  height: 28px;
+  color: white;
+  display: block;
 }
 
-.divee-empty-text {
-  font-size: 14px;
-  line-height: 1.5;
-  max-width: 260px;
+.divee-welcome-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.divee-welcome-subtitle {
+  font-size: 13px;
   color: #6b7280;
+  line-height: 1.5;
+  max-width: 240px;
+  margin: 0;
 }
 
 .divee-message {
@@ -730,30 +754,82 @@
   padding: 12px 16px;
   border-radius: 16px;
   font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
+  line-height: 1.6;
+  white-space: normal;
   word-wrap: break-word;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   margin: 0 !important;
 }
 
+/* Markdown rendered elements */
+.divee-message-content p {
+  margin: 0 0 6px 0;
+}
+.divee-message-content p:last-child { margin-bottom: 0; }
+.divee-message-content strong { font-weight: 700; }
+.divee-message-content em { font-style: italic; }
+.divee-inline-code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12.5px;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.divee-code-block {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12.5px;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 6px 0;
+}
+.divee-md-list {
+  margin: 4px 0 6px 0;
+  padding-left: 20px;
+}
+.divee-md-list li { margin-bottom: 3px; }
+.divee-md-heading { font-weight: 700; margin: 6px 0 4px; }
+
 .divee-message-user .divee-message-content {
-  background: linear-gradient(135deg, var(--divee-color-primary) 0%, var(--divee-color-secondary) 100%);
-  color: white;
+  background: #f3f4f6;
+  color: #1f2937;
   border-bottom-right-radius: 4px;
 }
 
 .divee-message-ai .divee-message-content {
-  background: #f3f4f6;
+  background: transparent;
   color: #1f2937;
-  border-bottom-left-radius: 4px;
-  border: 1px solid #e5e7eb;
+  border: none;
+  box-shadow: none;
+  padding: 2px 0;
 }
 
 .divee-cursor {
-  color: var(--divee-color-primary);
-  flex-wrap: wrap;-blink 1s infinite;
-  margin-left: 2px;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.divee-cursor-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--divee-color-secondary);
+  animation: divee-dot-bounce 1.2s infinite ease-in-out;
+  display: inline-block;
+}
+
+.divee-cursor-dot:nth-child(2) { animation-delay: 0.2s; }
+.divee-cursor-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes divee-dot-bounce {
+  0%, 80%, 100% { transform: scaleY(0.5); opacity: 0.4; }
+  40% { transform: scaleY(1); opacity: 1; }
 }
 
 /* Input - Search Box Style */
@@ -1308,6 +1384,98 @@
 /* Hide pills in floating collapsed mode */
 .divee-widget-floating[data-state="collapsed"] .divee-tag-pills {
   display: none !important;
+}
+
+/* ============================================
+   AI-FIRST DESIGN ELEMENTS (ChatGPT-inspired)
+   ============================================ */
+
+/* Header: sparkle avatar circle */
+.divee-header-ai-icon {
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+.divee-sparkle-header-icon {
+  width: 18px;
+  height: 18px;
+  color: rgba(255, 255, 255, 0.9);
+  display: block;
+}
+
+/* Header: text block (title + online badge stacked) */
+.divee-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.divee-site-favicon-header {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* Collapsed bar: favicon matches AI badge height */
+.divee-site-favicon-collapsed {
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+/* Online badge */
+.divee-online-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: #34d399;
+  line-height: 1;
+}
+
+/* Message: sparkle avatar for AI */
+.divee-sparkle-avatar {
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.divee-sparkle-msg-icon {
+  width: 13px;
+  height: 13px;
+  color: white;
+  display: block;
+}
+
+/* User message - clean neutral bubble */
+.divee-message-user .divee-message-content {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+/* AI message - no max-width cap, full width feel */
+.divee-message-ai {
+  max-width: 100% !important;
 }
 
 /* ============================================

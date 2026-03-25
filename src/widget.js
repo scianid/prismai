@@ -288,6 +288,67 @@
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
         }
 
+        renderMarkdown(text) {
+            if (!text) return '';
+
+            const esc = (s) => String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+            const inline = (s) => s
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+                .replace(/_([^_\n]+)_/g, '<em>$1</em>')
+                .replace(/`([^`\n]+)`/g, '<code class="divee-inline-code">$1</code>');
+
+            // Split into code-block vs text sections first
+            const segments = [];
+            const codeBlockRe = /```(?:\w*)\n?([\s\S]*?)```/g;
+            let last = 0, m;
+            while ((m = codeBlockRe.exec(text)) !== null) {
+                if (m.index > last) segments.push({ type: 'text', content: text.slice(last, m.index) });
+                segments.push({ type: 'code', content: m[1] });
+                last = m.index + m[0].length;
+            }
+            segments.push({ type: 'text', content: text.slice(last) });
+
+            return segments.map(seg => {
+                if (seg.type === 'code') {
+                    return `<pre class="divee-code-block"><code>${esc(seg.content)}</code></pre>`;
+                }
+
+                const lines = esc(seg.content).split('\n');
+                const out = [];
+                let listTag = null;
+
+                for (const line of lines) {
+                    const ul = line.match(/^[-*]\s+(.+)$/);
+                    const ol = line.match(/^\d+\.\s+(.+)$/);
+                    const h  = line.match(/^#{1,6}\s+(.+)$/);
+
+                    if (ul) {
+                        if (listTag !== 'ul') { if (listTag) out.push(`</${listTag}>`); out.push('<ul class="divee-md-list">'); listTag = 'ul'; }
+                        out.push(`<li>${inline(ul[1])}</li>`);
+                    } else if (ol) {
+                        if (listTag !== 'ol') { if (listTag) out.push(`</${listTag}>`); out.push('<ol class="divee-md-list">'); listTag = 'ol'; }
+                        out.push(`<li>${inline(ol[1])}</li>`);
+                    } else {
+                        if (listTag) { out.push(`</${listTag}>`); listTag = null; }
+                        if (h) {
+                            out.push(`<p class="divee-md-heading">${inline(h[1])}</p>`);
+                        } else if (line.trim() === '') {
+                            out.push('<br>');
+                        } else {
+                            out.push(`<p>${inline(line)}</p>`);
+                        }
+                    }
+                }
+                if (listTag) out.push(`</${listTag}>`);
+                return out.join('');
+            }).join('');
+        }
+
         getAnalyticsIds() {
             // Visitor ID (Persistent)
             let visitorId = localStorage.getItem('divee_visitor_id');
@@ -806,8 +867,7 @@
             const container = document.createElement('div');
             container.className = 'divee-widget';
             container.setAttribute('data-state', 'collapsed');
-            // Force overflow:hidden via inline important — beats AMP/site CSS that may override the class rule
-            container.style.setProperty('overflow', 'hidden', 'important');
+            container.style.setProperty('overflow', 'visible', 'important');
             
             // Apply display mode
             if (this.config.displayMode === 'floating') {
@@ -893,13 +953,18 @@
                     <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
                 </div>
                 <div class="divee-search-container-collapsed">
-                    <img class="divee-icon-ai-collapsed" src="https://srv.divee.ai/storage/v1/object/public/public-files/ai.png" alt="AI icon" />
-                    <img class="divee-icon-site-collapsed" src="${config.icon_url}" alt="Site icon" />
+                    <div class="divee-ai-identity" aria-label="AI">
+                        <svg class="divee-ai-identity-sparkle" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
+                        </svg>
+                        <span class="divee-ai-label">AI</span>
+                    </div>
+                    <img class="divee-site-favicon-collapsed" src="${config.icon_url}" alt="" aria-hidden="true" />
                     <input type="text" class="divee-search-input-collapsed" placeholder="" readonly />
                     <span class="divee-send-icon-collapsed" aria-hidden="true">&#10148;</span>
-        </div>
+                </div>
                 <div class="divee-tag-pills divee-tag-pills-collapsed"></div>
-      `;
+            `;
 
             // Add typewriter effect
             setTimeout(() => {
@@ -954,15 +1019,14 @@
             const container = document.createElement('div');
             container.className = 'divee-empty-state';
 
-            const placeholders = config.input_text_placeholders || ['Ask anything about this article...'];
-            // Use the first one as primary, or all of them.
-            // Let's show the first one as a prompt.
-            const text = placeholders.length > 0 ? placeholders[0] : 'Ask me anything about this article';
-
             container.innerHTML = `
-                <div class="divee-empty-icon">
-                    <img src="${config.icon_url}" alt="AI" />
+                <div class="divee-welcome-sparkle" aria-hidden="true">
+                    <svg class="divee-welcome-sparkle-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
+                    </svg>
                 </div>
+                <p class="divee-welcome-title">How can I help you?</p>
+                <p class="divee-welcome-subtitle">Ask me anything about this article</p>
             `;
             return container;
         }
@@ -979,11 +1043,16 @@
             view.innerHTML = `
                 <div class="divee-header">
                     <div class="divee-header-top">
-                        <div class="divee-icons">
-                            <img class="divee-icon-site-collapsed" src="https://srv.divee.ai/storage/v1/object/public/public-files/ai.png" alt="AI icon" />
-                            <img class="divee-icon-site" src="${config.icon_url}" alt="Site icon" />
+                        <div class="divee-header-ai-icon" aria-hidden="true">
+                            <svg class="divee-sparkle-header-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
+                            </svg>
                         </div>
-                        <span class="divee-title">${this.escapeHtml(config.client_name)}</span>
+                        <img class="divee-site-favicon-header" src="${config.icon_url}" alt="" aria-hidden="true" />
+                        <div class="divee-header-text">
+                            <span class="divee-title">${this.escapeHtml(config.client_name)}</span>
+                            <span class="divee-online-badge">● Online</span>
+                        </div>
                         <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
                         <button class="divee-close" aria-label="Close">✕</button>
                     </div>
@@ -1598,24 +1667,33 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `divee-message divee-message-${role}`;
             messageDiv.setAttribute('data-message-id', messageId);
+            messageDiv.dataset.rawText = '';
 
             const label = document.createElement('div');
             label.className = 'divee-message-label';
             if (role === 'user') {
                 label.textContent = 'You';
             } else {
-                const config = this.state.serverConfig || this.getDefaultConfig();
-                label.innerHTML = `<img class="divee-message-icon" src="${config.icon_url}" alt="AI" />`;
+                label.innerHTML = `
+                    <div class="divee-sparkle-avatar" aria-label="AI">
+                        <svg class="divee-sparkle-msg-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
+                        </svg>
+                    </div>`;
             }
 
             const contentDiv = document.createElement('div');
             contentDiv.className = 'divee-message-content';
-            contentDiv.textContent = content;
+            if (streaming || role === 'user') {
+                contentDiv.textContent = content;
+            } else {
+                contentDiv.innerHTML = this.renderMarkdown(content);
+            }
 
             if (streaming) {
                 const cursor = document.createElement('span');
                 cursor.className = 'divee-cursor';
-                cursor.textContent = '▊';
+                cursor.innerHTML = '<span class="divee-cursor-dot"></span><span class="divee-cursor-dot"></span><span class="divee-cursor-dot"></span>';
                 contentDiv.appendChild(cursor);
             }
 
@@ -1636,9 +1714,19 @@
             if (!messageDiv) return;
 
             const contentDiv = messageDiv.querySelector('.divee-message-content');
-            const cursor = contentDiv.querySelector('.divee-cursor');
+            const isAI = messageDiv.classList.contains('divee-message-ai');
 
-            if (append) {
+            if (append && isAI) {
+                // Accumulate raw text and re-render markdown live on every chunk
+                messageDiv.dataset.rawText = (messageDiv.dataset.rawText || '') + content;
+                contentDiv.innerHTML = this.renderMarkdown(messageDiv.dataset.rawText);
+                // Re-attach animated cursor at the end
+                const newCursor = document.createElement('span');
+                newCursor.className = 'divee-cursor';
+                newCursor.innerHTML = '<span class="divee-cursor-dot"></span><span class="divee-cursor-dot"></span><span class="divee-cursor-dot"></span>';
+                contentDiv.appendChild(newCursor);
+            } else if (append) {
+                const cursor = contentDiv.querySelector('.divee-cursor');
                 const textNode = document.createTextNode(content);
                 if (cursor) {
                     contentDiv.insertBefore(textNode, cursor);
@@ -1646,11 +1734,16 @@
                     contentDiv.appendChild(textNode);
                 }
             } else {
+                const cursor = contentDiv.querySelector('.divee-cursor');
                 if (cursor) cursor.remove();
-                contentDiv.textContent = content;
+                if (isAI) {
+                    contentDiv.innerHTML = this.renderMarkdown(content);
+                } else {
+                    contentDiv.textContent = content;
+                }
             }
 
-            // Scroll to bottom of chat container
+            // Scroll to bottom
             const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
