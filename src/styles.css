@@ -1425,8 +1425,8 @@
   height: 34px;
   border-radius: 50%;
   object-fit: cover;
-  flex-shrink: 0;
-  opacity: 0.85;
+  flex-shrink: 0;    
+  overflow: clip;
 }
 
 /* Collapsed bar: favicon matches AI badge height */
