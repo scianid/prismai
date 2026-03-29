@@ -126,7 +126,7 @@ export async function generateSuggestions(title: string, content: string, langua
   </article_content>
   Return ONLY a JSON array of ${TOTAL_SUGGESTIONS} strings in ${language} language.
    Do not include any additional text.
-   First question should always be "Summarized the article in brief." make sure all questions are in the specified language: ${language}.`;
+   First question should always be "Summarized the XXX in brief." XXX being the type of content that is presented. such as Article, Property etc. make sure all questions are in the specified language: ${language}.`;
 
   const response = await fetch(url, {
     method: 'POST',
