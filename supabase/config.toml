@@ -17,9 +17,3 @@ verify_jwt = false
 
 [functions.articles]
 verify_jwt = false
-
-[functions.project-ai-settings]
-verify_jwt = true
-
-[functions.rag-documents]
-verify_jwt = true
