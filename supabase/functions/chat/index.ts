@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseClient } from '../_shared/supabaseClient.ts';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { logEvent } from '../_shared/analytics.ts';
-import { readDeepSeekStreamAndCollectAnswer, streamAnswer, estimateCharCount, type Message } from '../_shared/ai.ts';
+import { readDeepSeekStreamAndCollectAnswer, streamAnswer, estimateCharCount, type Message, type AiCustomization } from '../_shared/ai.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
@@ -13,6 +13,9 @@ import { getOrCreateConversation, appendMessagesToConversation, type Conversatio
 import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
 import { issueVisitorToken } from '../_shared/visitorAuth.ts';
 import { checkRateLimit } from '../_shared/rateLimit.ts';
+import { getProjectAiSettings } from '../_shared/dao/projectAiSettingsDao.ts';
+import { generateEmbedding } from '../_shared/embeddingService.ts';
+import { searchSimilarChunks } from '../_shared/dao/ragDocumentDao.ts';
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -42,7 +45,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = await supabaseClient();
-    const project = await getProjectById(projectId, supabase);
+
+    // Run project lookup and AI settings fetch in parallel
+    const [project, aiSettings] = await Promise.all([
+      getProjectById(projectId, supabase),
+      getProjectAiSettings(supabase, projectId).catch(err => {
+        // Non-fatal: if settings can't be loaded, proceed without customization
+        console.error('chat: failed to load ai settings, proceeding without customization', err);
+        return null;
+      })
+    ]);
 
     // Verify origin
     const requestUrl = getRequestOriginUrl(req);
@@ -210,7 +222,30 @@ Deno.serve(async (req: Request) => {
     ];
 
     const resolvedQuestion = cachedItem?.question || question;
-    const aiResponse = await streamAnswer(aiMessages);
+
+    // Build AI customization only when the project has settings configured
+    let customization: AiCustomization | undefined;
+    if (aiSettings) {
+      let ragChunks: string[] | undefined;
+      try {
+        // Only generate an embedding (and pay for it) now that we know settings exist
+        const questionEmbedding = await generateEmbedding(question);
+        const matches = await searchSimilarChunks(supabase, projectId, questionEmbedding, 3);
+        if (matches.length > 0) {
+          ragChunks = matches.map(m => m.content);
+        }
+      } catch (err) {
+        console.error('chat: RAG lookup failed, proceeding without context', err);
+      }
+      customization = {
+        tone: aiSettings.tone,
+        guardrails: aiSettings.guardrails,
+        custom_instructions: aiSettings.custom_instructions,
+        ragChunks
+      };
+    }
+
+    const aiResponse = await streamAnswer(aiMessages, customization);
 
     if (!aiResponse.body)
       return errorResp('AI response stream unavailable', 500);
