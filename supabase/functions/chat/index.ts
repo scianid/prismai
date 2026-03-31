@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabaseClient } from '../_shared/supabaseClient.ts';
 import { getRequestOriginUrl, isAllowedOrigin } from '../_shared/origin.ts';
 import { logEvent } from '../_shared/analytics.ts';
-import { readDeepSeekStreamAndCollectAnswer, streamAnswer, estimateCharCount, type Message, type AiCustomization } from '../_shared/ai.ts';
+import { readStreamAndCollectAnswer, streamAnswer, estimateCharCount, type Message, type AiCustomization } from '../_shared/ai.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
@@ -253,7 +253,7 @@ Deno.serve(async (req: Request) => {
     const [clientStream, cacheStream] = aiResponse.body.tee();
 
     // Collect answer and store in conversation
-    readDeepSeekStreamAndCollectAnswer(cacheStream)
+    readStreamAndCollectAnswer(cacheStream)
       .then(async (result) => {
         const { answer, tokenUsage } = result;
         console.log('chat: collected answer, appending to conversation', {

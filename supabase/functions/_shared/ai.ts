@@ -15,7 +15,8 @@ const AI_PROVIDERS = {
     label: 'openai',
     apiKeyEnv: 'OPENAI_API_KEY',
     model: 'gpt-5.2',
-    url: 'https://api.openai.com/v1/chat/completions'
+    url: 'https://api.openai.com/v1/chat/completions',
+    responsesUrl: 'https://api.openai.com/v1/responses'
   }
 } as const;
 
@@ -234,6 +235,66 @@ function applyCustomization(messages: Message[], customization?: AiCustomization
   return result;
 }
 
+/**
+ * Transform OpenAI Responses API SSE stream → Chat Completions SSE format.
+ * Responses API emits `response.output_text.delta` / `response.completed` events;
+ * both the client widget and readDeepSeekStreamAndCollectAnswer expect
+ * `data: {choices:[{delta:{content}}]}` / `data: [DONE]`.
+ */
+function transformResponsesApiStream(responsesStream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  return new ReadableStream({
+    async start(controller) {
+      const reader = responsesStream.getReader();
+      let buffer = '';
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+
+          for (const part of parts) {
+            const lines = part.split('\n');
+            const dataLine = lines.find(l => l.trim().startsWith('data:'));
+            if (!dataLine) continue;
+            const data = dataLine.trim().replace(/^data:\s*/, '');
+            try {
+              const json = JSON.parse(data);
+              if (json.type === 'response.output_text.delta') {
+                const delta = json.delta || '';
+                const chunk = JSON.stringify({ choices: [{ delta: { content: delta }, index: 0 }] });
+                controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
+              } else if (json.type === 'response.completed') {
+                const u = json.response?.usage;
+                if (u) {
+                  const usageChunk = JSON.stringify({
+                    choices: [{ delta: {}, index: 0 }],
+                    usage: {
+                      prompt_tokens: u.input_tokens || 0,
+                      completion_tokens: u.output_tokens || 0,
+                      total_tokens: u.total_tokens || 0
+                    }
+                  });
+                  controller.enqueue(encoder.encode(`data: ${usageChunk}\n\n`));
+                }
+              }
+            } catch { /* ignore parse errors */ }
+          }
+        }
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    }
+  });
+}
+
 // Overload for backward compatibility (single question)
 export async function streamAnswer(title: string, content: string, question: string): Promise<Response>;
 // Overload for conversation history (message array) with optional AI customization
@@ -247,10 +308,6 @@ export async function streamAnswer(
   const { apiKey, url, model, provider } = getAiConfig();
   console.info('ai: streamAnswer', { provider, model });
 
-  const tokenParam = provider === 'openai'
-    ? { max_completion_tokens: MAX_TOKENS_CHAT }
-    : { max_tokens: MAX_TOKENS_CHAT };
-  
   let messages: Message[];
   
   // Handle message array (new conversation format)
@@ -295,24 +352,51 @@ Question: ${question}`;
     ];
   }
 
-  const aiResponse = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model,
-      messages: messages,
-      temperature: 0.4,
-      ...tokenParam,
-      stream: true
-    })
-  });
+  let aiResponse: Response;
 
-  if (!aiResponse.ok || !aiResponse.body) {
-    console.error(`chat: ${provider} request failed`, { status: aiResponse.status, model });
-    throw new Error(`${provider} request failed`);
+  if (provider === 'openai') {
+    // Responses API supports web_search_preview natively
+    const rawResponse = await fetch(AI_PROVIDERS.openai.responsesUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        input: messages,
+        tools: [{ type: 'web_search_preview' }],
+        stream: true
+      })
+    });
+    if (!rawResponse.ok || !rawResponse.body) {
+      console.error(`chat: openai responses request failed`, { status: rawResponse.status, model });
+      throw new Error(`openai request failed`);
+    }
+    // Transform Responses API SSE → Chat Completions SSE so client/server parsers need no changes
+    aiResponse = new Response(transformResponsesApiStream(rawResponse.body));
+  } else {
+    // DeepSeek: Chat Completions with native search_enabled
+    const rawResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.4,
+        max_tokens: MAX_TOKENS_CHAT,
+        search_enabled: true,
+        stream: true
+      })
+    });
+    if (!rawResponse.ok || !rawResponse.body) {
+      console.error(`chat: deepseek request failed`, { status: rawResponse.status, model });
+      throw new Error(`deepseek request failed`);
+    }
+    aiResponse = rawResponse;
   }
 
   return aiResponse;
@@ -336,7 +420,7 @@ export type StreamCollectResult = {
   tokenUsage: TokenUsage | null;
 };
 
-export async function readDeepSeekStreamAndCollectAnswer(stream: ReadableStream<Uint8Array>): Promise<StreamCollectResult> {
+export async function readStreamAndCollectAnswer(stream: ReadableStream<Uint8Array>): Promise<StreamCollectResult> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
