@@ -425,8 +425,8 @@
             googletag.cmd.push(function () {
 
                 // Get ad size overrides from config or use defaults
-                let desktopSizes = [[970, 250], [728, 90], [468, 60]]; //, [300, 250]
-                let desktopSizes768 = [[728, 90], [468, 60]]; // , [300, 250]
+                let desktopSizes = [[970, 250], [728, 90], [468, 60], [336, 280], [320, 250], [300, 250], [320, 100], [300, 100], [320, 50], [300, 50]];
+                let desktopSizes768 = [[728, 90], [468, 60], [300, 250], [336, 280], [320, 250], [300, 250], [320, 100], [300, 100], [320, 50], [300, 50]];
                 let mobileSizes = [[336, 280], [320, 250], [300, 250], [320, 100], [300, 100], [320, 50], [300, 50]];
                 
                 // Parse override_desktop_ad_size if provided
@@ -455,6 +455,63 @@
                     } catch (e) {
                         console.error('[Divee] Failed to parse override_mobile_ad_size:', e);
                     }
+                }
+
+                // URL param overrides (highest priority - overrides both server and client config)
+                const adSizeParams = new URLSearchParams(window.location.search);
+                const urlDesktopSizes = adSizeParams.get('diveeDesktopSizes');
+                const urlDesktopSizes768 = adSizeParams.get('diveeDesktopSizes768');
+                const urlMobileSizes = adSizeParams.get('diveeMobileSizes');
+
+                if (urlDesktopSizes) {
+                    try {
+                        const parsed = JSON.parse(urlDesktopSizes);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            desktopSizes = parsed;
+                            self.log('Using URL override desktop ad sizes:', desktopSizes);
+                        }
+                    } catch (e) {
+                        console.error('[Divee] Failed to parse diveeDesktopSizes URL param:', e);
+                    }
+                }
+
+                if (urlDesktopSizes768) {
+                    try {
+                        const parsed = JSON.parse(urlDesktopSizes768);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            desktopSizes768 = parsed;
+                            self.log('Using URL override desktop 768 ad sizes:', desktopSizes768);
+                        }
+                    } catch (e) {
+                        console.error('[Divee] Failed to parse diveeDesktopSizes768 URL param:', e);
+                    }
+                }
+
+                if (urlMobileSizes) {
+                    try {
+                        const parsed = JSON.parse(urlMobileSizes);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            mobileSizes = parsed;
+                            self.log('Using URL override mobile ad sizes:', mobileSizes);
+                        }
+                    } catch (e) {
+                        console.error('[Divee] Failed to parse diveeMobileSizes URL param:', e);
+                    }
+                }
+
+                // Filter out ad sizes wider than the container
+                const containerEl = self.elements.container
+                    || (self.config.containerSelector && document.querySelector(self.config.containerSelector))
+                    || document.querySelector('article')
+                    || document.querySelector('[role="article"]')
+                    || document.querySelector('main');
+                const containerWidth = containerEl?.offsetWidth || Infinity;
+                console.log("Divee", {containerWidth})
+                if (containerWidth !== Infinity) {
+                    desktopSizes = desktopSizes.filter(size => size[0] <= containerWidth);
+                    desktopSizes768 = desktopSizes768.filter(size => size[0] <= containerWidth);
+                    mobileSizes = mobileSizes.filter(size => size[0] <= containerWidth);
+                    self.log('Filtered ad sizes to container width:', containerWidth, { desktopSizes, desktopSizes768, mobileSizes });
                 }
 
                 // Collapsed view ads - with responsive size mapping
@@ -2569,20 +2626,8 @@
                 attentionAnimation: script.getAttribute('data-attention-animation') !== 'false'
             };
 
-            // Show deprecation warnings if data attributes are used
-            if (isDebug) {
-                const deprecated = [
-                    { attr: 'data-display-mode', msg: 'Use display_mode in project settings' },
-                    { attr: 'data-floating-position', msg: 'Use display_position in project settings' },
-                    { attr: 'data-article-class', msg: 'Use article_class in project settings' },
-                    { attr: 'data-container-selector', msg: 'Use widget_container_class in project settings' }
-                ].filter(d => script.getAttribute(d.attr));
-                
-                if (deprecated.length > 0) {
-                    console.warn('[Divee] Deprecated attributes:', deprecated.map(d => d.attr).join(', '));
-                }
+            if (isDebug)
                 console.log(`[Divee] Auto-init [${index}]:`, config);
-            }
             const instance = new DiveeWidget(config);
             diveeInstances.push(instance);
         });
