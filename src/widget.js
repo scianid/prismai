@@ -2622,6 +2622,7 @@
 
     // Auto-initialize from script tag
     function autoInit() {
+        this.log("app", "Initializing Divee...")
         const scripts = document.querySelectorAll('script[data-project-id]');
 
         if (scripts.length === 0) {
