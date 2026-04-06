@@ -135,7 +135,7 @@
         sendSessionHeartbeat() {
             const payload = this.buildSessionPayload();
             const endpoint = `${this.config.analyticsBaseUrl}/analytics`;
-            this.log('[Divee Session] Heartbeat:', payload);
+            this.log('session', 'Heartbeat:', payload);
             const blob = new Blob([JSON.stringify({ session: payload })], {
                 type: 'text/plain'
             });
@@ -157,7 +157,7 @@
             const blob = new Blob([JSON.stringify({ session: payload })], {
                 type: 'text/plain'
             });
-            this.log('[Divee Session] Beacon:', payload);
+            this.log('session', 'Beacon:', payload);
             if (navigator.sendBeacon) {
                 navigator.sendBeacon(endpoint, blob);
             } else {
@@ -266,10 +266,14 @@
             this.state.suggestionsSuppressed = true;
         }
 
-        log(...args) {
-            if (this.isDebugMode()) {
-                console.log('[Divee]', ...args);
+        log(category, ...args) {
+            if (!this.isDebugMode()) return;
+            const filter = new URLSearchParams(window.location.search).get('diveeDebugFilter');
+            if (filter) {
+                const allowed = filter.split(',').map(s => s.trim().toLowerCase());
+                if (!allowed.includes(category.toLowerCase())) return;
             }
+            console.log(`[Divee:${category}]`, ...args);
         }
 
         generateUUID() {
@@ -381,17 +385,17 @@
 
         initGoogleAds() {
             if (window.googletag && window.googletag._initialized_by_divee) {
-                this.log('Ads already initialized, skipping');
+                this.log('ads', 'Ads already initialized, skipping');
                 return;
             }
 
-            this.log('Initializing Google Ads...');
+            this.log('ads', 'Initializing Google Ads...');
             const self = this; // Capture widget instance
             
             // Get ad tag ID from server config - required to show ads
             const adTagId = this.state.serverConfig?.ad_tag_id;
             if (!adTagId) {
-                this.log('No ad_tag_id in server config, skipping ads');
+                this.log('ads', 'No ad_tag_id in server config, skipping ads');
                 return;
             }
             
@@ -404,7 +408,7 @@
             
             // Check if GPT is already loaded by the page
             const gptAlreadyLoaded = window.googletag && window.googletag.apiReady;
-            this.log('GPT preloaded:', gptAlreadyLoaded, 'Ad tag:', adTagId);
+            this.log('ads', 'GPT preloaded:', gptAlreadyLoaded, 'Ad tag:', adTagId);
             this._gptAlreadyLoaded = gptAlreadyLoaded;
             
             window.googletag = window.googletag || { cmd: [] };
@@ -417,7 +421,7 @@
                 gptScript.src = 'https://securepubads.g.doubleclick.net/tag/js/gpt.js';
                 gptScript.crossOrigin = 'anonymous';
 
-                gptScript.onload = () => self.log('✓ GPT script loaded');
+                gptScript.onload = () => self.log('ads', '✓ GPT script loaded');
                 gptScript.onerror = () => console.error('[Divee] Failed to load GPT script');
                 document.head.appendChild(gptScript);
             }
@@ -437,7 +441,7 @@
                             desktopSizes = parsed;
                             // Also use for 768+ breakpoint, filtering out sizes larger than 728px wide
                             desktopSizes768 = parsed.filter(size => size[0] <= 728);
-                            self.log('Using override desktop ad sizes:', desktopSizes);
+                            self.log('ads', 'Using override desktop ad sizes:', desktopSizes);
                         }
                     } catch (e) {
                         console.error('[Divee] Failed to parse override_desktop_ad_size:', e);
@@ -450,7 +454,7 @@
                         const parsed = JSON.parse(self.state.serverConfig.override_mobile_ad_size);
                         if (Array.isArray(parsed) && parsed.length > 0) {
                             mobileSizes = parsed;
-                            self.log('Using override mobile ad sizes:', mobileSizes);
+                            self.log('ads', 'Using override mobile ad sizes:', mobileSizes);
                         }
                     } catch (e) {
                         console.error('[Divee] Failed to parse override_mobile_ad_size:', e);
@@ -468,7 +472,7 @@
                         const parsed = JSON.parse(urlDesktopSizes);
                         if (Array.isArray(parsed) && parsed.length > 0) {
                             desktopSizes = parsed;
-                            self.log('Using URL override desktop ad sizes:', desktopSizes);
+                            self.log('ads', 'Using URL override desktop ad sizes:', desktopSizes);
                         }
                     } catch (e) {
                         console.error('[Divee] Failed to parse diveeDesktopSizes URL param:', e);
@@ -480,7 +484,7 @@
                         const parsed = JSON.parse(urlDesktopSizes768);
                         if (Array.isArray(parsed) && parsed.length > 0) {
                             desktopSizes768 = parsed;
-                            self.log('Using URL override desktop 768 ad sizes:', desktopSizes768);
+                            self.log('ads', 'Using URL override desktop 768 ad sizes:', desktopSizes768);
                         }
                     } catch (e) {
                         console.error('[Divee] Failed to parse diveeDesktopSizes768 URL param:', e);
@@ -492,7 +496,7 @@
                         const parsed = JSON.parse(urlMobileSizes);
                         if (Array.isArray(parsed) && parsed.length > 0) {
                             mobileSizes = parsed;
-                            self.log('Using URL override mobile ad sizes:', mobileSizes);
+                            self.log('ads', 'Using URL override mobile ad sizes:', mobileSizes);
                         }
                     } catch (e) {
                         console.error('[Divee] Failed to parse diveeMobileSizes URL param:', e);
@@ -506,12 +510,12 @@
                     || document.querySelector('[role="article"]')
                     || document.querySelector('main');
                 const containerWidth = containerEl?.offsetWidth || Infinity;
-                console.log("Divee", {containerWidth})
+                
                 if (containerWidth !== Infinity) {
                     desktopSizes = desktopSizes.filter(size => size[0] <= containerWidth);
                     desktopSizes768 = desktopSizes768.filter(size => size[0] <= containerWidth);
                     mobileSizes = mobileSizes.filter(size => size[0] <= containerWidth);
-                    self.log('Filtered ad sizes to container width:', containerWidth, { desktopSizes, desktopSizes768, mobileSizes });
+                    self.log('ads', 'Filtered ad sizes to container width:', containerWidth, { desktopSizes, desktopSizes768, mobileSizes });
                 }
 
                 // Collapsed view ads - with responsive size mapping
@@ -542,7 +546,7 @@
                     console.error('[Divee] Failed to define mobile slot');
                 }
 
-                self.log('✓ Ad slots defined');
+                self.log('ads', '✓ Ad slots defined');
 
                 googletag.pubads().collapseEmptyDivs();
                 googletag.pubads().enableLazyLoad({
@@ -560,12 +564,12 @@
                     self._needsSlotRefresh = true;
                 }
                 
-                self.log('✓ Ads initialized');
+                self.log('ads', '✓ Ads initialized');
             });
         }
 
         async init() {
-            this.log('Initializing widget... build:', typeof DIVEE_BUILD_VERSION !== 'undefined' ? DIVEE_BUILD_VERSION : 'dev', this.config);
+            this.log('init', 'Initializing widget... build:', typeof DIVEE_BUILD_VERSION !== 'undefined' ? DIVEE_BUILD_VERSION : 'dev', this.config);
             console.log('[Divee] SDK build:', typeof DIVEE_BUILD_VERSION !== 'undefined' ? DIVEE_BUILD_VERSION : 'dev');
 
             // Initialize Analytics IDs
@@ -578,7 +582,7 @@
             this.initGoogleAds();
 
             if (!this.state.serverConfig) {
-                this.log('Widget disabled due to config load failure');
+                this.log('init', 'Widget disabled due to config load failure');
                 return;
             }
 
@@ -587,12 +591,12 @@
             
             // Don't render widget if article element not found or content is empty
             if (!articleFound) {
-                this.log('Widget disabled: article element not found');
+                this.log('init', 'Widget disabled: article element not found');
                 return;
             }
             
             if (!this.articleContent || this.articleContent.trim().length < 10) {
-                this.log('Widget disabled: article content is empty or too short to load', {
+                this.log('init', 'Widget disabled: article content is empty or too short to load', {
                     contentLength: this.articleContent?.length || 0
                 });
                 return;
@@ -637,24 +641,24 @@
                 const serverConfig = await this.fetchServerConfig(this.config.projectId);
 
                 this.state.serverConfig = serverConfig;
-                this.log('Server config loaded:', this.state.serverConfig);
+                this.log('config', 'Server config loaded:', this.state.serverConfig);
 
                 // Apply display settings from server config (override data attributes)
                 if (serverConfig.display_mode) {
                     this.config.displayMode = serverConfig.display_mode;
-                    this.log('Display mode from config:', serverConfig.display_mode);
+                    this.log('config', 'Display mode from config:', serverConfig.display_mode);
                 }
                 if (serverConfig.display_position) {
                     // Apply position based on display mode
                     if (this.config.displayMode === 'floating') {
                         this.config.floatingPosition = serverConfig.display_position;
-                        this.log('Floating position from config:', serverConfig.display_position);
+                        this.log('config', 'Floating position from config:', serverConfig.display_position);
                     } else {
                         // Anchored mode: only allow 'top' or 'bottom'
                         this.config.anchoredPosition = ['top', 'bottom'].includes(serverConfig.display_position) 
                             ? serverConfig.display_position 
                             : 'bottom';
-                        this.log('Anchored position from config:', this.config.anchoredPosition);
+                        this.log('config', 'Anchored position from config:', this.config.anchoredPosition);
                     }
                 }
                 if (serverConfig.anchored_position) {
@@ -662,21 +666,21 @@
                     this.config.anchoredPosition = ['top', 'bottom'].includes(serverConfig.anchored_position) 
                         ? serverConfig.anchored_position 
                         : 'bottom';
-                    this.log('Anchored position override from config:', this.config.anchoredPosition);
+                    this.log('config', 'Anchored position override from config:', this.config.anchoredPosition);
                 }
                 if (serverConfig.article_class) {
                     this.config.articleClass = serverConfig.article_class;
-                    this.log('Article class from config:', serverConfig.article_class);
+                    this.log('config', 'Article class from config:', serverConfig.article_class);
                 }
                 
                 // Handle container selector with mobile override support
                 const isMobile = window.innerWidth < 768;
                 if (isMobile && serverConfig.override_mobile_container_selector) {
                     this.config.containerSelector = serverConfig.override_mobile_container_selector;
-                    this.log('Container selector from mobile override:', serverConfig.override_mobile_container_selector);
+                    this.log('config', 'Container selector from mobile override:', serverConfig.override_mobile_container_selector);
                 } else if (serverConfig.widget_container_class) {
                     this.config.containerSelector = serverConfig.widget_container_class;
-                    this.log('Container selector from config:', serverConfig.widget_container_class);
+                    this.log('config', 'Container selector from config:', serverConfig.widget_container_class);
                 }
 
 
@@ -700,17 +704,17 @@
                 
                 // Always log overrides (not just in debug mode)
                 if (overrideDisplayMode || overrideDisplayPosition || overrideArticleClass || overrideContainerSelector) {
-                    this.log('URL param overrides detected:', {
+                    this.log('config', 'URL param overrides detected:', {
                         displayMode: overrideDisplayMode,
                         displayPosition: overrideDisplayPosition,
                         articleClass: overrideArticleClass,
                         containerSelector: overrideContainerSelector
                     });
                 }
-                
+
                 if (overrideDisplayMode) {
                     this.config.displayMode = overrideDisplayMode;
-                    this.log('Display mode overridden by URL param:', overrideDisplayMode);
+                    this.log('config', 'Display mode overridden by URL param:', overrideDisplayMode);
                 }
                 if (overrideDisplayPosition) {
                     // For floating mode positions (bottom-right, bottom-left, etc.)
@@ -719,19 +723,19 @@
                     if (['top', 'bottom'].includes(overrideDisplayPosition)) {
                         this.config.anchoredPosition = overrideDisplayPosition;
                     }
-                    this.log('Display position overridden by URL param:', overrideDisplayPosition);
+                    this.log('config', 'Display position overridden by URL param:', overrideDisplayPosition);
                 }
                 if (overrideArticleClass) {
                     this.config.articleClass = overrideArticleClass;
-                    this.log('Article class overridden by URL param:', overrideArticleClass);
+                    this.log('config', 'Article class overridden by URL param:', overrideArticleClass);
                 }
                 if (overrideContainerSelector) {
                     this.config.containerSelector = overrideContainerSelector;
-                    this.log('Container selector overridden by URL param:', overrideContainerSelector);
+                    this.log('config', 'Container selector overridden by URL param:', overrideContainerSelector);
                 }
-                
+
                 // Log final config after all overrides
-                this.log('Final config after overrides:', {
+                this.log('config', 'Final config after overrides:', {
                     displayMode: this.config.displayMode,
                     floatingPosition: this.config.floatingPosition,
                     anchoredPosition: this.config.anchoredPosition,
@@ -752,7 +756,7 @@
             if (Array.isArray(colors) && colors.length >= 2) {
                 this.elements.container.style.setProperty('--divee-color-primary', colors[0]);
                 this.elements.container.style.setProperty('--divee-color-secondary', colors[1]);
-                this.log('Applied theme colors:', colors[0], colors[1]);
+                this.log('ui', 'Applied theme colors:', colors[0], colors[1]);
             }
         }
 
@@ -792,7 +796,7 @@
         extractArticleContent() {
             // Check if content is already cached
             if (this.contentCache.extracted) {
-                this.log('Using cached content');
+                this.log('content', 'Using cached content');
                 this.articleTitle = this.contentCache.title;
                 this.articleContent = this.contentCache.content;
                 return this.contentCache.articleFound;
@@ -802,7 +806,7 @@
             if (typeof window.diveeArticle !== 'undefined' && window.diveeArticle) {
                 const diveeArticle = window.diveeArticle;
                 if (diveeArticle.title || diveeArticle.content) {
-                    this.log('Using article data from window.diveeArticle (WordPress plugin)');
+                    this.log('content', 'Using article data from window.diveeArticle (WordPress plugin)');
                     this.articleTitle = diveeArticle.title || document.title || 'Untitled Article';
                     this.articleContent = diveeArticle.content || '';
                     this.articleUrl = diveeArticle.url || window.location.href;
@@ -846,7 +850,7 @@
 
                 // If no article element found, don't render widget
                 if (!articleElement) {
-                    this.log('No article element found, widget will not render');
+                    this.log('content', 'No article element found, widget will not render');
                     articleFound = false;
                 } else {
                     articleFound = true;
@@ -887,7 +891,7 @@
                     articleFound: articleFound
                 };
 
-                this.log('Article extracted and cached:', {
+                this.log('content', 'Article extracted and cached:', {
                     title: this.articleTitle,
                     url: this.articleUrl,
                     contentLength: this.articleContent.length,
@@ -914,7 +918,7 @@
 
         createWidget() {
             // Debug: Log config values at widget creation time
-            this.log('createWidget called with config:', {
+            this.log('ui', 'createWidget called with config:', {
                 displayMode: this.config.displayMode,
                 floatingPosition: this.config.floatingPosition,
                 anchoredPosition: this.config.anchoredPosition
@@ -928,14 +932,14 @@
             
             // Apply display mode
             if (this.config.displayMode === 'floating') {
-                this.log('Applying floating mode with position:', this.config.floatingPosition);
+                this.log('ui', 'Applying floating mode with position:', this.config.floatingPosition);
                 container.classList.add('divee-widget-floating');
                 container.setAttribute('data-floating-position', this.config.floatingPosition);
             } else if (this.config.displayMode === 'cubic') {
-                this.log('Cubic mode');
+                this.log('ui', 'Cubic mode');
                 container.classList.add('divee-widget-cubic');
             } else {
-                this.log('Anchored mode, position:', this.config.anchoredPosition);
+                this.log('ui', 'Anchored mode, position:', this.config.anchoredPosition);
             }
 
             // Apply direction from config
@@ -954,13 +958,13 @@
             // Create shared ad container - starts hidden, revealed only when an ad fills
             const hasAds = config.show_ad && config.ad_tag_id && this.config.displayMode !== 'floating';
             const showMockAd = !config.show_ad && this.isMockAdRequested();
-            this.log('[MockAd] show_ad:', config.show_ad, '| ad_tag_id:', config.ad_tag_id, '| diveeMockAd param:', this.isMockAdRequested(), '| showMockAd:', showMockAd, '| hasAds:', hasAds);
+            this.log('ads', '[MockAd] show_ad:', config.show_ad, '| ad_tag_id:', config.ad_tag_id, '| diveeMockAd param:', this.isMockAdRequested(), '| showMockAd:', showMockAd, '| hasAds:', hasAds);
             if (showMockAd) {
-                this.log('[MockAd] Rendering mock ad GIF (ads disabled in config + diveeMockAd=true)');
+                this.log('ads', '[MockAd] Rendering mock ad GIF (ads disabled in config + diveeMockAd=true)');
             } else if (!showMockAd && this.isMockAdRequested()) {
-                this.log('[MockAd] Mock ad NOT shown: diveeMockAd=true but show_ad is enabled in config (mock only works when ads are off)');
+                this.log('ads', '[MockAd] Mock ad NOT shown: diveeMockAd=true but show_ad is enabled in config (mock only works when ads are off)');
             } else {
-                this.log('[MockAd] Mock ad NOT shown: diveeMockAd param is not true');
+                this.log('ads', '[MockAd] Mock ad NOT shown: diveeMockAd param is not true');
             }
             const adContainer = document.createElement('div');
             adContainer.className = 'divee-ad-container-shared';
@@ -1210,17 +1214,17 @@
         }
 
         insertWidget(container) {
-            this.log('insertWidget called with config:', {
+            this.log('dom', 'insertWidget called with config:', {
                 displayMode: this.config.displayMode,
                 anchoredPosition: this.config.anchoredPosition,
                 containerSelector: this.config.containerSelector
             });
-            this.log('Display mode:', this.config.displayMode);
-            this.log('Config containerSelector (from server):', this.config.containerSelector);
+            this.log('dom', 'Display mode:', this.config.displayMode);
+            this.log('dom', 'Config containerSelector (from server):', this.config.containerSelector);
 
             // For floating mode, always append to body
             if (this.config.displayMode === 'floating') {
-                this.log('Floating mode: appending to body');
+                this.log('dom', 'Floating mode: appending to body');
                 document.body.appendChild(container);
                 this.displayAdsIfNeeded();
                 return;
@@ -1230,49 +1234,49 @@
 
             // First, try custom container selector if provided
             if (this.config.containerSelector) {
-                this.log('✓ Using containerSelector from server config:', this.config.containerSelector);
-                this.log('Attempting to find element with querySelector:', this.config.containerSelector);
+                this.log('dom', '✓ Using containerSelector from server config:', this.config.containerSelector);
+                this.log('dom', 'Attempting to find element with querySelector:', this.config.containerSelector);
                 targetElement = document.querySelector(this.config.containerSelector);
                 if (targetElement) {
-                    this.log('✓ Found custom container element:', {
+                    this.log('dom', '✓ Found custom container element:', {
                         selector: this.config.containerSelector,
                         tagName: targetElement.tagName,
                         className: targetElement.className,
                         id: targetElement.id
                     });
                 } else {
-                    this.log(`✗ Container selector "${this.config.containerSelector}" not found in DOM, falling back to default behavior`);
+                    this.log('dom', `✗ Container selector "${this.config.containerSelector}" not found in DOM, falling back to default behavior`);
                 }
             } else {
-                this.log('No containerSelector from server config, using default auto-detection');
+                this.log('dom', 'No containerSelector from server config, using default auto-detection');
             }
 
             // Fallback to default behavior
             if (!targetElement) {
-                this.log('Looking for default containers (article, [role="article"], main)');
+                this.log('dom', 'Looking for default containers (article, [role="article"], main)');
                 targetElement = document.querySelector('article') ||
                     document.querySelector('[role="article"]') ||
                     document.querySelector('main');
                 if (targetElement) {
-                    this.log('✓ Found default container:', targetElement.tagName, targetElement.className);
+                    this.log('dom', '✓ Found default container:', targetElement.tagName, targetElement.className);
                 } else {
-                    this.log('✗ No default container found, will append to body');
+                    this.log('dom', '✗ No default container found, will append to body');
                 }
             }
 
             // Insert widget based on anchored position
             if (targetElement) {
-                this.log('Inserting widget to target element, position:', this.config.anchoredPosition);
+                this.log('dom', 'Inserting widget to target element, position:', this.config.anchoredPosition);
                 if (this.config.anchoredPosition === 'top') {
-                    this.log('Using prepend() for top position');
+                    this.log('dom', 'Using prepend() for top position');
                     targetElement.prepend(container);
                 } else {
-                    this.log('Using appendChild() for bottom position');
+                    this.log('dom', 'Using appendChild() for bottom position');
                     targetElement.appendChild(container);
                 }
             } else {
                 // Final fallback: append to body if nothing found
-                this.log('No suitable container found, appending to body as fallback');
+                this.log('dom', 'No suitable container found, appending to body as fallback');
                 if (this.config.anchoredPosition === 'top') {
                     document.body.prepend(container);
                 } else {
@@ -1295,10 +1299,10 @@
                     const isDesktop = window.innerWidth >= 768;
                     if (isDesktop) {
                         googletag.display('div-gpt-ad-1770993606680-0');
-                        self.log('✓ Desktop ad slot displayed');
+                        self.log('ads', '✓ Desktop ad slot displayed');
                     } else {
                         googletag.display('div-gpt-ad-1770993160534-0');
-                        self.log('✓ Mobile ad slot displayed');
+                        self.log('ads', '✓ Mobile ad slot displayed');
                     }
 
                     // If GPT was already loaded, refresh newly defined slots
@@ -1309,7 +1313,7 @@
                         });
                         if (collapsedSlots.length > 0) {
                             googletag.pubads().refresh(collapsedSlots);
-                            self.log('✓ Refreshed pre-loaded slots');
+                            self.log('ads', '✓ Refreshed pre-loaded slots');
                         }
                         self._needsSlotRefresh = false;
                     }
@@ -1329,7 +1333,7 @@
                         if (event.isEmpty) {
                             if (adElement) adElement.style.display = 'none';
                             if (adOuterContainer) adOuterContainer.style.display = 'none';
-                            self.log('[Divee Ad] Slot empty, hiding container:', slotId);
+                            self.log('ads', 'Slot empty, hiding container:', slotId);
                             self.trackEvent('ad_unfilled', {
                                 ad_unit: slotId,
                                 position: 'collapsed',
@@ -1340,7 +1344,7 @@
                             if (adElement) adElement.style.setProperty('display', 'block', 'important');
                             if (adSlotContainer) adSlotContainer.style.display = '';
                             if (adOuterContainer) adOuterContainer.style.display = 'block';
-                            self.log('[Divee Ad] Slot filled, showing container:', slotId);
+                            self.log('ads', 'Slot filled, showing container:', slotId);
                             self.trackEvent('ad_impression', {
                                 ad_unit: slotId,
                                 position: 'collapsed',
@@ -1357,10 +1361,10 @@
                         self.startAdAutoRefresh();
                     });
             } else {
-                this.log('WARNING: Ads NOT displayed!');
-                this.log('WARNING: Reason:', !config.show_ad ? 'show_ad is false in config' : 'googletag not available');
-                this.log('WARNING: config.show_ad:', config.show_ad);
-                this.log('WARNING: window.googletag:', !!window.googletag);
+                this.log('ads', 'WARNING: Ads NOT displayed!');
+                this.log('ads', 'WARNING: Reason:', !config.show_ad ? 'show_ad is false in config' : 'googletag not available');
+                this.log('ads', 'WARNING: config.show_ad:', config.show_ad);
+                this.log('ads', 'WARNING: window.googletag:', !!window.googletag);
             }
         }
 
@@ -1375,17 +1379,17 @@
 
             this.state.adRefreshInterval = setInterval(() => {
                 if (!this.isWidgetInViewport()) {
-                    this.log('Ad refresh skipped: widget not near viewport');
+                    this.log('ads', 'Ad refresh skipped: widget not near viewport');
                     return;
                 }
                 if (!window.googletag || !window.googletag.pubads) {
-                    this.log('Ad refresh skipped: googletag not ready');
+                    this.log('ads', 'Ad refresh skipped: googletag not ready');
                     return;
                 }
 
                 googletag.cmd.push(function () {
                     if (!self.isWidgetInViewport()) {
-                        self.log('Ad refresh skipped: widget not near viewport (cmd)');
+                        self.log('ads', 'Ad refresh skipped: widget not near viewport (cmd)');
                         return;
                     }
                     // Get all Divee ad slots
@@ -1418,7 +1422,7 @@
 
                     if (visibleSlots.length > 0) {
                         googletag.pubads().refresh(visibleSlots);
-                        self.log('✓ Auto-refreshed', visibleSlots.length, 'ad(s)');
+                        self.log('ads', '✓ Auto-refreshed', visibleSlots.length, 'ad(s)');
                         self.trackEvent('ad_auto_refresh', {
                             slots_refreshed: visibleSlots.map(s => s.getSlotElementId()),
                             count: visibleSlots.length,
@@ -1991,26 +1995,26 @@
             const articleId = this.getArticleUniqueId();
             
             if (!articleId) {
-                this.log('[Divee Tags] No articleId, skipping tag fetch');
+                this.log('tags', 'No articleId, skipping tag fetch');
                 return;
             }
 
             try {
                 const url = `${this.config.cachedBaseUrl}/articles/tags?projectId=${encodeURIComponent(this.config.projectId)}&articleId=${encodeURIComponent(articleId)}`;
-                this.log('[Divee Tags] Fetching:', url);
+                this.log('tags', 'Fetching:', url);
                 const response = await fetch(url);
-                this.log('[Divee Tags] Response status:', response.status);
+                this.log('tags', 'Response status:', response.status);
                 if (!response.ok) return;
 
                 const data = await response.json();
-                this.log('[Divee Tags] Response data:', data);
+                this.log('tags', 'Response data:', data);
                 const tags = Array.isArray(data?.tags) ? data.tags.slice(0, 5) : [];
-                this.log('[Divee Tags] Tags found:', tags.length, tags);
+                this.log('tags', 'Tags found:', tags.length, tags);
                 if (tags.length === 0) return;
 
                 this.state.articleTags = tags;
                 this.renderTagPills();
-                this.log('[Divee Tags] Pills rendered');
+                this.log('tags', 'Pills rendered');
             } catch (error) {
                 console.error('[Divee Tags] Failed to fetch:', error);
             }
@@ -2094,7 +2098,7 @@
                 pillElement.classList.remove('loading');
                 this.showTagPopup(pillElement, tag, articles);
             } catch (error) {
-                this.log('[Divee] Failed to fetch articles by tag:', error);
+                this.log('tags', 'Failed to fetch articles by tag:', error);
                 pillElement.classList.remove('loading', 'active');
                 this.state.activeTagPopup = null;
             }
