@@ -2093,10 +2093,14 @@
     margin-bottom: 4px !important;
   }
   
-  /* Adjust powered-by font size on mobile */
+  /* Adjust powered-by on mobile — compact two-line layout */
   .divee-powered-by {
     font-size: 10px !important;
     padding: 0 4px !important;
+    white-space: normal !important;
+    text-align: center !important;
+    max-width: 60px !important;
+    flex-shrink: 2 !important;
   }
   
   /* Make close button smaller on mobile */
@@ -2106,8 +2110,10 @@
   }
   
   /* Reduce title font on mobile */
-  .divee-widget-floating .divee-title {
+  .divee-title {
     font-size: 14px !important;
+    flex: 1 1 auto !important;
+    min-width: 80px !important;
   }
   
   /* Reduce header-top gap on mobile */
