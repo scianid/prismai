@@ -472,10 +472,12 @@
                 const urlDesktopSizes768 = adSizeParams.get('diveeDesktopSizes768');
                 const urlMobileSizes = adSizeParams.get('diveeMobileSizes');
 
+                const MAX_AD_SIZES = 20;
+
                 if (urlDesktopSizes) {
                     try {
                         const parsed = JSON.parse(urlDesktopSizes);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
+                        if (Array.isArray(parsed) && parsed.length > 0 && parsed.length <= MAX_AD_SIZES) {
                             desktopSizes = parsed;
                             self.log('ads', 'Using URL override desktop ad sizes:', desktopSizes);
                         }
@@ -487,7 +489,7 @@
                 if (urlDesktopSizes768) {
                     try {
                         const parsed = JSON.parse(urlDesktopSizes768);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
+                        if (Array.isArray(parsed) && parsed.length > 0 && parsed.length <= MAX_AD_SIZES) {
                             desktopSizes768 = parsed;
                             self.log('ads', 'Using URL override desktop 768 ad sizes:', desktopSizes768);
                         }
@@ -499,7 +501,7 @@
                 if (urlMobileSizes) {
                     try {
                         const parsed = JSON.parse(urlMobileSizes);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
+                        if (Array.isArray(parsed) && parsed.length > 0 && parsed.length <= MAX_AD_SIZES) {
                             mobileSizes = parsed;
                             self.log('ads', 'Using URL override mobile ad sizes:', mobileSizes);
                         }
