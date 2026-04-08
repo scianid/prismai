@@ -2150,7 +2150,9 @@
                     card.target = '_blank';
                     card.rel = 'noopener noreferrer';
 
-                    const imgUrl = article.image_url || 'https://srv.divee.ai/storage/v1/object/public/public-files/placeholder.jpg';
+                    const fallbackImg = 'https://srv.divee.ai/storage/v1/object/public/public-files/placeholder.jpg';
+                    const rawImgUrl = article.image_url || fallbackImg;
+                    const imgUrl = /^https?:\/\//i.test(rawImgUrl) ? this.escapeHtml(rawImgUrl) : fallbackImg;
                     let domain = '';
                     try { domain = new URL(article.url).hostname.replace('www.', ''); } catch (e) {}
                     card.innerHTML = `
@@ -2288,18 +2290,21 @@
             card.setAttribute('data-card-id', cardId);
             card.setAttribute('role', 'link');
             card.setAttribute('tabindex', '0');
-            card.setAttribute('aria-label', `Suggested article: ${suggestion.title}`);
+            const safeTitle = this.escapeHtml(suggestion.title);
+            card.setAttribute('aria-label', `Suggested article: ${safeTitle}`);
 
-            const imageUrl = suggestion.image_url || 'https://srv.divee.ai/storage/v1/object/public/public-files/placeholder.jpg';
-            
+            const fallbackImg = 'https://srv.divee.ai/storage/v1/object/public/public-files/placeholder.jpg';
+            const rawImageUrl = suggestion.image_url || fallbackImg;
+            const imageUrl = /^https?:\/\//i.test(rawImageUrl) ? this.escapeHtml(rawImageUrl) : fallbackImg;
+
             card.innerHTML = `
                 <button class="divee-suggestion-dismiss" aria-label="Dismiss suggestion">✕</button>
                 <div class="divee-suggestion-image">
-                    <img src="${imageUrl}" alt="${suggestion.title}" />
+                    <img src="${imageUrl}" alt="${safeTitle}" />
                 </div>
                 <div class="divee-suggestion-text">
                     <div class="divee-suggestion-label">DIVE DEEPER...</div>
-                    <div class="divee-suggestion-title">${suggestion.title}</div>
+                    <div class="divee-suggestion-title">${safeTitle}</div>
                 </div>
             `;
 
