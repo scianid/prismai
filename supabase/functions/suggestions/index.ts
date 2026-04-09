@@ -10,6 +10,8 @@ import { supabaseClient } from '../_shared/supabaseClient.ts';
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH, sanitizeContent } from "../_shared/constants.ts";
 import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
 import { checkRateLimit } from '../_shared/rateLimit.ts';
+import { generateEmbedding } from '../_shared/embeddingService.ts';
+import { searchSimilarChunks } from '../_shared/dao/ragDocumentDao.ts';
 
 // @ts-ignore
 Deno.serve(async (req: Request) => {
@@ -29,14 +31,20 @@ Deno.serve(async (req: Request) => {
       console.error(`suggestions: missing projectId in request, url: ${req.url}`);
       return errorResp('suggestions: missing projectId', 400, { suggestions: [] });
     }
-    // Validate required fields
-    if (!url || !title || !content) 
-      return errorResp('suggestions: missing required fields:url,title,content', 400, { suggestions: [] });
 
     // Initialize Supabase client with service role key (bypasses RLS)
     const supabase = await supabaseClient();
 
     const project = await getProjectById(projectId, supabase);
+    const isKnowledgebase = project?.widget_mode === 'knowledgebase';
+
+    // In article mode, url/title/content are required
+    if (!isKnowledgebase && (!url || !title || !content))
+      return errorResp('suggestions: missing required fields:url,title,content', 400, { suggestions: [] });
+
+    // Default url for knowledgebase mode
+    if (!url) url = 'knowledgebase';
+
     const requestUrl = getRequestOriginUrl(req);
 
     if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
@@ -52,6 +60,53 @@ Deno.serve(async (req: Request) => {
       url,
     }, 'get_suggestions');
 
+    if (isKnowledgebase) {
+      // Knowledgebase mode: generate suggestions from RAG documents
+      const rateLimit = await checkRateLimit(supabase, 'suggestions', visitor_id, projectId);
+      if (rateLimit.limited) {
+        return new Response(
+          JSON.stringify({ error: 'Too many requests', retryAfter: rateLimit.retryAfterSeconds }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+        );
+      }
+
+      // Fetch RAG chunks to use as context for suggestion generation
+      let ragContent = '';
+      try {
+        // Use a generic query to retrieve representative chunks
+        const embedding = await generateEmbedding('frequently asked questions help guide');
+        const matches = await searchSimilarChunks(supabase, projectId, embedding, 5);
+        ragContent = matches.map(m => m.content).join('\n\n');
+      } catch (err) {
+        console.error('suggestions: RAG lookup failed', err);
+      }
+
+      if (!ragContent) {
+        return successResp({ suggestions: [] });
+      }
+
+      console.log('suggestions: knowledgebase mode, generating from RAG');
+      const result = await generateSuggestions('Knowledge Base', ragContent, project?.language || 'en');
+      const { suggestions, tokenUsage, model } = result;
+
+      if (tokenUsage) {
+        insertTokenUsage(supabase, {
+          projectId,
+          visitorId: visitor_id,
+          sessionId: session_id,
+          inputTokens: tokenUsage.inputTokens,
+          outputTokens: tokenUsage.outputTokens,
+          model,
+          endpoint: 'suggestions',
+          metadata: { article_url: url, language: project?.language || 'en' }
+        }).catch(err => console.error('suggestions: failed to track tokens', err));
+      }
+
+      return successResp({ suggestions });
+    }
+
+    // ── Article mode (original behavior) ─────────────────────────────────────
+
     let article = await getArticleById(url, projectId, supabase);
 
     if (!article) {
@@ -60,7 +115,7 @@ Deno.serve(async (req: Request) => {
 
     // Return cached suggestions if available - cache hits are cheap and don't consume rate limit quota
     const cachedSuggestions = extractCachedSuggestions(article);
-    
+
     if (cachedSuggestions)
       return successResp({ suggestions: cachedSuggestions });
 
@@ -74,7 +129,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Fallback: generate hard-coded suggestions
+    // Fallback: generate suggestions via AI
     console.log('suggestions: cache miss, generating');
     const result = await generateSuggestions(title, content, project?.language || 'en');
     const { suggestions, tokenUsage, model } = result;

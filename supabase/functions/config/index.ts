@@ -68,6 +68,7 @@ Deno.serve(async (req: Request) => {
       widget_container_class: project.widget_container_class || null,
       override_mobile_container_selector: project.override_mobile_container_selector || null,
       disclaimer_text: project.disclaimer_text || null,
+      widget_mode: project.widget_mode || 'article',
       allowed_urls: project.allowed_urls || [],
       // Merge project_config fields (e.g., ad tag ID, ad size overrides)
       ...(projectConfig && {

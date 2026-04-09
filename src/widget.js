@@ -593,20 +593,33 @@
                 return;
             }
 
-            // Extract article content
-            const articleFound = this.extractArticleContent();
-            
-            // Don't render widget if article element not found or content is empty
-            if (!articleFound) {
-                this.log('init', 'Widget disabled: article element not found');
-                return;
-            }
-            
-            if (!this.articleContent || this.articleContent.trim().length < 10) {
-                this.log('init', 'Widget disabled: article content is empty or too short to load', {
-                    contentLength: this.articleContent?.length || 0
-                });
-                return;
+            // In knowledgebase mode, article content is not required
+            if (this.config.widgetMode === 'knowledgebase') {
+                this.log('init', 'Knowledgebase mode: skipping article extraction');
+                // Extract page context if available (e.g. from hidden divee-page-content-context div)
+                this.extractArticleContent();
+                this.contentCache.articleFound = true;
+                // Use page URL as the article URL and page title as the title
+                this.contentCache.url = this.contentCache.url || window.location.href;
+                this.contentCache.title = this.contentCache.title || document.title || 'Knowledgebase';
+                this.contentCache.content = this.contentCache.content || '';
+                this.contentCache.extracted = true;
+            } else {
+                // Article mode: extract article content (original behavior)
+                const articleFound = this.extractArticleContent();
+
+                // Don't render widget if article element not found or content is empty
+                if (!articleFound) {
+                    this.log('init', 'Widget disabled: article element not found');
+                    return;
+                }
+
+                if (!this.articleContent || this.articleContent.trim().length < 10) {
+                    this.log('init', 'Widget disabled: article content is empty or too short to load', {
+                        contentLength: this.articleContent?.length || 0
+                    });
+                    return;
+                }
             }
 
             // Track impression only when article is present
@@ -674,6 +687,10 @@
                         ? serverConfig.anchored_position 
                         : 'bottom';
                     this.log('config', 'Anchored position override from config:', this.config.anchoredPosition);
+                }
+                if (serverConfig.widget_mode) {
+                    this.config.widgetMode = serverConfig.widget_mode;
+                    this.log('config', 'Widget mode from config:', serverConfig.widget_mode);
                 }
                 if (serverConfig.article_class) {
                     this.config.articleClass = serverConfig.article_class;
@@ -794,6 +811,7 @@
                 client_description: 'Article Assistant',
                 highlight_color: ['#68E5FD', '#A389E0'],
                 show_ad: true,
+                widgetMode: 'article',
                 input_text_placeholders: [
                     'Ask anything about this article...'
                 ]
@@ -1692,6 +1710,7 @@
         async fetchSuggestions() {
             // Send cached content to server for suggestions
             const payload = {
+                widget_mode: this.config.widgetMode || 'article',
                 projectId: this.config.projectId,
                 articleId: this.config.articleId,
                 title: this.contentCache.title,
@@ -1883,10 +1902,11 @@
                 question: question,
                 title: this.contentCache.title,
                 url: this.contentCache.url,
-                content: this.contentCache.content,
+                content: this.config.widgetMode === 'knowledgebase' ? '' : this.contentCache.content,
                 visitor_id: this.state.visitorId,
                 session_id: this.state.sessionId,
                 conversation_id: this.state.conversationId, // Include if exists
+                widget_mode: this.config.widgetMode || 'article',
                 metadata: {
                     image_url: this.contentCache.image_url,
                     og_image: this.contentCache.og_image
