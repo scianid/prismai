@@ -1,5 +1,5 @@
 /**
- * Visitor ownership tokens — fix for C-2 (Unauthenticated Conversation Access).
+ * Visitor ownership tokens - fix for C-2 (Unauthenticated Conversation Access).
  *
  * Flow:
  *   1. The /chat endpoint issues a short-lived HMAC-SHA256 token that binds a
@@ -12,13 +12,13 @@
  * Token format (pipe-separated, safe because UUIDs only contain hex + hyphens):
  *   {visitorId}|{projectId}|{expiresMs}|{hmac-sha256-hex}
  *
- * Environment variable: VISITOR_TOKEN_SECRET (required — set via `supabase secrets set`)
+ * Environment variable: VISITOR_TOKEN_SECRET (required - set via `supabase secrets set`)
  */
 
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function getSecret(): string {
-  // @ts-ignore — Deno.env is available in the Edge Runtime
+  // @ts-ignore - Deno.env is available in the Edge Runtime
   return Deno.env.get('VISITOR_TOKEN_SECRET') ?? '';
 }
 

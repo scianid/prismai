@@ -107,7 +107,7 @@ async function handleTags(
     confidence: row.confidence,
   }));
 
-  // Don't cache empty results — article may not be indexed yet
+  // Don't cache empty results - article may not be indexed yet
   if (tags.length === 0) {
     return sharedErrorResp('No tags found', 404);
   }

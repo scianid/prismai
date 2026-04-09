@@ -13,7 +13,7 @@ export function normalizeHost(host: string): string {
 }
 
 // H-4 fix: only trust the browser-injected Origin header.
-// Referer is client-controlled and forgeable — never use it for security decisions.
+// Referer is client-controlled and forgeable - never use it for security decisions.
 // Any cross-origin request from a real browser always includes Origin;
 // server-side/script requests without Origin are correctly rejected by isAllowedOrigin.
 export function getRequestOriginUrl(req: Request): string | null {

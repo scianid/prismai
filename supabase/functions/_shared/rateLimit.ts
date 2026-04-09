@@ -1,13 +1,13 @@
 /**
- * AI endpoint rate limiter — H-2 fix.
+ * AI endpoint rate limiter - H-2 fix.
  *
  * Uses a 1-minute tumbling window backed by the `ai_rate_limits` Postgres table.
  * The `increment_rate_limit` DB function performs an atomic INSERT … ON CONFLICT
  * DO UPDATE, so there is no read-then-write race condition.
  *
  * Rate limits (configurable via the LIMITS object below):
- *   /chat    — 20 req/min per visitor_id,  500 req/min per project_id
- *   /suggestions — 5 req/min per visitor_id, 200 req/min per project_id
+ *   /chat    - 20 req/min per visitor_id,  500 req/min per project_id
+ *   /suggestions - 5 req/min per visitor_id, 200 req/min per project_id
  */
 
 type SupabaseClient = any;

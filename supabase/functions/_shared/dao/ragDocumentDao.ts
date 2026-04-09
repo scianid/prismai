@@ -94,7 +94,7 @@ export async function softDeleteRagDocument(
     .from('rag_documents')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', documentId)
-    .eq('project_id', projectId)  // scoped to project — prevent cross-tenant deletes
+    .eq('project_id', projectId)  // scoped to project - prevent cross-tenant deletes
     .is('deleted_at', null)
     .select('id', { count: 'exact', head: true });
 

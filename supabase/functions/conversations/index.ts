@@ -28,7 +28,7 @@ Deno.serve(async (req: Request) => {
 
   const tokenData = await verifyVisitorToken(rawToken);
   if (!tokenData) {
-    return errorResp('Unauthorized — missing or invalid visitor token', 401);
+    return errorResp('Unauthorized - missing or invalid visitor token', 401);
   }
 
   try {

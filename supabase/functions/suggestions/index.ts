@@ -21,7 +21,7 @@ Deno.serve(async (req: Request) => {
   try {
     let { projectId, title, content, url, visitor_id, session_id, metadata } = await req.json();
 
-    // Truncate then sanitize inputs — mitigates stored prompt injection (C-1)
+    // Truncate then sanitize inputs - mitigates stored prompt injection (C-1)
     if (title) title = sanitizeContent(title.substring(0, MAX_TITLE_LENGTH));
     if (content) content = sanitizeContent(content.substring(0, MAX_CONTENT_LENGTH));
 
@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
       article = await insertArticle(url, title, content, projectId, supabase, metadata);
     }
 
-    // Return cached suggestions if available — cache hits are cheap and don't consume rate limit quota
+    // Return cached suggestions if available - cache hits are cheap and don't consume rate limit quota
     const cachedSuggestions = extractCachedSuggestions(article);
     
     if (cachedSuggestions)
