@@ -823,6 +823,7 @@
                 client_description: 'Article Assistant',
                 highlight_color: ['#68E5FD', '#A389E0'],
                 show_ad: true,
+                white_label: false,
                 widgetMode: 'article',
                 input_text_placeholders: [
                     'Ask anything about this article...'
