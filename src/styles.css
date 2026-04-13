@@ -1840,8 +1840,8 @@
 
 /* Collapsed bar: favicon matches AI badge height */
 .divee-site-favicon-collapsed {
-  width: 23px;
-  height: 23px;
+  width: 23px !important;
+  height: 23px !important;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
