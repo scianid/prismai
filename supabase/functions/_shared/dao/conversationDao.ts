@@ -192,6 +192,41 @@ export async function listConversationsByVisitor(
 }
 
 /**
+ * Get the round-robin suggestion_index for a conversation. Used by the
+ * suggested-articles endpoint to rotate through candidate articles across
+ * successive requests in the same conversation. Returns `null` if the
+ * conversation row doesn't exist or has no value set.
+ */
+export async function getSuggestionIndex(
+  supabase: SupabaseClient,
+  conversationId: string,
+): Promise<number | null> {
+  const { data } = await supabase
+    .from("conversations")
+    .select("suggestion_index")
+    .eq("id", conversationId)
+    .single();
+  if (!data) return null;
+  return (data as { suggestion_index: number | null }).suggestion_index ?? 0;
+}
+
+/**
+ * Bump the round-robin suggestion_index for a conversation by writing the
+ * next value. Callers compute `next = current + 1` so failures are silent —
+ * the worst case is a repeated suggestion, which is harmless.
+ */
+export async function updateSuggestionIndex(
+  supabase: SupabaseClient,
+  conversationId: string,
+  nextIndex: number,
+): Promise<void> {
+  await supabase
+    .from("conversations")
+    .update({ suggestion_index: nextIndex })
+    .eq("id", conversationId);
+}
+
+/**
  * Delete conversation
  */
 export async function deleteConversation(

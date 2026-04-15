@@ -1,8 +1,35 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { errorResp, successResp } from "../_shared/responses.ts";
+import { supabaseClient } from "../_shared/supabaseClient.ts";
+import { getRecentArticlesForProject } from "../_shared/dao/articleDao.ts";
+import { getSuggestionIndex, updateSuggestionIndex } from "../_shared/dao/conversationDao.ts";
 
-Deno.serve(async (req: Request) => {
+// ─── Dependency injection seam ────────────────────────────────────────────
+// `suggestedArticlesHandler` accepts a `SuggestedArticlesDeps` object so
+// unit tests can stub the Supabase DAOs AND the random shuffle. The
+// `random` field lets tests make the round-robin selection deterministic
+// by passing a stable RNG. Same DI pattern as chat/config/articles/etc.
+export interface SuggestedArticlesDeps {
+  supabaseClient: typeof supabaseClient;
+  getRecentArticlesForProject: typeof getRecentArticlesForProject;
+  getSuggestionIndex: typeof getSuggestionIndex;
+  updateSuggestionIndex: typeof updateSuggestionIndex;
+  random: () => number;
+}
+
+export const realSuggestedArticlesDeps: SuggestedArticlesDeps = {
+  supabaseClient,
+  getRecentArticlesForProject,
+  getSuggestionIndex,
+  updateSuggestionIndex,
+  random: Math.random,
+};
+
+export async function suggestedArticlesHandler(
+  req: Request,
+  deps: SuggestedArticlesDeps = realSuggestedArticlesDeps,
+): Promise<Response> {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -13,85 +40,45 @@ Deno.serve(async (req: Request) => {
 
     // Validate required fields
     if (!projectId || !currentUrl) {
-      return new Response(
-        JSON.stringify({
-          error: "Missing required fields: projectId, currentUrl",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResp("Missing required fields: projectId, currentUrl", 400, {
+        error: "Missing required fields: projectId, currentUrl",
+      });
     }
 
     // Validate URL format
     try {
       new URL(currentUrl);
     } catch {
-      return new Response(
-        JSON.stringify({ error: "Invalid URL format" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResp("Invalid URL format", 400, { error: "Invalid URL format" });
     }
 
-    // Create Supabase client with service role key (bypass RLS)
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const supabase = await deps.supabaseClient();
 
     // Get round-robin counter from conversation (just for tracking rotation)
     let suggestionIndex = 0;
     if (conversationId) {
-      const { data: conversation } = await supabase
-        .from("conversations")
-        .select("suggestion_index")
-        .eq("id", conversationId)
-        .single();
-
-      if (conversation) {
-        suggestionIndex = conversation.suggestion_index || 0;
-      }
+      const idx = await deps.getSuggestionIndex(supabase, conversationId);
+      if (idx !== null) suggestionIndex = idx;
     }
 
     // ========================================
     // FETCH ARTICLES FROM ARTICLE TABLE
     // Filters: same project_id only, exclude current article
     // ========================================
-    const { data: recentArticles, error } = await supabase
-      .from("article") // ← Source: ARTICLE table
-      .select("unique_id, url, title, image_url, cache")
-      .eq("project_id", projectId) // ← Filter: same project only
-      .neq("url", currentUrl) // ← Exclude current article
-      .order("cache->created_at", { ascending: false })
-      .limit(10);
-
-    if (error) {
-      console.error("[Suggested Articles] Database error:", error);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch articles" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
+    const recentArticles = await deps.getRecentArticlesForProject(
+      supabase,
+      projectId,
+      currentUrl,
+      10,
+    );
 
     // If no articles available, return empty
     if (!recentArticles || recentArticles.length === 0) {
-      return new Response(
-        JSON.stringify({ suggestion: null }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return successResp({ suggestion: null });
     }
 
     // Randomly select 4 articles from the pool of 10
-    const shuffled = [...recentArticles].sort(() => Math.random() - 0.5);
+    const shuffled = [...recentArticles].sort(() => deps.random() - 0.5);
     const selectedArticles = shuffled.slice(0, Math.min(4, shuffled.length));
 
     // Use round-robin to pick one article from the 4 selected
@@ -103,38 +90,23 @@ Deno.serve(async (req: Request) => {
 
     // Update round-robin counter in conversation (for next suggestion rotation)
     if (conversationId) {
-      await supabase
-        .from("conversations")
-        .update({ suggestion_index: suggestionIndex + 1 })
-        .eq("id", conversationId);
+      await deps.updateSuggestionIndex(supabase, conversationId, suggestionIndex + 1);
     }
 
     // Return suggestion
-    return new Response(
-      JSON.stringify({
-        suggestion: {
-          unique_id: suggestion.unique_id,
-          url: suggestion.url,
-          title: suggestion.title,
-          image_url: imageUrl,
-        },
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+    return successResp({
+      suggestion: {
+        unique_id: suggestion.unique_id,
+        url: suggestion.url,
+        title: suggestion.title,
+        image_url: imageUrl,
       },
-    );
+    });
   } catch (err) {
     console.error("[Suggested Articles] Error:", err);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return errorResp("Internal server error", 500, { error: "Internal server error" });
   }
-});
+}
+
+// @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
+Deno.serve((req: Request) => suggestedArticlesHandler(req));

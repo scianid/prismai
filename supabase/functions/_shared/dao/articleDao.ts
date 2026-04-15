@@ -92,6 +92,26 @@ export async function getArticleTagsByTagValues(
   return data || [];
 }
 
+export async function getRecentArticlesForProject(
+  supabase: any,
+  projectId: string,
+  excludeUrl: string,
+  limit: number,
+): Promise<any[]> {
+  const { data, error } = await supabase
+    .from("article")
+    .select("unique_id, url, title, image_url, cache")
+    .eq("project_id", projectId)
+    .neq("url", excludeUrl)
+    .order("cache->created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("[Suggested Articles] Database error:", error);
+    throw error;
+  }
+  return data || [];
+}
+
 export async function getArticlesByIds(
   ids: string[],
   supabase: any,
