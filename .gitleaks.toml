@@ -1,0 +1,45 @@
+# gitleaks config for divee-widget — focused on the secrets the widget edge
+# functions actually touch. Extends the built-in default ruleset rather than
+# replacing it, so all of gitleaks' generic rules still apply.
+
+title = "divee-widget gitleaks config"
+
+[extend]
+useDefault = true
+
+# ── Custom rules ──────────────────────────────────────────────────────────────
+
+[[rules]]
+id = "supabase-service-role-jwt"
+description = "Supabase service_role JWT (full DB bypass — never commit)"
+regex = '''eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]*(?:cm9sZSI6InNlcnZpY2Vfcm9sZSI|InJvbGUiOiJzZXJ2aWNlX3JvbGUi)[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+'''
+tags = ["supabase", "jwt", "critical"]
+
+[[rules]]
+id = "openai-api-key"
+description = "OpenAI API key"
+regex = '''sk-(?:proj-)?[A-Za-z0-9_-]{20,}'''
+tags = ["openai"]
+
+[[rules]]
+id = "supabase-service-role-pair"
+description = "SUPABASE_SERVICE_ROLE_KEY = ... assignment (any JWT-shaped value)"
+regex = '''SUPABASE_SERVICE_ROLE_KEY\s*=\s*['"]?eyJ[A-Za-z0-9_.-]+'''
+tags = ["supabase", "critical"]
+
+[[rules]]
+id = "visitor-token-secret"
+description = "VISITOR_TOKEN_SECRET — HMAC key used to mint visitor tokens"
+regex = '''VISITOR_TOKEN_SECRET\s*=\s*['"]?[A-Za-z0-9+/=_-]{16,}'''
+tags = ["widget", "critical"]
+
+# ── Allowlist ─────────────────────────────────────────────────────────────────
+
+[allowlist]
+description = "Files that are allowed to contain key-shaped strings"
+paths = [
+  '''(.*?)(jpg|jpeg|png|gif|webp|svg|ico|woff2?|ttf)$''',
+  '''^node_modules/''',
+  '''^dist/''',
+  '''^test/fixtures/''',
+]

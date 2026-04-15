@@ -5,6 +5,5 @@ node_modules/
 playwright-report/
 test-results/
 coverage/
-.github/
 _bmad/
 src/widget.js

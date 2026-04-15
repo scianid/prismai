@@ -16,6 +16,6 @@
   },
   "tasks": {
     "check": "deno check $(find . -name index.ts)",
-    "guard:auth": "deno run --allow-read=. --allow-env ../../../scripts/check-edge-auth.ts --project=widget"
+    "guard:auth": "deno run --allow-read=. --allow-env ../../scripts/check-edge-auth.ts"
   }
 }

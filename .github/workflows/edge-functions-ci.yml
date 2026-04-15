@@ -1,0 +1,157 @@
+name: Edge Functions CI
+
+# Security pipeline for the divee-widget Supabase project (Deno).
+#
+# CI lives in this repo (not the parent divee.ai repo) so the security gate
+# fires at the moment widget code is introduced — not when someone bumps the
+# submodule pointer in the parent. Sibling pipeline:
+# https://github.com/scianid/divee.ai/blob/main/.github/workflows/edge-functions-ci.yml
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - "scripts/check-edge-auth.ts"
+      - ".gitleaks.toml"
+      - ".github/workflows/edge-functions-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - "scripts/check-edge-auth.ts"
+      - ".gitleaks.toml"
+      - ".github/workflows/edge-functions-ci.yml"
+
+concurrency:
+  group: edge-functions-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read   # for dependency-review
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # 1. SECURITY — always runs, gates the deploy.
+  # ─────────────────────────────────────────────────────────────────────────
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so gitleaks can scan the diff range
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Format check
+        working-directory: supabase/functions
+        run: deno fmt --check
+
+      - name: Lint
+        working-directory: supabase/functions
+        run: deno lint
+
+      - name: Type-check every function entrypoint
+        working-directory: supabase/functions
+        run: deno task check
+
+      - name: Auth-bypass guard
+        run: deno run --allow-read=. scripts/check-edge-auth.ts
+
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+
+      - name: Import allowlist (no unpinned URLs, no raw github)
+        working-directory: supabase/functions
+        run: |
+          set -euo pipefail
+          # Fail if any function imports from an unpinned/untrusted source.
+          # Allowed: jsr:, npm: (pinned), https:// with @<version>, relative paths.
+          BAD=$(grep -RhE "from\s+['\"]https?://" --include="*.ts" . \
+            | grep -vE "@[0-9]+\.[0-9]+(\.[0-9]+)?['\"]" \
+            || true)
+          RAW=$(grep -RhE "raw\.githubusercontent\.com" --include="*.ts" . || true)
+          if [ -n "$BAD" ] || [ -n "$RAW" ]; then
+            echo "::error::Disallowed imports found in supabase/functions:"
+            [ -n "$BAD" ] && echo "Unpinned https:// imports:" && echo "$BAD"
+            [ -n "$RAW" ] && echo "raw.githubusercontent imports:" && echo "$RAW"
+            exit 1
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 2. DEPLOY — only on push to main, only if security passed,
+  #    only after a human approves the protected `production-edge-functions` env.
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Supabase
+    needs: [security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production-edge-functions
+      url: https://supabase.com/dashboard/project/${{ vars.SUPABASE_PROJECT_REF }}/functions
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # need previous commit to diff changed functions
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Compute changed functions
+        id: changed
+        run: |
+          set -euo pipefail
+          CHANGED=$(git diff --name-only HEAD^ HEAD -- 'supabase/functions/' \
+            | awk -F/ '$3 != "" && $3 !~ /^_/ {print $3}' \
+            | sort -u \
+            | paste -sd, -)
+          echo "fns=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "Changed functions: ${CHANGED:-<none>}"
+
+      - name: Deploy changed functions
+        if: steps.changed.outputs.fns != ''
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra FNS <<< "${{ steps.changed.outputs.fns }}"
+          for fn in "${FNS[@]}"; do
+            echo "::group::Deploying $fn"
+            supabase functions deploy "$fn" \
+              --project-ref "${{ vars.SUPABASE_PROJECT_REF }}"
+            echo "::endgroup::"
+          done
+
+      - name: Deploy summary
+        if: always()
+        run: |
+          {
+            echo "## Edge function deploy"
+            echo ""
+            echo "**Functions deployed:** ${{ steps.changed.outputs.fns || '_none_' }}"
+            echo ""
+            echo "**Deployed by:** @${{ github.actor }}"
+            echo "**Commit:** ${{ github.sha }}"
+          } >> "$GITHUB_STEP_SUMMARY"
