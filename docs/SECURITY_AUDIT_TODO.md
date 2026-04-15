@@ -115,23 +115,26 @@ auditor's benefit.
 
 ## 🟠 Medium
 
-### [ ] 5. Document the RAG trust boundary
+### [x] 5. Document the RAG trust boundary
 
-- **What**: `chat/index.ts` concatenates RAG chunks from
-  `searchSimilarChunks` into the prompt with no post-retrieval
-  sanitization. Sanitization runs only at *ingest*
-  (`sanitizeContent` in constants.ts).
-- **Why**: Confused-deputy risk. If a customer can upload arbitrary
-  RAG documents, one tenant's stored payload can alter another
-  visitor's AI output. Today the mitigation is "RAG uploads are
-  admin-only." That assumption needs to be written down.
-- **Where**: `docs/SECURITY_REVIEW.md` (extend) or a new
-  `docs/RAG_TRUST_BOUNDARY.md`.
-- **How**: One-page doc answering: who can write to `rag_documents`,
-  what reviews are required, what happens if the ingest path is
-  compromised, what the blast radius is.
-- **SOC2**: CC6.1, CC8.1
-- **Effort**: ~30 min.
+Written up in [RAG_TRUST_BOUNDARY.md](RAG_TRUST_BOUNDARY.md). Key findings
+worth re-reading after the audit:
+
+- Ingest is admin-only via `admin_users` table; no publisher
+  self-service today.
+- Content is NOT sanitized on ingest and NOT sanitized on retrieval —
+  RAG chunks enter the AI prompt verbatim as `AiCustomization.ragChunks`.
+- The actual correction to the audit assumption: my earlier note said
+  "sanitization runs at ingest". That was wrong — there is no
+  sanitization at ingest either. The `rag-documents` write path in the
+  parent repo inserts raw `source_content` and chunked text without
+  calling `sanitizeContent`. Corrected in the doc.
+- Blast radius of a compromised admin: prompt-injection into any
+  project's chat output. Cannot read conversation data or exfiltrate
+  across projects.
+- The doc has a "what would change if we ever accepted publisher RAG"
+  section listing the five mitigations that must land together before
+  any self-service ingest path ships.
 
 ### [ ] 6. Fill the `sanitizeContent` gaps
 
