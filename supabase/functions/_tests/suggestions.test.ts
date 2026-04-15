@@ -379,9 +379,12 @@ Deno.test("suggestions/article: title/content are sanitized before being sent to
   );
   assertEquals(res.status, 200);
   // sanitizeContent strips HTML tags and comments — the injection payload
-  // must not reach the AI.
+  // must not reach the AI. Post SECURITY_AUDIT_TODO item 6, `<script>`
+  // is a BLOCK-level strip so the script body (`alert(1)`) is removed
+  // along with the tags — not left behind as text. This is the stronger
+  // contract; the old test asserted the weaker one.
   assertEquals(sent.title?.includes("<script>"), false);
-  assertEquals(sent.title?.includes("alert(1)"), true); // text content kept
+  assertEquals(sent.title?.includes("alert(1)"), false);
   assertEquals(sent.content?.includes("<!--"), false);
   assertEquals(sent.content?.includes("hidden prompt injection"), false);
 });

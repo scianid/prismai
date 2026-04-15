@@ -136,7 +136,7 @@ worth re-reading after the audit:
   section listing the five mitigations that must land together before
   any self-service ingest path ships.
 
-### [ ] 6. Fill the `sanitizeContent` gaps
+### [x] 6. Fill the `sanitizeContent` gaps
 
 - **What**: The current sanitizer strips HTML tags, comments, and
   entities. It does NOT handle: zero-width/BiDi Unicode (U+200B,
