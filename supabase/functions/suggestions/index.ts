@@ -18,8 +18,45 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { generateEmbedding } from "../_shared/embeddingService.ts";
 import { searchSimilarChunks } from "../_shared/dao/ragDocumentDao.ts";
 
-// @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-Deno.serve(async (req: Request) => {
+// ─── Dependency injection seam ────────────────────────────────────────────
+// `suggestionsHandler` accepts a `SuggestionsDeps` object so unit tests can
+// stub external services (Supabase DAOs, AI, rate-limit, embeddings) without
+// touching the network. Production wires the real implementations via
+// `realSuggestionsDeps`. Same pattern as chat/config/articles.
+export interface SuggestionsDeps {
+  supabaseClient: typeof supabaseClient;
+  getProjectById: typeof getProjectById;
+  getArticleById: typeof getArticleById;
+  insertArticle: typeof insertArticle;
+  extractCachedSuggestions: typeof extractCachedSuggestions;
+  updateArticleCache: typeof updateArticleCache;
+  generateSuggestions: typeof generateSuggestions;
+  logEvent: typeof logEvent;
+  checkRateLimit: typeof checkRateLimit;
+  generateEmbedding: typeof generateEmbedding;
+  searchSimilarChunks: typeof searchSimilarChunks;
+  insertTokenUsage: typeof insertTokenUsage;
+}
+
+export const realSuggestionsDeps: SuggestionsDeps = {
+  supabaseClient,
+  getProjectById,
+  getArticleById,
+  insertArticle,
+  extractCachedSuggestions,
+  updateArticleCache,
+  generateSuggestions,
+  logEvent,
+  checkRateLimit,
+  generateEmbedding,
+  searchSimilarChunks,
+  insertTokenUsage,
+};
+
+export async function suggestionsHandler(
+  req: Request,
+  deps: SuggestionsDeps = realSuggestionsDeps,
+): Promise<Response> {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -44,9 +81,9 @@ Deno.serve(async (req: Request) => {
     }
 
     // Initialize Supabase client with service role key (bypasses RLS)
-    const supabase = await supabaseClient();
+    const supabase = await deps.supabaseClient();
 
-    const project = await getProjectById(projectId, supabase);
+    const project = await deps.getProjectById(projectId, supabase);
     const isKnowledgebase = project?.widget_mode === "knowledgebase";
 
     // In article mode, url/title/content are required
@@ -75,7 +112,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Track Event (Async)
-    logEvent({
+    deps.logEvent({
       projectId,
       visitorId: visitor_id,
       sessionId: session_id,
@@ -84,7 +121,7 @@ Deno.serve(async (req: Request) => {
 
     if (isKnowledgebase) {
       // Knowledgebase mode: generate suggestions from RAG documents
-      const rateLimit = await checkRateLimit(
+      const rateLimit = await deps.checkRateLimit(
         supabase,
         "suggestions",
         visitor_id,
@@ -111,16 +148,16 @@ Deno.serve(async (req: Request) => {
       let ragContent = "";
       try {
         // Use a generic query to retrieve representative chunks
-        const embedding = await generateEmbedding(
+        const embedding = await deps.generateEmbedding(
           "frequently asked questions help guide",
         );
-        const matches = await searchSimilarChunks(
+        const matches = await deps.searchSimilarChunks(
           supabase,
           projectId,
           embedding,
           5,
         );
-        ragContent = matches.map((m) => m.content).join("\n\n");
+        ragContent = matches.map((m: { content: string }) => m.content).join("\n\n");
       } catch (err) {
         console.error("suggestions: RAG lookup failed", err);
       }
@@ -130,7 +167,7 @@ Deno.serve(async (req: Request) => {
       }
 
       console.log("suggestions: knowledgebase mode, generating from RAG");
-      const result = await generateSuggestions(
+      const result = await deps.generateSuggestions(
         "Knowledge Base",
         ragContent,
         project?.language || "en",
@@ -138,7 +175,7 @@ Deno.serve(async (req: Request) => {
       const { suggestions, tokenUsage, model } = result;
 
       if (tokenUsage) {
-        insertTokenUsage(supabase, {
+        deps.insertTokenUsage(supabase, {
           projectId,
           visitorId: visitor_id,
           sessionId: session_id,
@@ -147,7 +184,7 @@ Deno.serve(async (req: Request) => {
           model,
           endpoint: "suggestions",
           metadata: { article_url: url, language: project?.language || "en" },
-        }).catch((err) => console.error("suggestions: failed to track tokens", err));
+        }).catch((err: unknown) => console.error("suggestions: failed to track tokens", err));
       }
 
       return successResp({ suggestions });
@@ -155,10 +192,10 @@ Deno.serve(async (req: Request) => {
 
     // ── Article mode (original behavior) ─────────────────────────────────────
 
-    let article = await getArticleById(url, projectId, supabase);
+    let article = await deps.getArticleById(url, projectId, supabase);
 
     if (!article) {
-      article = await insertArticle(
+      article = await deps.insertArticle(
         url,
         title,
         content,
@@ -169,7 +206,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Return cached suggestions if available - cache hits are cheap and don't consume rate limit quota
-    const cachedSuggestions = extractCachedSuggestions(article);
+    const cachedSuggestions = deps.extractCachedSuggestions(article);
 
     if (cachedSuggestions) {
       return successResp({ suggestions: cachedSuggestions });
@@ -177,7 +214,7 @@ Deno.serve(async (req: Request) => {
 
     // H-2 fix: enforce per-visitor and per-project rate limits before hitting the AI
     // Only runs when a real AI call is needed (cache miss)
-    const rateLimit = await checkRateLimit(
+    const rateLimit = await deps.checkRateLimit(
       supabase,
       "suggestions",
       visitor_id,
@@ -202,7 +239,7 @@ Deno.serve(async (req: Request) => {
 
     // Fallback: generate suggestions via AI
     console.log("suggestions: cache miss, generating");
-    const result = await generateSuggestions(
+    const result = await deps.generateSuggestions(
       title,
       content,
       project?.language || "en",
@@ -213,7 +250,7 @@ Deno.serve(async (req: Request) => {
     // Track token usage (async, don't block)
     if (tokenUsage) {
       console.log("suggestions: inserting token usage", tokenUsage);
-      insertTokenUsage(supabase, {
+      deps.insertTokenUsage(supabase, {
         projectId,
         visitorId: visitor_id,
         sessionId: session_id,
@@ -226,8 +263,8 @@ Deno.serve(async (req: Request) => {
           article_id: article?.unique_id || null,
           language: project?.language || "en",
         },
-      }).then(() => console.log("suggestions: token usage tracked successfully")).catch((err) =>
-        console.error("suggestions: failed to track tokens", err)
+      }).then(() => console.log("suggestions: token usage tracked successfully")).catch(
+        (err: unknown) => console.error("suggestions: failed to track tokens", err),
       );
     } else {
       console.log("suggestions: no token usage data from AI provider");
@@ -239,7 +276,7 @@ Deno.serve(async (req: Request) => {
       suggestions,
       created_at: article.cache?.created_at || new Date().toISOString(),
     };
-    await updateArticleCache(article, updatedCache, supabase);
+    await deps.updateArticleCache(article, updatedCache, supabase);
 
     return successResp({ suggestions });
   } catch (error: any) {
@@ -247,4 +284,7 @@ Deno.serve(async (req: Request) => {
     console.error("Error:", error);
     return errorResp(error.message, 500);
   }
-});
+}
+
+// @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
+Deno.serve((req: Request) => suggestionsHandler(req));
