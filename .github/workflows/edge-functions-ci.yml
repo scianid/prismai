@@ -130,10 +130,31 @@ jobs:
         id: changed
         run: |
           set -euo pipefail
-          CHANGED=$(git diff --name-only HEAD^ HEAD -- 'supabase/functions/' \
-            | awk -F/ '$3 != "" && $3 !~ /^_/ {print $3}' \
-            | sort -u \
-            | paste -sd, -)
+          DIFF=$(git diff --name-only HEAD^ HEAD)
+          echo "Diff files:"
+          echo "$DIFF" | sed 's/^/  /'
+
+          # A "global" change is anything that every function consumes:
+          # shared helpers, gateway config, or the Deno workspace file.
+          # Changing any of these requires redeploying ALL functions — the
+          # per-function diff would otherwise silently skip the redeploy
+          # (this is the origin.ts bug we hit).
+          GLOBAL=0
+          if echo "$DIFF" | grep -qE '^supabase/functions/_(shared|tests)/'; then GLOBAL=1; fi
+          if echo "$DIFF" | grep -qE '^supabase/config\.toml$'; then GLOBAL=1; fi
+          if echo "$DIFF" | grep -qE '^supabase/functions/deno\.json$'; then GLOBAL=1; fi
+
+          if [ "$GLOBAL" = "1" ]; then
+            echo "Global change detected → deploying ALL functions"
+            CHANGED=$(ls supabase/functions | grep -vE '^_' | sort -u | paste -sd, -)
+          else
+            CHANGED=$(echo "$DIFF" \
+              | grep -E '^supabase/functions/[^_]' \
+              | awk -F/ '$3 != "" && $3 !~ /^_/ {print $3}' \
+              | sort -u \
+              | paste -sd, -)
+          fi
+
           echo "fns=$CHANGED" >> "$GITHUB_OUTPUT"
           echo "Changed functions: ${CHANGED:-<none>}"
 
