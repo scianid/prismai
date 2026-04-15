@@ -43,13 +43,7 @@ const AUTH_HELPERS: AuthHelper[] = [
 // Functions that are intentionally callable without origin gate or visitor token.
 // Each entry MUST document how the function authorizes its caller instead.
 // Adding an entry here is a security decision — require a second reviewer.
-const PUBLIC_ALLOWLIST: Record<string, string> = {
-  // TODO(security): suggested-articles has no auth, no origin check, and uses
-  // the service-role key to bypass RLS. Anyone who knows the URL and a valid
-  // projectId can call it. Tracked for follow-up; do not add new callers.
-  "suggested-articles":
-    "KNOWN GAP — no auth/origin gate. Tracked for follow-up; do not add new callers.",
-};
+const PUBLIC_ALLOWLIST: Record<string, string> = {};
 
 interface Failure {
   fn: string;

@@ -45,9 +45,18 @@ const { suggestedArticlesHandler } = module_;
 // ── Fixtures ──────────────────────────────────────────────────────────────
 
 const PROJECT_ID = "proj-test-suggested-0001";
+const ALLOWED_HOST = "publisher.example.com";
 const ORIGIN = "https://publisher.example.com";
 const CURRENT_URL = "https://publisher.example.com/articles/current";
 const CONVERSATION_ID = "conv-abc";
+
+function fakeProject(overrides: Record<string, unknown> = {}) {
+  return {
+    project_id: PROJECT_ID,
+    allowed_urls: [ALLOWED_HOST],
+    ...overrides,
+  };
+}
 
 function fakeArticle(id: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -73,6 +82,7 @@ function stableRandom() {
 function makeDeps(overrides: Record<string, unknown> = {}): any {
   return {
     supabaseClient: () => Promise.resolve({} as unknown),
+    getProjectForArticlesAuth: () => Promise.resolve(fakeProject()),
     getRecentArticlesForProject: () => Promise.resolve([]),
     getSuggestionIndex: () => Promise.resolve(null),
     updateSuggestionIndex: () => Promise.resolve(),
@@ -118,6 +128,53 @@ Deno.test("suggested-articles: malformed currentUrl returns 400", async () => {
     makeDeps(),
   );
   assertEquals(res.status, 400);
+});
+
+// ── Auth gate (SECURITY_AUDIT_TODO item 1) ──────────────────────────────
+// These tests pin the fix for the "KNOWN GAP" that used to live in
+// scripts/check-edge-auth.ts PUBLIC_ALLOWLIST. Regressions must fail loudly.
+
+Deno.test("suggested-articles: unknown projectId returns 400", async () => {
+  const deps = makeDeps({
+    getProjectForArticlesAuth: () => Promise.resolve(null),
+  });
+  const res = await suggestedArticlesHandler(
+    postJson("suggested-articles", body(), ORIGIN),
+    deps,
+  );
+  assertEquals(res.status, 400);
+});
+
+Deno.test("suggested-articles: origin not in allowed_urls returns 403", async () => {
+  const deps = makeDeps({
+    getProjectForArticlesAuth: () =>
+      Promise.resolve(fakeProject({ allowed_urls: ["other.example.com"] })),
+  });
+  const res = await suggestedArticlesHandler(
+    postJson("suggested-articles", body(), ORIGIN),
+    deps,
+  );
+  assertEquals(res.status, 403);
+});
+
+Deno.test("suggested-articles: auth check runs BEFORE the article fetch", async () => {
+  // Regression guard: if someone reorders the handler and does the DAO
+  // fetch before the auth check, an attacker with a mismatched origin
+  // could still exfiltrate the list (just not read the response). This
+  // test asserts the DAO is never called when auth fails.
+  let daoCalled = false;
+  const deps = makeDeps({
+    getProjectForArticlesAuth: () => Promise.resolve(null),
+    getRecentArticlesForProject: () => {
+      daoCalled = true;
+      return Promise.resolve([]);
+    },
+  });
+  await suggestedArticlesHandler(
+    postJson("suggested-articles", body(), ORIGIN),
+    deps,
+  );
+  assertEquals(daoCalled, false);
 });
 
 Deno.test("suggested-articles: non-JSON body returns 500", async () => {

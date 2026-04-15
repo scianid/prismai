@@ -2,7 +2,11 @@ import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { errorResp, successResp } from "../_shared/responses.ts";
 import { supabaseClient } from "../_shared/supabaseClient.ts";
-import { getRecentArticlesForProject } from "../_shared/dao/articleDao.ts";
+import { getRequestOriginUrl, isAllowedOrigin } from "../_shared/origin.ts";
+import {
+  getProjectForArticlesAuth,
+  getRecentArticlesForProject,
+} from "../_shared/dao/articleDao.ts";
 import { getSuggestionIndex, updateSuggestionIndex } from "../_shared/dao/conversationDao.ts";
 
 // ─── Dependency injection seam ────────────────────────────────────────────
@@ -12,6 +16,7 @@ import { getSuggestionIndex, updateSuggestionIndex } from "../_shared/dao/conver
 // by passing a stable RNG. Same DI pattern as chat/config/articles/etc.
 export interface SuggestedArticlesDeps {
   supabaseClient: typeof supabaseClient;
+  getProjectForArticlesAuth: typeof getProjectForArticlesAuth;
   getRecentArticlesForProject: typeof getRecentArticlesForProject;
   getSuggestionIndex: typeof getSuggestionIndex;
   updateSuggestionIndex: typeof updateSuggestionIndex;
@@ -20,6 +25,7 @@ export interface SuggestedArticlesDeps {
 
 export const realSuggestedArticlesDeps: SuggestedArticlesDeps = {
   supabaseClient,
+  getProjectForArticlesAuth,
   getRecentArticlesForProject,
   getSuggestionIndex,
   updateSuggestionIndex,
@@ -53,6 +59,25 @@ export async function suggestedArticlesHandler(
     }
 
     const supabase = await deps.supabaseClient();
+
+    // Auth: validate projectId exists and the caller's Origin is in the
+    // project's allowed_urls. Closes the "KNOWN GAP" tracked in
+    // scripts/check-edge-auth.ts — before this check, anyone who scraped
+    // a projectId from a widget snippet could enumerate the article corpus.
+    const project = await deps.getProjectForArticlesAuth(projectId, supabase);
+    if (!project) {
+      return errorResp("Invalid projectId", 400, { error: "Invalid projectId" });
+    }
+
+    const requestUrl = getRequestOriginUrl(req);
+    if (!isAllowedOrigin(requestUrl, project.allowed_urls)) {
+      console.warn("[Suggested Articles] origin not allowed", {
+        attempted: requestUrl,
+        allowed: project.allowed_urls,
+        projectId,
+      });
+      return errorResp("Origin not allowed", 403, { error: "Origin not allowed" });
+    }
 
     // Get round-robin counter from conversation (just for tracking rotation)
     let suggestionIndex = 0;
