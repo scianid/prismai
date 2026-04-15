@@ -144,15 +144,17 @@ jobs:
           if echo "$DIFF" | grep -qE '^supabase/config\.toml$'; then GLOBAL=1; fi
           if echo "$DIFF" | grep -qE '^supabase/functions/deno\.json$'; then GLOBAL=1; fi
 
+          # `|| true` on every pipeline so an empty match doesn't trip pipefail.
           if [ "$GLOBAL" = "1" ]; then
             echo "Global change detected → deploying ALL functions"
-            CHANGED=$(ls supabase/functions | grep -vE '^_' | sort -u | paste -sd, -)
+            CHANGED=$({ ls supabase/functions 2>/dev/null || true; } \
+              | { grep -vE '^_' || true; } \
+              | sort -u | paste -sd, -)
           else
             CHANGED=$(echo "$DIFF" \
-              | grep -E '^supabase/functions/[^_]' \
+              | { grep -E '^supabase/functions/[^_]' || true; } \
               | awk -F/ '$3 != "" && $3 !~ /^_/ {print $3}' \
-              | sort -u \
-              | paste -sd, -)
+              | sort -u | paste -sd, -)
           fi
 
           echo "fns=$CHANGED" >> "$GITHUB_OUTPUT"
