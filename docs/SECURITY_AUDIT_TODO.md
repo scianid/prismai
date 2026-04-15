@@ -92,7 +92,7 @@ auditor's benefit.
 - **SOC2**: CC7.1, A1.2
 - **Effort**: ~1 hour.
 
-### [ ] 4. Stop logging `visitor_id` in plaintext
+### [x] 4. Stop logging `visitor_id` in plaintext
 
 - **What**: `chat/index.ts` logs `visitor_id` at several points (rate
   limit, token usage, cache writes).

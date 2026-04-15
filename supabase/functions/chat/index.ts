@@ -11,6 +11,7 @@ import {
 import { corsHeaders } from "../_shared/cors.ts";
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { enforceContentLength, errorResp, successResp } from "../_shared/responses.ts";
+import { hashForLog } from "../_shared/logSafe.ts";
 import {
   extractCachedSuggestions,
   getArticleById,
@@ -222,9 +223,12 @@ export async function chatHandler(
     // Get or create conversation (per visitor + article)
     // Use same format as article.unique_id (no dash)
     const articleUniqueId = url + projectId;
+    // SECURITY_AUDIT_TODO item 4: log the visitor hash, not the raw ID.
+    // Incident response can still correlate by recomputing
+    // hashForLog(knownVisitorId, projectId).
     console.log("chat: getting/creating conversation", {
       articleUniqueId,
-      visitor_id,
+      visitorHash: await hashForLog(visitor_id, projectId),
       projectId,
       hasArticle: !!article,
     });

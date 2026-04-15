@@ -1,3 +1,5 @@
+import { hashForLog } from "./logSafe.ts";
+
 /**
  * Edge function rate limiter.
  *
@@ -72,17 +74,28 @@ export async function checkRateLimit(
   // the endpoint defines a visitor limit. A `visitor: 0` in LIMITS means
   // "no visitor-level limit for this endpoint" (e.g. config/articles
   // don't know who the visitor is).
-  const checks: Array<{ key: string; limit: number }> = [
-    { key: `${endpoint}:project:${projectId}`, limit: limits.project },
+  //
+  // SECURITY_AUDIT_TODO item 4: the DB `key` must embed the raw visitorId
+  // so the rate-limit bucket is stable across calls, but logs must never
+  // leak that raw value. We pre-compute a `logKey` alongside each check
+  // where the visitor portion is replaced with a hashForLog tag.
+  const checks: Array<{ key: string; logKey: string; limit: number }> = [
+    {
+      key: `${endpoint}:project:${projectId}`,
+      logKey: `${endpoint}:project:${projectId}`,
+      limit: limits.project,
+    },
   ];
   if (visitorId && limits.visitor > 0) {
+    const visitorHash = await hashForLog(visitorId, projectId);
     checks.push({
       key: `${endpoint}:visitor:${visitorId}`,
+      logKey: `${endpoint}:visitor:${visitorHash}`,
       limit: limits.visitor,
     });
   }
 
-  for (const { key, limit } of checks) {
+  for (const { key, logKey, limit } of checks) {
     try {
       const { data, error } = await supabase.rpc("increment_rate_limit", {
         p_key: key,
@@ -90,7 +103,7 @@ export async function checkRateLimit(
       });
 
       if (error) {
-        console.error(`rateLimit: db error for key=${key}`, error);
+        console.error(`rateLimit: db error for key=${logKey}`, error);
         continue; // fail-open on DB errors
       }
 
@@ -98,12 +111,12 @@ export async function checkRateLimit(
 
       if (count > limit) {
         console.warn(
-          `rateLimit: limit exceeded key=${key} count=${count} limit=${limit}`,
+          `rateLimit: limit exceeded key=${logKey} count=${count} limit=${limit}`,
         );
         return { limited: true, retryAfterSeconds };
       }
     } catch (err) {
-      console.error(`rateLimit: unexpected error for key=${key}`, err);
+      console.error(`rateLimit: unexpected error for key=${logKey}`, err);
       // fail-open
     }
   }

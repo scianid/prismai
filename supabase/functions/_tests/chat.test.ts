@@ -331,6 +331,66 @@ Deno.test("chat: no visitor token header when visitor_id is missing from body", 
   }
 });
 
+// ── PII-in-logs guard (SECURITY_AUDIT_TODO item 4) ──────────────────────
+// Pin the contract that raw visitor_id never appears in stdout. This is
+// the whole SOC2 CC7.2 story — catching a regression here is the reason
+// the test exists. We capture console.log/warn/error for the duration of
+// one happy-path chat call and assert.
+
+Deno.test("chat: visitor_id is never written to console in plaintext", async () => {
+  const captured: string[] = [];
+  const origLog = console.log;
+  const origWarn = console.warn;
+  const origError = console.error;
+  // deno-lint-ignore no-explicit-any
+  const capture = (...args: any[]) => {
+    captured.push(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "));
+  };
+  console.log = capture;
+  console.warn = capture;
+  console.error = capture;
+
+  // Happy path needs a cache entry matching questionId, otherwise the
+  // handler short-circuits to 404 "No cached suggestions" before reaching
+  // the log site we care about.
+  const deps = makeDeps({
+    getArticleById: () =>
+      Promise.resolve(
+        fakeArticle({
+          cache: {
+            suggestions: [{ id: "q-123", question: "cached q", answer: null }],
+          },
+        }),
+      ),
+  });
+
+  try {
+    const res = await chatHandler(req(validBody()), deps);
+    assertEquals(res.status, 200);
+  } finally {
+    console.log = origLog;
+    console.warn = origWarn;
+    console.error = origError;
+  }
+
+  const joined = captured.join("\n");
+  // The raw VISITOR_ID must not appear anywhere in the captured output.
+  assertEquals(
+    joined.includes(VISITOR_ID),
+    false,
+    `raw visitor_id "${VISITOR_ID}" leaked into log output. Captured:\n${joined}`,
+  );
+  // Sanity: the handler DID log the conversation-creation line, it just
+  // used a hash. We prove the log site still fires by looking for its
+  // marker string — that way a refactor that silently removes the log
+  // doesn't make this test tautologically pass.
+  assertEquals(
+    joined.includes("chat: getting/creating conversation"),
+    true,
+    "expected 'chat: getting/creating conversation' log to fire",
+  );
+});
+
 // ── Teardown ──────────────────────────────────────────────────────────────
 Deno.test("chat: teardown (restore env)", () => {
   restoreEnv();
