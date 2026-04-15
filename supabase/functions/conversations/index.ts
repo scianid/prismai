@@ -10,8 +10,33 @@ import {
 } from "../_shared/dao/conversationDao.ts";
 import { verifyVisitorToken } from "../_shared/visitorAuth.ts";
 
-// @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-Deno.serve(async (req: Request) => {
+// ─── Dependency injection seam ────────────────────────────────────────────
+// `conversationsHandler` accepts a `ConversationsDeps` object so unit tests
+// can stub the Supabase DAOs and visitor-token verifier without touching
+// the network or needing a real HMAC secret. Production wires the real
+// implementations via `realConversationsDeps`. Same pattern as chat/config.
+export interface ConversationsDeps {
+  supabaseClient: typeof supabaseClient;
+  verifyVisitorToken: typeof verifyVisitorToken;
+  listConversationsByVisitor: typeof listConversationsByVisitor;
+  getConversationById: typeof getConversationById;
+  resetConversation: typeof resetConversation;
+  deleteConversation: typeof deleteConversation;
+}
+
+export const realConversationsDeps: ConversationsDeps = {
+  supabaseClient,
+  verifyVisitorToken,
+  listConversationsByVisitor,
+  getConversationById,
+  resetConversation,
+  deleteConversation,
+};
+
+export async function conversationsHandler(
+  req: Request,
+  deps: ConversationsDeps = realConversationsDeps,
+): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -25,13 +50,13 @@ Deno.serve(async (req: Request) => {
   const rawToken = req.headers.get("x-visitor-token") ??
     url.searchParams.get("visitor_token");
 
-  const tokenData = await verifyVisitorToken(rawToken);
+  const tokenData = await deps.verifyVisitorToken(rawToken);
   if (!tokenData) {
     return errorResp("Unauthorized - missing or invalid visitor token", 401);
   }
 
   try {
-    const supabase = await supabaseClient();
+    const supabase = await deps.supabaseClient();
 
     // GET /conversations - List conversations for a visitor
     if (req.method === "GET" && pathParts.length === 1) {
@@ -49,14 +74,14 @@ Deno.serve(async (req: Request) => {
         return errorResp("Forbidden", 403);
       }
 
-      const conversations = await listConversationsByVisitor(
+      const conversations = await deps.listConversationsByVisitor(
         supabase,
         visitorId,
         projectId,
       );
 
       // Return simplified list
-      const simplified = conversations.map((conv) => ({
+      const simplified = conversations.map((conv: any) => ({
         id: conv.id,
         article_title: conv.article_title,
         article_url: conv.article_unique_id.split("-")[0], // Extract URL from unique_id
@@ -74,7 +99,7 @@ Deno.serve(async (req: Request) => {
     ) {
       const conversationId = pathParts[1];
 
-      const conversation = await getConversationById(supabase, conversationId);
+      const conversation = await deps.getConversationById(supabase, conversationId);
 
       if (!conversation) {
         return errorResp("Conversation not found", 404);
@@ -106,7 +131,7 @@ Deno.serve(async (req: Request) => {
         return errorResp("Forbidden", 403);
       }
 
-      const conversationId = await resetConversation(
+      const conversationId = await deps.resetConversation(
         supabase,
         visitor_id,
         article_unique_id,
@@ -125,7 +150,7 @@ Deno.serve(async (req: Request) => {
       const conversationId = pathParts[1];
 
       // Fetch first to verify ownership before destructive action
-      const conversation = await getConversationById(supabase, conversationId);
+      const conversation = await deps.getConversationById(supabase, conversationId);
       if (!conversation) {
         return errorResp("Conversation not found", 404);
       }
@@ -135,7 +160,7 @@ Deno.serve(async (req: Request) => {
         return errorResp("Forbidden", 403);
       }
 
-      const success = await deleteConversation(supabase, conversationId);
+      const success = await deps.deleteConversation(supabase, conversationId);
 
       if (!success) {
         return errorResp("Failed to delete conversation", 500);
@@ -149,4 +174,7 @@ Deno.serve(async (req: Request) => {
     console.error("conversations: unhandled error", error);
     return errorResp("Internal server error", 500);
   }
-});
+}
+
+// @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
+Deno.serve((req: Request) => conversationsHandler(req));
