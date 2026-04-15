@@ -19,21 +19,25 @@ const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function getSecret(): string {
   // @ts-ignore - Deno.env is available in the Edge Runtime
-  return Deno.env.get('VISITOR_TOKEN_SECRET') ?? '';
+  return Deno.env.get("VISITOR_TOKEN_SECRET") ?? "";
 }
 
 async function hmacHex(message: string, secret: string): Promise<string> {
   const key = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
+    { name: "HMAC", hash: "SHA-256" },
     false,
-    ['sign']
+    ["sign"],
   );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(message),
+  );
   return Array.from(new Uint8Array(sig))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 /** Constant-time comparison to prevent timing side-channels. */
@@ -50,9 +54,12 @@ function safeEqual(a: string, b: string): boolean {
  * Issue a signed token that proves ownership of `visitorId` within `projectId`.
  * Throws if VISITOR_TOKEN_SECRET is not set.
  */
-export async function issueVisitorToken(visitorId: string, projectId: string): Promise<string> {
+export async function issueVisitorToken(
+  visitorId: string,
+  projectId: string,
+): Promise<string> {
   const secret = getSecret();
-  if (!secret) throw new Error('VISITOR_TOKEN_SECRET is not configured');
+  if (!secret) throw new Error("VISITOR_TOKEN_SECRET is not configured");
   const expires = Date.now() + TOKEN_TTL_MS;
   const message = `${visitorId}|${projectId}|${expires}`;
   const hex = await hmacHex(message, secret);
@@ -65,14 +72,14 @@ export async function issueVisitorToken(visitorId: string, projectId: string): P
  * missing, malformed, expired, or has an invalid signature.
  */
 export async function verifyVisitorToken(
-  token: string | null | undefined
+  token: string | null | undefined,
 ): Promise<{ visitorId: string; projectId: string } | null> {
   if (!token) return null;
   const secret = getSecret();
   if (!secret) return null;
 
   // Parse: exactly 3 pipe chars expected
-  const parts = token.split('|');
+  const parts = token.split("|");
   if (parts.length !== 4) return null;
   const [visitorId, projectId, expiresStr, receivedHex] = parts;
   if (!visitorId || !projectId || !expiresStr || !receivedHex) return null;

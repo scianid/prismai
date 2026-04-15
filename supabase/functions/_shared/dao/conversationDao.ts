@@ -17,7 +17,7 @@ export type ConversationRecord = {
 };
 
 export type ConversationMessage = {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   char_count: number;
   created_at: string;
@@ -33,16 +33,16 @@ export async function getOrCreateConversation(
   visitorId: string,
   sessionId: string,
   articleTitle: string,
-  articleContent: string
+  articleContent: string,
 ): Promise<ConversationRecord | null> {
   // Try to find existing conversation (by visitor, article, session)
   const { data: existing, error: fetchError } = await supabase
-    .from('conversations')
-    .select('*')
-    .eq('visitor_id', visitorId)
-    .eq('article_unique_id', articleUniqueId)
-    .eq('project_id', projectId)
-    .eq('session_id', sessionId)
+    .from("conversations")
+    .select("*")
+    .eq("visitor_id", visitorId)
+    .eq("article_unique_id", articleUniqueId)
+    .eq("project_id", projectId)
+    .eq("session_id", sessionId)
     .single();
 
   // Return existing if found (ignore PGRST116 = not found error)
@@ -51,13 +51,13 @@ export async function getOrCreateConversation(
   }
 
   // If error is not "not found", log it
-  if (fetchError && fetchError.code !== 'PGRST116') {
-    console.error('conversationDao: error fetching conversation', fetchError);
+  if (fetchError && fetchError.code !== "PGRST116") {
+    console.error("conversationDao: error fetching conversation", fetchError);
   }
 
   // Create new conversation
   const { data: newConv, error: insertError } = await supabase
-    .from('conversations')
+    .from("conversations")
     .insert({
       project_id: projectId,
       article_unique_id: articleUniqueId,
@@ -67,13 +67,16 @@ export async function getOrCreateConversation(
       article_content: articleContent,
       messages: [],
       message_count: 0,
-      total_chars: 0
+      total_chars: 0,
     })
     .select()
     .single();
 
   if (insertError) {
-    console.error('conversationDao: failed to create conversation', insertError);
+    console.error(
+      "conversationDao: failed to create conversation",
+      insertError,
+    );
     return null;
   }
 
@@ -89,23 +92,24 @@ export async function appendMessagesToConversation(
   userMessage: ConversationMessage,
   assistantMessage: ConversationMessage,
   existingMessages: ConversationMessage[],
-  existingTotalChars: number
+  existingTotalChars: number,
 ): Promise<boolean> {
   const updatedMessages = [...existingMessages, userMessage, assistantMessage];
-  const newTotalChars = existingTotalChars + userMessage.char_count + assistantMessage.char_count;
+  const newTotalChars = existingTotalChars + userMessage.char_count +
+    assistantMessage.char_count;
 
   const { error } = await supabase
-    .from('conversations')
+    .from("conversations")
     .update({
       messages: updatedMessages,
       last_message_at: new Date().toISOString(),
       message_count: updatedMessages.length,
-      total_chars: newTotalChars
+      total_chars: newTotalChars,
     })
-    .eq('id', conversationId);
+    .eq("id", conversationId);
 
   if (error) {
-    console.error('conversationDao: failed to append messages', error);
+    console.error("conversationDao: failed to append messages", error);
     return false;
   }
 
@@ -117,16 +121,16 @@ export async function appendMessagesToConversation(
  */
 export async function getConversationById(
   supabase: SupabaseClient,
-  conversationId: string
+  conversationId: string,
 ): Promise<ConversationRecord | null> {
   const { data, error } = await supabase
-    .from('conversations')
-    .select('*')
-    .eq('id', conversationId)
+    .from("conversations")
+    .select("*")
+    .eq("id", conversationId)
     .single();
 
   if (error || !data) {
-    console.error('conversationDao: failed to get conversation', error);
+    console.error("conversationDao: failed to get conversation", error);
     return null;
   }
 
@@ -140,24 +144,24 @@ export async function resetConversation(
   supabase: SupabaseClient,
   visitorId: string,
   articleUniqueId: string,
-  projectId: string
+  projectId: string,
 ): Promise<string | null> {
   const { data, error } = await supabase
-    .from('conversations')
+    .from("conversations")
     .update({
       messages: [],
       message_count: 0,
       total_chars: 0,
-      last_message_at: new Date().toISOString()
+      last_message_at: new Date().toISOString(),
     })
-    .eq('visitor_id', visitorId)
-    .eq('article_unique_id', articleUniqueId)
-    .eq('project_id', projectId)
-    .select('id')
+    .eq("visitor_id", visitorId)
+    .eq("article_unique_id", articleUniqueId)
+    .eq("project_id", projectId)
+    .select("id")
     .single();
 
   if (error || !data) {
-    console.error('conversationDao: failed to reset conversation', error);
+    console.error("conversationDao: failed to reset conversation", error);
     return null;
   }
 
@@ -170,17 +174,17 @@ export async function resetConversation(
 export async function listConversationsByVisitor(
   supabase: SupabaseClient,
   visitorId: string,
-  projectId: string
+  projectId: string,
 ): Promise<ConversationRecord[]> {
   const { data, error } = await supabase
-    .from('conversations')
-    .select('*')
-    .eq('visitor_id', visitorId)
-    .eq('project_id', projectId)
-    .order('last_message_at', { ascending: false });
+    .from("conversations")
+    .select("*")
+    .eq("visitor_id", visitorId)
+    .eq("project_id", projectId)
+    .order("last_message_at", { ascending: false });
 
   if (error) {
-    console.error('conversationDao: failed to list conversations', error);
+    console.error("conversationDao: failed to list conversations", error);
     return [];
   }
 
@@ -192,15 +196,15 @@ export async function listConversationsByVisitor(
  */
 export async function deleteConversation(
   supabase: SupabaseClient,
-  conversationId: string
+  conversationId: string,
 ): Promise<boolean> {
   const { error } = await supabase
-    .from('conversations')
+    .from("conversations")
     .delete()
-    .eq('id', conversationId);
+    .eq("id", conversationId);
 
   if (error) {
-    console.error('conversationDao: failed to delete conversation', error);
+    console.error("conversationDao: failed to delete conversation", error);
     return false;
   }
 

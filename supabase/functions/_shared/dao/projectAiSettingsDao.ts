@@ -11,16 +11,16 @@ export type ProjectAiSettings = {
  */
 export async function getProjectAiSettings(
   supabase: any,
-  projectId: string
+  projectId: string,
 ): Promise<ProjectAiSettings | null> {
   const { data, error } = await supabase
-    .from('project_ai_settings')
-    .select('project_id, tone, guardrails, custom_instructions')
-    .eq('project_id', projectId)
+    .from("project_ai_settings")
+    .select("project_id, tone, guardrails, custom_instructions")
+    .eq("project_id", projectId)
     .maybeSingle();
 
   if (error) {
-    console.error('projectAiSettingsDao: fetch error', error);
+    console.error("projectAiSettingsDao: fetch error", error);
     throw error;
   }
 
@@ -32,19 +32,19 @@ export async function getProjectAiSettings(
  */
 export async function upsertProjectAiSettings(
   supabase: any,
-  settings: Omit<ProjectAiSettings, 'project_id'> & { project_id: string }
+  settings: Omit<ProjectAiSettings, "project_id"> & { project_id: string },
 ): Promise<ProjectAiSettings> {
   const { data, error } = await supabase
-    .from('project_ai_settings')
+    .from("project_ai_settings")
     .upsert(
       { ...settings, updated_at: new Date().toISOString() },
-      { onConflict: 'project_id' }
+      { onConflict: "project_id" },
     )
-    .select('project_id, tone, guardrails, custom_instructions')
+    .select("project_id, tone, guardrails, custom_instructions")
     .single();
 
   if (error) {
-    console.error('projectAiSettingsDao: upsert error', error);
+    console.error("projectAiSettingsDao: upsert error", error);
     throw error;
   }
 

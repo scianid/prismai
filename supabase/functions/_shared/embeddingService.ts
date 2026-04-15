@@ -1,5 +1,5 @@
-const EMBEDDING_MODEL = 'text-embedding-3-small';
-const EMBEDDING_URL = 'https://api.openai.com/v1/embeddings';
+const EMBEDDING_MODEL = "text-embedding-3-small";
+const EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
 
 /**
  * Generate a vector embedding for the given text using OpenAI text-embedding-3-small.
@@ -7,19 +7,19 @@ const EMBEDDING_URL = 'https://api.openai.com/v1/embeddings';
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   // @ts-ignore
-  const apiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!apiKey) throw new Error('OPENAI_API_KEY not set');
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) throw new Error("OPENAI_API_KEY not set");
 
   const response = await fetch(EMBEDDING_URL, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: EMBEDDING_MODEL,
-      input: text.substring(0, 8192) // API hard limit
-    })
+      input: text.substring(0, 8192), // API hard limit
+    }),
   });
 
   if (!response.ok) {
@@ -27,10 +27,12 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     throw new Error(`Embedding API error ${response.status}: ${body}`);
   }
 
-  const data = await response.json() as { data: Array<{ embedding: number[] }> };
+  const data = await response.json() as {
+    data: Array<{ embedding: number[] }>;
+  };
   const embedding = data?.data?.[0]?.embedding;
   if (!Array.isArray(embedding) || embedding.length === 0) {
-    throw new Error('Embedding API returned empty result');
+    throw new Error("Embedding API returned empty result");
   }
   return embedding;
 }

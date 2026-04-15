@@ -19,16 +19,21 @@ export async function createRagDocument(
   projectId: string,
   title: string,
   sourceContent: string,
-  chunkCount: number
+  chunkCount: number,
 ): Promise<string> {
   const { data, error } = await supabase
-    .from('rag_documents')
-    .insert({ project_id: projectId, title, source_content: sourceContent, chunk_count: chunkCount })
-    .select('id')
+    .from("rag_documents")
+    .insert({
+      project_id: projectId,
+      title,
+      source_content: sourceContent,
+      chunk_count: chunkCount,
+    })
+    .select("id")
     .single();
 
   if (error) {
-    console.error('ragDocumentDao: insert error', error);
+    console.error("ragDocumentDao: insert error", error);
     throw error;
   }
 
@@ -42,20 +47,20 @@ export async function insertRagChunks(
   supabase: any,
   documentId: string,
   projectId: string,
-  chunks: Array<{ content: string; chunk_index: number; embedding: number[] }>
+  chunks: Array<{ content: string; chunk_index: number; embedding: number[] }>,
 ): Promise<void> {
-  const rows = chunks.map(c => ({
+  const rows = chunks.map((c) => ({
     document_id: documentId,
     project_id: projectId,
     content: c.content,
     chunk_index: c.chunk_index,
-    embedding: JSON.stringify(c.embedding) // pgvector accepts JSON array string
+    embedding: JSON.stringify(c.embedding), // pgvector accepts JSON array string
   }));
 
-  const { error } = await supabase.from('rag_chunks').insert(rows);
+  const { error } = await supabase.from("rag_chunks").insert(rows);
 
   if (error) {
-    console.error('ragDocumentDao: chunk insert error', error);
+    console.error("ragDocumentDao: chunk insert error", error);
     throw error;
   }
 }
@@ -65,17 +70,17 @@ export async function insertRagChunks(
  */
 export async function listRagDocuments(
   supabase: any,
-  projectId: string
+  projectId: string,
 ): Promise<RagDocument[]> {
   const { data, error } = await supabase
-    .from('rag_documents')
-    .select('id, project_id, title, chunk_count, created_at')
-    .eq('project_id', projectId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .from("rag_documents")
+    .select("id, project_id, title, chunk_count, created_at")
+    .eq("project_id", projectId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error('ragDocumentDao: list error', error);
+    console.error("ragDocumentDao: list error", error);
     throw error;
   }
 
@@ -88,23 +93,23 @@ export async function listRagDocuments(
 export async function softDeleteRagDocument(
   supabase: any,
   documentId: string,
-  projectId: string
+  projectId: string,
 ): Promise<boolean> {
   const { error, count } = await supabase
-    .from('rag_documents')
+    .from("rag_documents")
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', documentId)
-    .eq('project_id', projectId)  // scoped to project - prevent cross-tenant deletes
-    .is('deleted_at', null)
-    .select('id', { count: 'exact', head: true });
+    .eq("id", documentId)
+    .eq("project_id", projectId) // scoped to project - prevent cross-tenant deletes
+    .is("deleted_at", null)
+    .select("id", { count: "exact", head: true });
 
   if (error) {
-    console.error('ragDocumentDao: soft-delete error', error);
+    console.error("ragDocumentDao: soft-delete error", error);
     throw error;
   }
 
   // Also delete chunks (soft-deleted documents shouldn't be retrieved but clean up anyway)
-  await supabase.from('rag_chunks').delete().eq('document_id', documentId);
+  await supabase.from("rag_chunks").delete().eq("document_id", documentId);
 
   return (count ?? 0) > 0;
 }
@@ -117,16 +122,16 @@ export async function searchSimilarChunks(
   supabase: any,
   projectId: string,
   queryEmbedding: number[],
-  topK: number = 3
+  topK: number = 3,
 ): Promise<RagChunkMatch[]> {
-  const { data, error } = await supabase.rpc('match_rag_chunks', {
+  const { data, error } = await supabase.rpc("match_rag_chunks", {
     p_project_id: projectId,
     p_embedding: JSON.stringify(queryEmbedding),
-    p_match_count: topK
+    p_match_count: topK,
   });
 
   if (error) {
-    console.error('ragDocumentDao: similarity search error', error);
+    console.error("ragDocumentDao: similarity search error", error);
     throw error;
   }
 

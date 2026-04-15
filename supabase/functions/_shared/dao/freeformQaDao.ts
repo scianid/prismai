@@ -21,23 +21,23 @@ export async function insertFreeformQuestion(
   articleUniqueId: string,
   question: string,
   visitorId?: string,
-  sessionId?: string
+  sessionId?: string,
 ): Promise<number | null> {
   const { data, error } = await supabase
-    .from('freeform_qa')
+    .from("freeform_qa")
     .insert({
       project_id: projectId,
       article_unique_id: articleUniqueId,
       visitor_id: visitorId,
       session_id: sessionId,
       question: question,
-      answer: null
+      answer: null,
     })
-    .select('id')
+    .select("id")
     .single();
 
   if (error) {
-    console.error('Error inserting freeform question:', error);
+    console.error("Error inserting freeform question:", error);
     return null;
   }
 
@@ -50,18 +50,18 @@ export async function insertFreeformQuestion(
 export async function updateFreeformAnswer(
   supabase: SupabaseClient,
   id: number,
-  answer: string
+  answer: string,
 ): Promise<boolean> {
   const { error } = await supabase
-    .from('freeform_qa')
+    .from("freeform_qa")
     .update({
       answer: answer,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     })
-    .eq('id', id);
+    .eq("id", id);
 
   if (error) {
-    console.error('Error updating freeform answer:', error);
+    console.error("Error updating freeform answer:", error);
     return false;
   }
 
@@ -73,16 +73,16 @@ export async function updateFreeformAnswer(
  */
 export async function getFreeformQasByArticle(
   supabase: SupabaseClient,
-  articleUniqueId: string
+  articleUniqueId: string,
 ): Promise<FreeformQa[]> {
   const { data, error } = await supabase
-    .from('freeform_qa')
-    .select('*')
-    .eq('article_unique_id', articleUniqueId)
-    .order('created_at', { ascending: false });
+    .from("freeform_qa")
+    .select("*")
+    .eq("article_unique_id", articleUniqueId)
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error('Error fetching freeform QAs:', error);
+    console.error("Error fetching freeform QAs:", error);
     return [];
   }
 
@@ -95,17 +95,17 @@ export async function getFreeformQasByArticle(
 export async function getFreeformQasByProject(
   supabase: SupabaseClient,
   projectId: string,
-  limit: number = 100
+  limit: number = 100,
 ): Promise<FreeformQa[]> {
   const { data, error } = await supabase
-    .from('freeform_qa')
-    .select('*')
-    .eq('project_id', projectId)
-    .order('created_at', { ascending: false })
+    .from("freeform_qa")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) {
-    console.error('Error fetching freeform QAs:', error);
+    console.error("Error fetching freeform QAs:", error);
     return [];
   }
 

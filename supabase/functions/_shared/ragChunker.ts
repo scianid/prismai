@@ -10,11 +10,14 @@ const DEFAULT_MAX_CHUNK_CHARS = 1800; // ~450 tokens at ~4 chars/token; safe for
  *
  * Returns an array of non-empty strings.
  */
-export function chunkText(text: string, maxChunkChars: number = DEFAULT_MAX_CHUNK_CHARS): string[] {
+export function chunkText(
+  text: string,
+  maxChunkChars: number = DEFAULT_MAX_CHUNK_CHARS,
+): string[] {
   const paragraphs = text
     .split(/\n{2,}/)
-    .map(p => p.trim())
-    .filter(p => p.length > 0);
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
 
   const chunks: string[] = [];
 
@@ -23,7 +26,8 @@ export function chunkText(text: string, maxChunkChars: number = DEFAULT_MAX_CHUN
       appendToChunks(chunks, paragraph, maxChunkChars);
     } else {
       // Split long paragraphs by sentence boundaries
-      const sentences = paragraph.match(/[^.!?]+[.!?]+["']?\s*/g) ?? [paragraph];
+      const sentences = paragraph.match(/[^.!?]+[.!?]+["']?\s*/g) ??
+        [paragraph];
       for (const sentence of sentences) {
         appendToChunks(chunks, sentence.trim(), maxChunkChars);
       }
@@ -36,7 +40,11 @@ export function chunkText(text: string, maxChunkChars: number = DEFAULT_MAX_CHUN
 /**
  * Merge text into the last open chunk if it fits; otherwise start a new chunk.
  */
-function appendToChunks(chunks: string[], text: string, maxChunkChars: number): void {
+function appendToChunks(
+  chunks: string[],
+  text: string,
+  maxChunkChars: number,
+): void {
   if (!text) return;
 
   if (chunks.length === 0) {
@@ -46,7 +54,7 @@ function appendToChunks(chunks: string[], text: string, maxChunkChars: number): 
 
   const last = chunks[chunks.length - 1];
   if (last.length + 1 + text.length <= maxChunkChars) {
-    chunks[chunks.length - 1] = last + '\n' + text;
+    chunks[chunks.length - 1] = last + "\n" + text;
   } else {
     chunks.push(text);
   }

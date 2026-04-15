@@ -17,9 +17,9 @@ export type RateLimitResult =
   | { limited: true; retryAfterSeconds: number };
 
 /** Limits by endpoint and key type. Adjust as needed. */
-const LIMITS: Record<string, Record<'visitor' | 'project', number>> = {
-  chat:        { visitor: 20,  project: 500 },
-  suggestions: { visitor: 5,   project: 200 },
+const LIMITS: Record<string, Record<"visitor" | "project", number>> = {
+  chat: { visitor: 20, project: 500 },
+  suggestions: { visitor: 5, project: 200 },
 };
 
 /**
@@ -34,25 +34,31 @@ const LIMITS: Record<string, Record<'visitor' | 'project', number>> = {
  */
 export async function checkRateLimit(
   supabase: SupabaseClient,
-  endpoint: 'chat' | 'suggestions',
+  endpoint: "chat" | "suggestions",
   visitorId: string | null | undefined,
-  projectId: string
+  projectId: string,
 ): Promise<RateLimitResult> {
   const limits = LIMITS[endpoint];
-  const windowStart = new Date(Math.floor(Date.now() / 60_000) * 60_000).toISOString();
-  const retryAfterSeconds = Math.ceil((Math.floor(Date.now() / 60_000) * 60_000 + 60_000 - Date.now()) / 1000);
+  const windowStart = new Date(Math.floor(Date.now() / 60_000) * 60_000)
+    .toISOString();
+  const retryAfterSeconds = Math.ceil(
+    (Math.floor(Date.now() / 60_000) * 60_000 + 60_000 - Date.now()) / 1000,
+  );
 
   // Keys to check: always check project; check visitor only if known
   const checks: Array<{ key: string; limit: number }> = [
     { key: `${endpoint}:project:${projectId}`, limit: limits.project },
   ];
   if (visitorId) {
-    checks.push({ key: `${endpoint}:visitor:${visitorId}`, limit: limits.visitor });
+    checks.push({
+      key: `${endpoint}:visitor:${visitorId}`,
+      limit: limits.visitor,
+    });
   }
 
   for (const { key, limit } of checks) {
     try {
-      const { data, error } = await supabase.rpc('increment_rate_limit', {
+      const { data, error } = await supabase.rpc("increment_rate_limit", {
         p_key: key,
         p_window_start: windowStart,
       });
@@ -65,7 +71,9 @@ export async function checkRateLimit(
       const count: number = data ?? 0;
 
       if (count > limit) {
-        console.warn(`rateLimit: limit exceeded key=${key} count=${count} limit=${limit}`);
+        console.warn(
+          `rateLimit: limit exceeded key=${key} count=${count} limit=${limit}`,
+        );
         return { limited: true, retryAfterSeconds };
       }
     } catch (err) {

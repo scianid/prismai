@@ -1,7 +1,7 @@
 export type ModelId = string;
 
 export const MODEL_COSTS: Record<string, { input: number; output: number }> = {
-  'gpt-5.2': { input: 1.75, output: 14.00 },
+  "gpt-5.2": { input: 1.75, output: 14.00 },
 };
 
 /**
@@ -11,7 +11,7 @@ export const MODEL_COSTS: Record<string, { input: number; output: number }> = {
 export function computeCostUsd(
   model: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
 ): number {
   const costs = MODEL_COSTS[model];
   if (!costs) {
@@ -19,7 +19,7 @@ export function computeCostUsd(
     return 0;
   }
   return (inputTokens / 1_000_000) * costs.input +
-         (outputTokens / 1_000_000) * costs.output;
+    (outputTokens / 1_000_000) * costs.output;
 }
 
 /**
@@ -38,11 +38,15 @@ export async function recordTokenUsage(
     visitor_id?: string;
     session_id?: string;
     metadata?: Record<string, any>;
-  }
+  },
 ): Promise<boolean> {
-  const cost_usd = computeCostUsd(data.model, data.input_tokens, data.output_tokens);
+  const cost_usd = computeCostUsd(
+    data.model,
+    data.input_tokens,
+    data.output_tokens,
+  );
   try {
-    const { error } = await supabase.from('token_usage').insert({
+    const { error } = await supabase.from("token_usage").insert({
       project_id: data.project_id,
       conversation_id: data.conversation_id ?? null,
       visitor_id: data.visitor_id ?? null,
@@ -55,12 +59,12 @@ export async function recordTokenUsage(
       metadata: data.metadata ?? null,
     });
     if (error) {
-      console.error('ai-costs: recordTokenUsage insert error', error);
+      console.error("ai-costs: recordTokenUsage insert error", error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('ai-costs: recordTokenUsage unexpected error', err);
+    console.error("ai-costs: recordTokenUsage unexpected error", err);
     return false;
   }
 }
