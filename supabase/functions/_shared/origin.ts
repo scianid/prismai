@@ -12,23 +12,17 @@ export function normalizeHost(host: string): string {
   return host.replace(/^www\./i, "").toLowerCase();
 }
 
-// Prefer the browser-injected Origin header, but fall back to Referer when
-// Origin is absent. Some browsers omit Origin on simple GET requests, cached
-// fetches, AMP contexts, or when privacy extensions strip it. For read-only
-// endpoints (config, suggestions, articles) rejecting these visitors causes a
-// production outage while providing no meaningful security benefit — Referer
-// is sufficient for hostname-based allowlisting on GET endpoints. Mutating
-// endpoints (chat, analytics) still only receive GET/POST with CORS, where
-// Origin is reliably present.
+// Prefer Origin header, fall back to Referer. The CDN (Fastly/Cloudflare)
+// strips the Origin header when forwarding to the edge function, so browser
+// requests arrive without it. Referer is reliably present on GET requests
+// and is sufficient for hostname-based allowlisting on read-only endpoints.
 export function getRequestOriginUrl(req: Request): string | null {
   return req.headers.get("origin") || req.headers.get("referer") || null;
 }
 
 // Extract a bare hostname from a project.allowed_urls entry. Tolerates both
 // full URLs (`https://foo.com`, `https://foo.com/path`) and bare hostnames
-// (`foo.com`, `www.foo.com`) because the widget admin UI stores whatever the
-// user types; a single "https://" entry used to silently lock that domain
-// out of the widget on every visitor request.
+// (`foo.com`, `www.foo.com`).
 function extractHostFromEntry(entry: string): string {
   try {
     return new URL(entry).hostname.toLowerCase();
@@ -40,15 +34,36 @@ function extractHostFromEntry(entry: string): string {
   }
 }
 
+// DRY RUN: logs what the check would do, always returns true.
+// When rawUrl is null (no Origin or Referer), logs it as a CDN/infra request.
 export function isAllowedOrigin(
   rawUrl: string | null | undefined,
   allowedUrls: string[] | null | undefined,
 ): boolean {
+  // No Origin and no Referer — CDN cache-warming or infra request.
+  // Real browsers always send at least one of these headers.
+  if (!rawUrl) {
+    console.warn("origin-dry-run: no origin/referer (CDN request)", {
+      allowedUrls,
+      wouldAllow: true,
+    });
+    return true;
+  }
+
   const requestHost = normalizeHost(getBaseHost(rawUrl) || "");
   const allowedHosts = Array.isArray(allowedUrls)
     ? allowedUrls.map((entry) => normalizeHost(extractHostFromEntry(entry)))
     : [];
 
-  return !!requestHost && allowedHosts.length > 0 &&
+  const wouldAllow = !!requestHost && allowedHosts.length > 0 &&
     allowedHosts.includes(requestHost);
+
+  console.warn("origin-dry-run", {
+    rawUrl,
+    requestHost,
+    allowedHosts,
+    wouldAllow,
+  });
+
+  return true;
 }
