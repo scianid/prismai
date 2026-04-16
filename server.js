@@ -40,8 +40,8 @@ const server = http.createServer((req, res) => {
   }
 
   // Static file serving
-  // Remove query string and decode percent-encoding before resolving
-  const urlPath = req.url.split('?')[0];
+  // Remove query string, normalise backslashes (Windows traversal), then resolve
+  const urlPath = req.url.split('?')[0].replace(/\\/g, '/');
   let filePath = path.resolve(PROJECT_ROOT, '.' + urlPath);
   if (urlPath === '/') {
     filePath = path.resolve(PROJECT_ROOT, 'test/index.html');

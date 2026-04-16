@@ -31,11 +31,11 @@ function isPathAllowed(resolvedPath) {
   );
 }
 
-// Simulate what the server does: decode the URL path, resolve, then check
+// Simulate what the server does: decode the URL path, resolve, then check.
+// Backslashes are normalised to forward slashes before resolution so that
+// Windows-style traversal (..\..\) is caught on all platforms.
 function simulateRequest(rawUrlPath) {
-  // Node's http module delivers the raw (not decoded) path in req.url, but
-  // path.resolve handles the rest. Simulate decoding as the OS would see it.
-  const urlPath = rawUrlPath.split('?')[0];
+  const urlPath = rawUrlPath.split('?')[0].replace(/\\/g, '/');
   const resolved = resolveRequestPath(urlPath);
   return { resolved, allowed: isPathAllowed(resolved) };
 }

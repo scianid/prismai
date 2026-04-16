@@ -37,7 +37,7 @@ const corsSource = fs.readFileSync(corsPath, 'utf8');
  * Returns the raw string value (lowercased for case-insensitive matching).
  */
 function extractHeaderValue(propertyName) {
-  const re = new RegExp(`'${propertyName}'\\s*:\\s*'([^']+)'`);
+  const re = new RegExp(`["']${propertyName}["']\\s*:\\s*\\n?\\s*["']([^"']+)["']`);
   const match = corsSource.match(re);
   if (!match) throw new Error(`Property '${propertyName}' not found in cors.ts`);
   return match[1].toLowerCase();
