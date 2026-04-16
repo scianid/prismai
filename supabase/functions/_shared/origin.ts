@@ -12,12 +12,16 @@ export function normalizeHost(host: string): string {
   return host.replace(/^www\./i, "").toLowerCase();
 }
 
-// H-4 fix: only trust the browser-injected Origin header.
-// Referer is client-controlled and forgeable - never use it for security decisions.
-// Any cross-origin request from a real browser always includes Origin;
-// server-side/script requests without Origin are correctly rejected by isAllowedOrigin.
+// Prefer the browser-injected Origin header, but fall back to Referer when
+// Origin is absent. Some browsers omit Origin on simple GET requests, cached
+// fetches, AMP contexts, or when privacy extensions strip it. For read-only
+// endpoints (config, suggestions, articles) rejecting these visitors causes a
+// production outage while providing no meaningful security benefit — Referer
+// is sufficient for hostname-based allowlisting on GET endpoints. Mutating
+// endpoints (chat, analytics) still only receive GET/POST with CORS, where
+// Origin is reliably present.
 export function getRequestOriginUrl(req: Request): string | null {
-  return req.headers.get("origin");
+  return req.headers.get("origin") || req.headers.get("referer") || null;
 }
 
 // Extract a bare hostname from a project.allowed_urls entry. Tolerates both

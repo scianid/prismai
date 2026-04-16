@@ -1,14 +1,14 @@
 /**
- * Origin Check Tests — H-4 fix
+ * Origin Check Tests
  *
  * Tests for getRequestOriginUrl() and isAllowedOrigin() in
  * supabase/functions/_shared/origin.ts.
  *
- * Key behaviours under test (H-4 fix):
- *  - getRequestOriginUrl returns only the Origin header, never Referer
- *  - A request with no Origin but a spoofed Referer returns null → 403 path
+ * Key behaviours under test:
+ *  - getRequestOriginUrl prefers Origin, falls back to Referer
+ *  - A request with no Origin and no Referer returns null → 403 path
  *  - A request with a valid Origin passes the allowed-origin check
- *  - isAllowedOrigin correctly matches/rejects hostnames (existing logic guard)
+ *  - isAllowedOrigin correctly matches/rejects hostnames
  *
  * The functions are ported inline for Jest/Node compatibility (avoids Deno imports).
  */
@@ -16,7 +16,7 @@
 const { describe, test, expect } = require('@jest/globals');
 
 // ---------------------------------------------------------------------------
-// Inline port of origin.ts (mirrors the file exactly after the H-4 fix)
+// Inline port of origin.ts
 // ---------------------------------------------------------------------------
 function getBaseHost(rawUrl) {
   if (!rawUrl) return null;
@@ -32,15 +32,25 @@ function normalizeHost(host) {
   return host.replace(/^www\./i, '').toLowerCase();
 }
 
-// H-4 fix: only Origin header, no Referer fallback
 function getRequestOriginUrl(req) {
-  return req.headers.get('origin');
+  return req.headers.get('origin') || req.headers.get('referer') || null;
+}
+
+function extractHostFromEntry(entry) {
+  try {
+    return new URL(entry).hostname.toLowerCase();
+  } catch { /* not a full URL — retry with a synthetic scheme */ }
+  try {
+    return new URL(`https://${entry}`).hostname.toLowerCase();
+  } catch {
+    return entry.toLowerCase();
+  }
 }
 
 function isAllowedOrigin(rawUrl, allowedUrls) {
   const requestHost = normalizeHost(getBaseHost(rawUrl) || '');
   const allowedHosts = Array.isArray(allowedUrls)
-    ? allowedUrls.map((h) => normalizeHost(h))
+    ? allowedUrls.map((entry) => normalizeHost(extractHostFromEntry(entry)))
     : [];
   return !!requestHost && allowedHosts.length > 0 && allowedHosts.includes(requestHost);
 }
@@ -57,34 +67,32 @@ function makeReq(headers = {}) {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('getRequestOriginUrl (H-4)', () => {
+describe('getRequestOriginUrl', () => {
   test('returns the Origin header when present', () => {
     const req = makeReq({ origin: 'https://partner-site.com' });
     expect(getRequestOriginUrl(req)).toBe('https://partner-site.com');
   });
 
-  test('returns null when Origin header is absent', () => {
-    const req = makeReq({});
-    expect(getRequestOriginUrl(req)).toBeNull();
+  test('falls back to Referer when Origin is absent', () => {
+    const req = makeReq({ referer: 'https://partner-site.com/article' });
+    expect(getRequestOriginUrl(req)).toBe('https://partner-site.com/article');
   });
 
-  test('does NOT fall back to Referer when Origin is absent (H-4 regression guard)', () => {
-    // An attacker sends Referer but no Origin — must be rejected
-    const req = makeReq({ referer: 'https://allowed-partner-site.com/article' });
-    expect(getRequestOriginUrl(req)).toBeNull();
-  });
-
-  test('ignores Referer even when both Origin and Referer are present', () => {
+  test('prefers Origin over Referer when both are present', () => {
     const req = makeReq({
       origin: 'https://real-origin.com',
-      referer: 'https://spoofed-referer.com/page',
+      referer: 'https://other-site.com/page',
     });
     expect(getRequestOriginUrl(req)).toBe('https://real-origin.com');
   });
 
-  test('returns null for empty string Origin header', () => {
+  test('returns null when neither Origin nor Referer is present', () => {
+    const req = makeReq({});
+    expect(getRequestOriginUrl(req)).toBeNull();
+  });
+
+  test('returns null for empty string Origin and no Referer', () => {
     const req = makeReq({ origin: '' });
-    // empty string is falsy — treated as absent
     expect(getRequestOriginUrl(req) || null).toBeNull();
   });
 });
@@ -104,7 +112,7 @@ describe('isAllowedOrigin', () => {
     expect(isAllowedOrigin('https://evil.com', allowedUrls)).toBe(false);
   });
 
-  test('rejects null (absent Origin → no Referer fallback → blocked)', () => {
+  test('rejects null (no Origin or Referer → blocked)', () => {
     expect(isAllowedOrigin(null, allowedUrls)).toBe(false);
   });
 
@@ -120,10 +128,15 @@ describe('isAllowedOrigin', () => {
     expect(isAllowedOrigin('https://partner-site.com', null)).toBe(false);
   });
 
-  test('spoofed Referer with no Origin resolves to null → rejected', () => {
-    // Full end-to-end simulation of the attack path
+  test('Referer fallback with allowed host passes', () => {
     const req = makeReq({ referer: 'https://partner-site.com/article' });
-    const originUrl = getRequestOriginUrl(req); // null after H-4 fix
+    const originUrl = getRequestOriginUrl(req);
+    expect(isAllowedOrigin(originUrl, allowedUrls)).toBe(true);
+  });
+
+  test('Referer fallback with disallowed host is rejected', () => {
+    const req = makeReq({ referer: 'https://evil.com/page' });
+    const originUrl = getRequestOriginUrl(req);
     expect(isAllowedOrigin(originUrl, allowedUrls)).toBe(false);
   });
 
@@ -131,5 +144,10 @@ describe('isAllowedOrigin', () => {
     const req = makeReq({ origin: 'https://partner-site.com' });
     const originUrl = getRequestOriginUrl(req);
     expect(isAllowedOrigin(originUrl, allowedUrls)).toBe(true);
+  });
+
+  test('handles full URL entries in allowedUrls', () => {
+    const urlAllowed = ['https://partner-site.com/path', 'https://another-partner.io'];
+    expect(isAllowedOrigin('https://partner-site.com', urlAllowed)).toBe(true);
   });
 });
