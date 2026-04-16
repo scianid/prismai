@@ -2,9 +2,11 @@
 function getContent(articleClass) {
   const selectors = [
     "article",
+    "content",
+    "main",
     ".article-content",
     "[role='main']",
-    "main",
+    ".main",
     ".post-content",
     ".entry-content",
     ".content",
