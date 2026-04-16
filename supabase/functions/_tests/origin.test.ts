@@ -104,10 +104,12 @@ Deno.test("isAllowedOrigin: rejects null/undefined allowlist", () => {
   assertEquals(isAllowedOrigin(REQUEST_ORIGIN, undefined), false);
 });
 
-Deno.test("isAllowedOrigin: rejects null/undefined request origin", () => {
-  assertEquals(isAllowedOrigin(null, ["publisher.example.com"]), false);
-  assertEquals(isAllowedOrigin(undefined, ["publisher.example.com"]), false);
-  assertEquals(isAllowedOrigin("", ["publisher.example.com"]), false);
+Deno.test("isAllowedOrigin: allows null/undefined request origin (CDN pass-through)", () => {
+  // When neither Origin nor Referer is present, the request is from CDN
+  // cache-warming or infra — real browsers always send at least one header.
+  assertEquals(isAllowedOrigin(null, ["publisher.example.com"]), true);
+  assertEquals(isAllowedOrigin(undefined, ["publisher.example.com"]), true);
+  assertEquals(isAllowedOrigin("", ["publisher.example.com"]), true);
 });
 
 Deno.test("isAllowedOrigin: rejects malformed request origin", () => {
@@ -165,11 +167,16 @@ Deno.test("getRequestOriginUrl: reads the Origin header only", () => {
   assertEquals(getRequestOriginUrl(r), "https://publisher.example.com");
 });
 
-Deno.test("getRequestOriginUrl: returns null when Origin header is absent", () => {
-  // H-4 fix: Referer is client-controlled and must never be trusted as a
-  // fallback. Requests without an Origin header are rejected downstream.
+Deno.test("getRequestOriginUrl: falls back to Referer when Origin is absent", () => {
+  // CDN (Fastly/Cloudflare) strips the Origin header. Referer is the
+  // fallback for hostname-based allowlisting on read-only endpoints.
   const r = new Request("https://widget.divee.ai/functions/v1/chat", {
     headers: { "referer": "https://publisher.example.com/article" },
   });
+  assertEquals(getRequestOriginUrl(r), "https://publisher.example.com/article");
+});
+
+Deno.test("getRequestOriginUrl: returns null when neither Origin nor Referer is present", () => {
+  const r = new Request("https://widget.divee.ai/functions/v1/chat");
   assertEquals(getRequestOriginUrl(r), null);
 });
