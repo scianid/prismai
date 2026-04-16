@@ -81,7 +81,7 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────
   # 2. DEPLOY — only on push to main, after build passes,
-  #    requires manual approval via the production-sdk environment.
+  #    requires manual approval via the production-edge-functions environment.
   # ─────────────────────────────────────────────────────────────────────────
   deploy:
     name: Upload to Supabase Storage
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:
-      name: production-sdk
+      name: production-edge-functions
       url: https://srv.divee.ai/storage/v1/object/public/public-files/sdk/divee.sdk.latest.js
     steps:
       - name: Download build artifact
@@ -107,9 +107,21 @@ jobs:
           set -euo pipefail
 
           STORAGE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co/storage/v1/object/public-files/sdk"
+          echo "Storage URL: ${STORAGE_URL}"
+          echo "Project ref length: ${#SUPABASE_PROJECT_REF}"
+          echo "Service role key length: ${#SUPABASE_SERVICE_ROLE_KEY}"
+
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "::error::SUPABASE_PROJECT_REF is empty. Add it as a variable in the production-edge-functions environment."
+            exit 1
+          fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY is empty. Add it as a secret in the production-edge-functions environment."
+            exit 1
+          fi
 
           echo "Uploading divee.sdk.latest.js..."
-          curl -sf -X POST "${STORAGE_URL}/divee.sdk.latest.js" \
+          curl -sS --fail-with-body -X POST "${STORAGE_URL}/divee.sdk.latest.js" \
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/javascript" \
             -H "x-upsert: true" \
@@ -120,7 +132,7 @@ jobs:
           VERSIONED=$(ls dist/divee.sdk.*.js | grep -v latest | sort | tail -1)
           VERSIONED_NAME=$(basename "$VERSIONED")
           echo "Uploading ${VERSIONED_NAME}..."
-          curl -sf -X POST "${STORAGE_URL}/${VERSIONED_NAME}" \
+          curl -sS --fail-with-body -X POST "${STORAGE_URL}/${VERSIONED_NAME}" \
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/javascript" \
             -H "x-upsert: true" \
