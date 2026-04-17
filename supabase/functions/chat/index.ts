@@ -32,6 +32,7 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getProjectAiSettings } from "../_shared/dao/projectAiSettingsDao.ts";
 import { generateEmbedding } from "../_shared/embeddingService.ts";
 import { searchSimilarChunks } from "../_shared/dao/ragDocumentDao.ts";
+import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 
 // ─── Dependency injection seam ────────────────────────────────────────────
 // `chatHandler` takes a `ChatDeps` object so unit tests can stub external
@@ -538,6 +539,11 @@ export async function chatHandler(
       })
       .catch((err) => {
         console.error("chat: failed to cache answer", err);
+        captureException(err, {
+          handler: "chat",
+          tags: { phase: "post_stream" },
+          extra: { conversationId: conversation.id, projectId },
+        });
       });
 
     // Issue a signed visitor token so the client can prove ownership of this
@@ -564,9 +570,10 @@ export async function chatHandler(
     });
   } catch (error) {
     console.error("chat: unhandled error", error);
+    captureException(error, { handler: "chat" });
     return errorResp("Internal server error", 500);
   }
 }
 
 // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-Deno.serve((req: Request) => chatHandler(req));
+Deno.serve(serveWithSentry("chat", (req: Request) => chatHandler(req)));

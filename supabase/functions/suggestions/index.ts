@@ -17,6 +17,7 @@ import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { generateEmbedding } from "../_shared/embeddingService.ts";
 import { searchSimilarChunks } from "../_shared/dao/ragDocumentDao.ts";
+import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 
 // ─── Dependency injection seam ────────────────────────────────────────────
 // `suggestionsHandler` accepts a `SuggestionsDeps` object so unit tests can
@@ -288,9 +289,10 @@ export async function suggestionsHandler(
   } catch (error: any) {
     console.error("suggestions: unhandled error", error);
     console.error("Error:", error);
+    captureException(error, { handler: "suggestions" });
     return errorResp(error.message, 500);
   }
 }
 
 // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-Deno.serve((req: Request) => suggestionsHandler(req));
+Deno.serve(serveWithSentry("suggestions", (req: Request) => suggestionsHandler(req)));

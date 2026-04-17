@@ -6,6 +6,7 @@ import { errorResp, successRespWithCache, tooManyRequestsResp } from "../_shared
 import { getProjectById, getProjectConfigById } from "../_shared/dao/projectDao.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { verifyConfigBypassToken } from "../_shared/configBypassToken.ts";
+import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 
 // ─── Dependency injection seam ────────────────────────────────────────────
 // `configHandler` takes a `ConfigDeps` object so unit tests can stub the
@@ -148,9 +149,10 @@ export async function configHandler(
     return successRespWithCache(config);
   } catch (error) {
     console.error("Error:", error);
+    captureException(error, { handler: "config" });
     return errorResp("Internal Server Error", 500);
   }
 }
 
 // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-Deno.serve((req: Request) => configHandler(req));
+Deno.serve(serveWithSentry("config", (req: Request) => configHandler(req)));
