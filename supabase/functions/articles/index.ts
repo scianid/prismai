@@ -16,6 +16,7 @@ import {
   getSourceArticleTags,
 } from "../_shared/dao/articleDao.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 
 const TAG_WEIGHTS: Record<string, number> = {
   person: 2.0,
@@ -123,6 +124,7 @@ export async function articlesHandler(
     }
   } catch (err) {
     console.error("[Articles] Error:", err);
+    captureException(err, { handler: "articles" });
     return errorResp("Internal server error", 500);
   }
 }
@@ -299,4 +301,4 @@ async function handleRelated(
 }
 
 // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-Deno.serve((req: Request) => articlesHandler(req));
+Deno.serve(serveWithSentry("articles", (req: Request) => articlesHandler(req)));

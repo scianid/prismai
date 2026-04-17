@@ -9,6 +9,7 @@ import {
   resetConversation,
 } from "../_shared/dao/conversationDao.ts";
 import { verifyVisitorToken } from "../_shared/visitorAuth.ts";
+import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 
 // ─── Dependency injection seam ────────────────────────────────────────────
 // `conversationsHandler` accepts a `ConversationsDeps` object so unit tests
@@ -178,9 +179,10 @@ export async function conversationsHandler(
     return errorResp("Not found", 404);
   } catch (error) {
     console.error("conversations: unhandled error", error);
+    captureException(error, { handler: "conversations" });
     return errorResp("Internal server error", 500);
   }
 }
 
 // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-Deno.serve((req: Request) => conversationsHandler(req));
+Deno.serve(serveWithSentry("conversations", (req: Request) => conversationsHandler(req)));

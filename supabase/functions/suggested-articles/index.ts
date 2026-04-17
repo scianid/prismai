@@ -8,6 +8,7 @@ import {
   getRecentArticlesForProject,
 } from "../_shared/dao/articleDao.ts";
 import { getSuggestionIndex, updateSuggestionIndex } from "../_shared/dao/conversationDao.ts";
+import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 
 // ─── Dependency injection seam ────────────────────────────────────────────
 // `suggestedArticlesHandler` accepts a `SuggestedArticlesDeps` object so
@@ -135,9 +136,10 @@ export async function suggestedArticlesHandler(
     });
   } catch (err) {
     console.error("[Suggested Articles] Error:", err);
+    captureException(err, { handler: "suggested-articles" });
     return errorResp("Internal server error", 500, { error: "Internal server error" });
   }
 }
 
 // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-Deno.serve((req: Request) => suggestedArticlesHandler(req));
+Deno.serve(serveWithSentry("suggested-articles", (req: Request) => suggestedArticlesHandler(req)));

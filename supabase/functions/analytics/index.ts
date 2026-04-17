@@ -5,6 +5,7 @@ import { supabaseClient } from "../_shared/supabaseClient.ts";
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { enforceContentLength, tooManyRequestsResp } from "../_shared/responses.ts";
+import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 
 // analytics_impressions and analytics_events tables are deprecated.
 // This function now reverse-proxies all analytics traffic to the secondary
@@ -144,9 +145,10 @@ export async function analyticsHandler(
     });
   } catch (error) {
     console.error("Error proxying analytics event:", error);
+    captureException(error, { handler: "analytics" });
     return jsonResp({ error: "Internal server error" }, 500);
   }
 }
 
 // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-Deno.serve((req: Request) => analyticsHandler(req));
+Deno.serve(serveWithSentry("analytics", (req: Request) => analyticsHandler(req)));
