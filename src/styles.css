@@ -2184,6 +2184,7 @@
   }
   
   .divee-widget-floating .divee-icon-site-collapsed,
+  .divee-widget-floating .divee-site-favicon-collapsed,
   .divee-widget-floating .divee-search-input-collapsed,
   .divee-widget-floating .divee-send-icon-collapsed {
     display: none !important;
