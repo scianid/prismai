@@ -615,6 +615,12 @@
             // Load server configuration first (needed for ad_tag_id)
             await this.loadServerConfig();
 
+            // Admin kill switch — short-circuit before ads, analytics, or DOM.
+            if (this.state.serverConfig && this.state.serverConfig.enabled === false) {
+                this.log('init', 'Widget disabled by admin (enabled=false)');
+                return;
+            }
+
             // Initialize Google Ads (after config is loaded to get ad_tag_id)
             this.initGoogleAds();
 

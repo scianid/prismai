@@ -31,7 +31,7 @@ export function getProjectById(projectId: string, supabase: any) {
     const { data: project, error: projectError } = await supabase
       .from("project")
       .select(
-        "project_id, allowed_urls, direction, language, icon_url, client_name, client_description, highlight_color, show_ad, input_text_placeholders, display_mode, display_position, article_class, widget_container_class, override_mobile_container_selector, disclaimer_text, widget_mode, ask_concent",
+        "project_id, allowed_urls, direction, language, icon_url, client_name, client_description, highlight_color, show_ad, enabled, input_text_placeholders, display_mode, display_position, article_class, widget_container_class, override_mobile_container_selector, disclaimer_text, widget_mode, ask_concent",
       )
       .eq("project_id", projectId)
       .single();

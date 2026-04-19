@@ -118,6 +118,7 @@ export async function configHandler(
       client_name: project.client_name || "",
       client_description: project.client_description || "",
       highlight_color: project.highlight_color || ["#68E5FD", "#A389E0"],
+      enabled: project.enabled !== false,
       show_ad: typeof project.show_ad === "boolean" ? project.show_ad : true,
       input_text_placeholders: project.input_text_placeholders || [
         "Ask anything about this article...",
