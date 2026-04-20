@@ -278,7 +278,7 @@ The Suggested Reads feature is an **embeddable JavaScript widget component** tha
 
 **Presentation Layer:**
 - In-chat suggestion cards appearing after every 2nd AI response (#2, #4, #6, #8...)
-- Horizontal card layout: 80px image, title (15px semibold, 3-line clamp), "DIVE DEEPER..." label
+- Horizontal card layout: 80px image, title (15px semibold, 3-line clamp), "Recommendation" label
 - Match existing AI message styling (border, background, spacing)
 - Smooth entrance animations
 - Responsive design (desktop/tablet/mobile breakpoints)
@@ -447,7 +447,7 @@ The Suggested Reads feature is an **embeddable JavaScript widget component** tha
 
 - **FR35:** Readers can see suggestion cards styled to match existing AI message appearance (border, background, spacing)
 - **FR36:** Readers can see smooth entrance animations when suggestions appear
-- **FR37:** Readers can see "DIVE DEEPER..." label on suggestion cards
+- **FR37:** Readers can see "Recommendation" label on suggestion cards
 - **FR38:** Readers can see suggestion cards with 8px border radius matching AI message styling
 
 ### Performance & Technical

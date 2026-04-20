@@ -134,7 +134,7 @@ card.innerHTML = `
         <img src="${imageUrl}" alt="${suggestion.title}" />   <!-- injection point 1 -->
     </div>
     <div class="divee-suggestion-text">
-        <div class="divee-suggestion-label">DIVE DEEPER...</div>
+        <div class="divee-suggestion-label">Recommendation</div>
         <div class="divee-suggestion-title">${suggestion.title}</div>  <!-- injection point 2 -->
     </div>
 `;

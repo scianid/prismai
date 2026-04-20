@@ -308,6 +308,13 @@
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
         }
 
+        // Look up a translation from serverConfig.translations by key.
+        // Falls back to the given English default when not provided.
+        t(key, fallback) {
+            const value = this.state.serverConfig?.translations?.[key];
+            return (typeof value === 'string' && value.length > 0) ? value : fallback;
+        }
+
         renderMarkdown(text) {
             if (!text) return '';
 
@@ -867,7 +874,11 @@
                 widgetMode: 'article',
                 input_text_placeholders: [
                     'Ask anything about this article...'
-                ]
+                ],
+                // Optional per-deployment UI translations. Supported keys:
+                //   topic, welcomeTitle, welcomeSubtitle, recommendation.
+                // Any missing key falls back to the English default inline.
+                translations: {}
             };
         }
 
@@ -1227,8 +1238,8 @@
                         <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
                     </svg>
                 </div>
-                <p class="divee-welcome-title">How can I help you?</p>
-                <p class="divee-welcome-subtitle">Ask me anything about this article</p>
+                <p class="divee-welcome-title">${this.escapeHtml(this.t('welcomeTitle', 'How can I help you?'))}</p>
+                <p class="divee-welcome-subtitle">${this.escapeHtml(this.t('welcomeSubtitle', 'Ask me anything about this article'))}</p>
             `;
             return container;
         }
@@ -2315,12 +2326,13 @@
             }
 
             const typeLabels = { category: 'Category', person: 'Person', place: 'Place' };
+            const tagLabel = typeLabels[tag.tag_type] || this.t('topic', 'Topic');
 
             const header = document.createElement('div');
             header.className = 'divee-tag-popup-header';
             header.innerHTML = `
                 <div>
-                    <div class="divee-tag-popup-tag-label">${typeLabels[tag.tag_type] || 'Topic'}</div>
+                    <div class="divee-tag-popup-tag-label">${this.escapeHtml(tagLabel)}</div>
                     <span class="divee-tag-popup-title">${this.escapeHtml(tag.value)}</span>
                 </div>
                 <button class="divee-tag-popup-close" aria-label="Close">✕</button>
@@ -2493,7 +2505,7 @@
                     <img src="${imageUrl}" alt="${safeTitle}" />
                 </div>
                 <div class="divee-suggestion-text">
-                    <div class="divee-suggestion-label">DIVE DEEPER...</div>
+                    <div class="divee-suggestion-label">${this.escapeHtml(this.t('recommendation', 'Recommandation'))}</div>
                     <div class="divee-suggestion-title">${safeTitle}</div>
                 </div>
             `;

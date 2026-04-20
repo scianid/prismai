@@ -43,7 +43,7 @@ Design and architect a "suggested reads" feature for the PrismAI chat widget tha
 
 #### #2 - Minimal Card Design (3 Core Elements)
 **Concept:** Clean, compact card with only essential information:
-1. "Dive deeper..." label (brand-aligned!)
+1. "Recommendation" label (brand-aligned!)
 2. Article thumbnail/featured image
 3. Article title
 
@@ -251,7 +251,7 @@ ADD COLUMN suggestion_index INTEGER DEFAULT 0;
 
 ## Breakthrough Concepts
 
-### 🌟 "Dive deeper..." Brand Integration
+### 🌟 "Recommended" Brand Integration
 **Insight:** Feature copy that reinforces brand identity (Divee.AI → "Dive deeper").
 
 **Impact:** Every suggestion card becomes a brand touchpoint. Subtle but powerful alignment between product name and user action.
@@ -393,7 +393,7 @@ ADD COLUMN suggestion_index INTEGER DEFAULT 0;
 <div class="divee-suggested-read-card">
   <button class="dismiss-btn">×</button>
   <a href="{article.url}" target="_blank" class="card-link">
-    <div class="label">Dive deeper...</div>
+    <div class="label">Recommendation</div>
     <img src="{article.image_url}" alt="{article.title}" />
     <h4>{article.title}</h4>
   </a>
@@ -560,7 +560,7 @@ trackEvent('suggestion_dismissed_cancelled', {
    - Simple > perfect for launch
 
 3. **Brand consistency opportunities exist in micro-copy**
-   - "Dive deeper..." = brand reinforcement
+   - "Recommendation" = brand reinforcement
    - Feature becomes marketing touchpoint
 
 4. **Two-step patterns balance control with retention**

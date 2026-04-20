@@ -26,7 +26,7 @@ This document provides complete visual and interaction specifications for the su
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  ┌────────┐  DIVE DEEPER...                            [×]  │
+│  ┌────────┐  Recommandation                            [×]  │
 │  │        │                                                   │
 │  │ Image  │  Article Title That Can Span Up To              │
 │  │ 80px   │  Three Lines Maximum With Ellipsis              │
@@ -69,8 +69,8 @@ If article has no featured image:
 - **Margin-left:** 16px (gap from image)
 - **Justify-content:** flex-start
 
-**4. Label ("DIVE DEEPER...")**
-- **Text:** "DIVE DEEPER..." (always uppercase)
+**4. Label ("Recommandations")**
+- **Text:** "Recommandations"
 - **Font-size:** 11px
 - **Font-weight:** 500 (medium)
 - **Color:** #6B7280 (medium gray)
@@ -296,7 +296,7 @@ Card content fades out and is replaced with confirmation message.
 **Before (Normal State):**
 ```
 ┌──────────────────────────────────────────────┐
-│  ┌────┐  DIVE DEEPER...              [×]    │
+│  ┌────┐  Recommandation              [×]    │
 │  │Img │  Article Title Here                 │
 │  └────┘                                      │
 └──────────────────────────────────────────────┘
@@ -444,7 +444,7 @@ Card content fades out and is replaced with confirmation message.
   <!-- Text Content -->
   <div class="divee-suggestion-text">
     <div class="divee-suggestion-label" aria-hidden="true">
-      Dive deeper...
+      Recommandation
     </div>
     <h4 class="divee-suggestion-title">
       {articleTitle}
@@ -1016,7 +1016,7 @@ function createImageElement(imageUrl, title) {
 - [ ] Card renders correctly in chat flow
 - [ ] Image scales properly (cover, no distortion)
 - [ ] Title truncates at 3 lines with ellipsis
-- [ ] "Dive deeper..." label is uppercase and gray
+- [ ] "Recommandation" label is uppercase and gray
 - [ ] X button is visible and properly positioned
 - [ ] Border and background match AI messages
 - [ ] Spacing is consistent (16px padding, 16px gap)
@@ -1089,7 +1089,7 @@ function createImageElement(imageUrl, title) {
 - **Rationale:** Balance between preview (needs enough text to be compelling) and space (can't dominate chat).
 - **User Benefit:** Enough context to decide interest without overwhelming.
 
-**4. "Dive deeper..." Label**
+**4. "Recommended" Label**
 - **Rationale:** Brand alignment (Divee → Dive). Subtle system label (like "Suggested" or "Recommended") without aggressive marketing language.
 - **User Benefit:** Clear context without feeling like an ad; playful without being unprofessional.
 

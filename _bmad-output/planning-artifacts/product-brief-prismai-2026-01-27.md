@@ -323,7 +323,7 @@ While Sarah doesn't directly decide to install PrismAI features (that's a produc
 - **Graceful Degradation:** Show available articles if < 4, suppress entirely if 0
 
 **3. Minimal Card Design**
-- **Components:** Featured image (80px width, full height) + article title + "DIVE DEEPER..." label
+- **Components:** Featured image (80px width, full height) + article title + "Recommendation" label
 - **Styling:** Match AI message border/background, 8px border-radius, horizontal layout
 - **Text Truncation:** Title limited to 3 lines with ellipsis
 - **RTL Support:** Text alignment and entrance animation respect language direction
