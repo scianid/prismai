@@ -160,6 +160,26 @@ describe('Content Extraction', () => {
       expect(content).not.toContain('regular article tag');
     });
 
+    test('should deduplicate paragraphs that appear multiple times in the DOM', () => {
+      const p1 = 'First paragraph with substantial text that exceeds the minimum length.';
+      const p2 = 'Second paragraph containing enough content to pass all the filters.';
+      const p3 = 'Third paragraph that also has plenty of words to be kept by extractor.';
+
+      const block = `<p>${p1}</p><p>${p2}</p><p>${p3}</p>`;
+      document.body.innerHTML = `<article>${block}${block}${block}${block}</article>`;
+
+      const contentJs = require('fs').readFileSync('./src/content.js', 'utf8');
+      eval(contentJs);
+
+      const content = getContent();
+      const countOccurrences = (haystack, needle) =>
+        haystack.split(needle).length - 1;
+
+      expect(countOccurrences(content, p1)).toBe(1);
+      expect(countOccurrences(content, p2)).toBe(1);
+      expect(countOccurrences(content, p3)).toBe(1);
+    });
+
     test('should handle empty or minimal content', () => {
       document.body.innerHTML = `
         <article>
