@@ -1426,9 +1426,34 @@
   outline: none;
 }
 
-/* RTL entrance animation */
+/* RTL entrance animation + flip the colored accent border to the right */
 [dir="rtl"] .divee-suggestion-card {
   animation: slideInRTL 300ms ease-out;
+  border-left: 1px solid #e5e7eb;
+  border-right: 3px solid var(--divee-color-secondary);
+}
+
+@media (hover: hover) {
+  [dir="rtl"] .divee-suggestion-card:hover {
+    border-right-color: var(--divee-color-primary);
+  }
+}
+
+/* In RTL the image sits on the right, so the gap belongs on its left */
+[dir="rtl"] .divee-suggestion-image {
+  margin-right: 0;
+  margin-left: 12px;
+}
+@media (max-width: 400px) {
+  [dir="rtl"] .divee-suggestion-image {
+    margin-left: 10px;
+  }
+}
+
+/* In RTL the dismiss X moves to the top-left so it doesn't cover the image */
+[dir="rtl"] .divee-suggestion-dismiss {
+  right: auto;
+  left: 7px;
 }
 
 /* Hover state (desktop only) */
