@@ -123,17 +123,20 @@ function getContent(articleClass) {
   }
 
   const paragraphs = [];
-  const stats = { empty:0, insideFigure:0, insideAside:0, caption:0, highLinkDensity:0, adContent:0, tooShort:0 };
+  const seen = new Set();
+  const stats = { empty:0, insideFigure:0, insideAside:0, caption:0, highLinkDensity:0, adContent:0, tooShort:0, duplicate:0 };
 
   for (const el of nodes) {
     const text = (el.textContent || "").trim();
     if (!text) { stats.empty++; continue; }
+    if (seen.has(text)) { stats.duplicate++; continue; }
     if (isInside(el, "figure")) { stats.insideFigure++; continue; }
     if (isInside(el, "aside")) { stats.insideAside++; continue; }
     if (isCaption(el, text)) { stats.caption++; continue; }
     if (linkDensity(el, text) > 0.8) { stats.highLinkDensity++; continue; }
     if (isAdContent(el, text)) { stats.adContent++; continue; }
     if (text.length < 20) { stats.tooShort++; continue; }
+    seen.add(text);
     paragraphs.push(text);
   }
 
