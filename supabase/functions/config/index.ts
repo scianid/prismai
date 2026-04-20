@@ -7,6 +7,7 @@ import { getProjectById, getProjectConfigById } from "../_shared/dao/projectDao.
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { verifyConfigBypassToken } from "../_shared/configBypassToken.ts";
 import { captureException, serveWithSentry } from "../_shared/sentry.ts";
+import { resolveTranslations } from "./translations/index.ts";
 
 // ─── Dependency injection seam ────────────────────────────────────────────
 // `configHandler` takes a `ConfigDeps` object so unit tests can stub the
@@ -137,6 +138,11 @@ export async function configHandler(
       widget_mode: project.widget_mode || "article",
       ask_concent: project.ask_concent === true,
       allowed_urls: project.allowed_urls || [],
+      // `language_code` is the canonical ISO 639-1 key for the
+      // translation bundle. Rows where it is NULL (unknown language
+      // at analyze time) resolve to the English default inside
+      // resolveTranslations — that is the intended UX, not a fallback.
+      translations: resolveTranslations(project.language_code),
       // Merge project_config fields (e.g., ad tag ID, ad size overrides)
       ...(projectConfig && {
         ad_tag_id: projectConfig.ad_tag_id || null,

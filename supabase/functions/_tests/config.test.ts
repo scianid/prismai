@@ -260,6 +260,49 @@ Deno.test("config: display_position falls back to 'bottom-right' for unknown val
   assertEquals(body.display_position, "bottom-right");
 });
 
+Deno.test("config: response includes translations keyed by language_code", async () => {
+  // Default fake project has language_code not set → resolver treats
+  // missing code as "we don't know", which resolves to English.
+  const resEn = await configHandler(req({ projectId: PROJECT_ID }), makeDeps());
+  const bodyEn = await resEn.json();
+  assertEquals(bodyEn.translations.topic, "Topic");
+  assertEquals(bodyEn.translations.welcomeTitle, "How can I help you?");
+
+  // Hebrew project → Hebrew strings. The canonical key is
+  // `language_code`; the legacy `language` name is NOT consulted.
+  const heDeps = makeDeps({
+    getProjectById: () => Promise.resolve(fakeProject({ language_code: "he" })),
+  });
+  const resHe = await configHandler(req({ projectId: PROJECT_ID }), heDeps);
+  const bodyHe = await resHe.json();
+  assertEquals(bodyHe.translations.topic, "נושא");
+  assertEquals(bodyHe.translations.recommendation, "המלצה");
+
+  // Unknown code → English fallback, never undefined.
+  const xxDeps = makeDeps({
+    getProjectById: () => Promise.resolve(fakeProject({ language_code: "xx" })),
+  });
+  const resXx = await configHandler(req({ projectId: PROJECT_ID }), xxDeps);
+  const bodyXx = await resXx.json();
+  assertEquals(bodyXx.translations.topic, "Topic");
+});
+
+Deno.test("config: legacy `language` name is ignored — only language_code picks the bundle", async () => {
+  // A row with an obsolete English name in `language` but no
+  // `language_code` (pre-backfill state, or a language we chose not to
+  // backfill) must resolve to English — not to Hebrew strings inferred
+  // from the name. This locks in the "language_code is authoritative"
+  // contract after we dropped the name-parsing fallback.
+  const deps = makeDeps({
+    getProjectById: () => Promise.resolve(
+      fakeProject({ language: "Hebrew", language_code: null }),
+    ),
+  });
+  const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
+  const body = await res.json();
+  assertEquals(body.translations.topic, "Topic");
+});
+
 Deno.test("config: missing project_config row returns widget config without ad fields", async () => {
   const deps = makeDeps({
     getProjectConfigById: () => Promise.resolve(null),

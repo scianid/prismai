@@ -1301,7 +1301,7 @@
               <span class="divee-send-svg" aria-hidden="true">&#10148;</span>
             </button>
             <div class="divee-input-footer">
-                <div class="divee-warning">${this.escapeHtml(config.disclaimer_text) || 'This is an AI driven tool, results might not always be accurate'}</div>
+                <div class="divee-warning">${this.escapeHtml(config.disclaimer_text || this.t('disclaimer', 'This is an AI driven tool, results might not always be accurate'))}</div>
                 <div class="divee-counter">0/200</div>
             </div>
                         <div class="divee-tag-pills divee-tag-pills-expanded"></div>
