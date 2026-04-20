@@ -2304,11 +2304,14 @@
             popup.className = 'divee-tag-popup';
             popup.setAttribute('data-type', tag.tag_type || 'category');
 
-            // Inherit widget CSS custom properties
+            // Inherit widget CSS custom properties + direction (popup lives on
+            // document.body, so [dir="rtl"] on the widget wouldn't reach it).
             const widgetEl = this.elements.container;
             if (widgetEl) {
                 popup.style.setProperty('--divee-color-primary', getComputedStyle(widgetEl).getPropertyValue('--divee-color-primary'));
                 popup.style.setProperty('--divee-color-secondary', getComputedStyle(widgetEl).getPropertyValue('--divee-color-secondary'));
+                const widgetDir = widgetEl.getAttribute('dir');
+                if (widgetDir) popup.setAttribute('dir', widgetDir);
             }
 
             const typeLabels = { category: 'Category', person: 'Person', place: 'Place' };
