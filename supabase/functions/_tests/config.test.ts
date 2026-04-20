@@ -294,9 +294,10 @@ Deno.test("config: legacy `language` name is ignored — only language_code pick
   // from the name. This locks in the "language_code is authoritative"
   // contract after we dropped the name-parsing fallback.
   const deps = makeDeps({
-    getProjectById: () => Promise.resolve(
-      fakeProject({ language: "Hebrew", language_code: null }),
-    ),
+    getProjectById: () =>
+      Promise.resolve(
+        fakeProject({ language: "Hebrew", language_code: null }),
+      ),
   });
   const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
   const body = await res.json();

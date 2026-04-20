@@ -14,10 +14,7 @@
  *      the source of truth, so it must always be usable.
  */
 import { assertEquals, assertNotStrictEquals } from "jsr:@std/assert@1";
-import {
-  _bundledForTest,
-  resolveTranslations,
-} from "../config/translations/index.ts";
+import { _bundledForTest, resolveTranslations } from "../config/translations/index.ts";
 
 Deno.test("resolveTranslations: English returns the English bundle", () => {
   const t = resolveTranslations("en");
