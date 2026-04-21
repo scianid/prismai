@@ -960,14 +960,24 @@
                     this.articleUrl = window.location.href;
                 }
 
-                // Extract social share image metadata
-                const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content') ||
-                               document.querySelector('meta[name="twitter:image"]')?.getAttribute('content') ||
-                               null;
-                
-                const articleImage = document.querySelector('article img')?.src ||
-                                   document.querySelector('[role="article"] img')?.src ||
-                                   null;
+                // Extract social share image metadata.
+                // Only accept absolute http(s) URLs — some pages inline images as
+                // `data:` URIs which can be MB-sized and would blow past the
+                // suggestions/chat body caps if forwarded to the server.
+                const isHttpUrl = (u) => typeof u === 'string' && /^https?:\/\//i.test(u);
+                const pickHttpUrl = (u) => (isHttpUrl(u) ? u : null);
+
+                const ogImage = pickHttpUrl(
+                    document.querySelector('meta[property="og:image"]')?.getAttribute('content') ||
+                    document.querySelector('meta[name="twitter:image"]')?.getAttribute('content') ||
+                    null,
+                );
+
+                const articleImage = pickHttpUrl(
+                    document.querySelector('article img')?.src ||
+                    document.querySelector('[role="article"] img')?.src ||
+                    null,
+                );
 
                 // Cache the extracted content
                 this.contentCache = {
