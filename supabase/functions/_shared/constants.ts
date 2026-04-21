@@ -1,5 +1,5 @@
 export const MAX_TITLE_LENGTH = 1000;
-export const MAX_CONTENT_LENGTH = 20000;
+export const MAX_CONTENT_LENGTH = 200000;
 
 /**
  * Strip HTML/script content, normalize Unicode, and clean control characters

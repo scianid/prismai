@@ -84,7 +84,7 @@ export async function suggestionsHandler(
   // SECURITY_AUDIT_TODO item 3: cap body size BEFORE parsing. Same 64KB
   // budget as /chat — same MAX_CONTENT_LENGTH + MAX_TITLE_LENGTH sanitizer
   // caps apply here.
-  const oversize = enforceContentLength(req, 65536);
+  const oversize = enforceContentLength(req, 262144);
   if (oversize) return oversize;
 
   try {

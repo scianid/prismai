@@ -1886,14 +1886,22 @@
         }
 
         async fetchSuggestions() {
+            // Server caps at 200000 chars content / 1000 chars title (MAX_CONTENT_LENGTH,
+            // MAX_TITLE_LENGTH) and rejects >256KB bodies before parsing. Truncate
+            // client-side so we stay well under the body cap on verbose pages.
+            const MAX_CONTENT = 200000;
+            const MAX_TITLE = 1000;
+            const title = (this.contentCache.title || '').slice(0, MAX_TITLE);
+            const content = (this.contentCache.content || '').slice(0, MAX_CONTENT);
+
             // Send cached content to server for suggestions
             const payload = {
                 widget_mode: this.config.widgetMode || 'article',
                 projectId: this.config.projectId,
                 articleId: this.config.articleId,
-                title: this.contentCache.title,
+                title,
                 url: this.contentCache.url,
-                content: this.contentCache.content,
+                content,
                 visitor_id: this.state.visitorId,
                 session_id: this.state.sessionId,
                 metadata: {

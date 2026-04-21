@@ -94,10 +94,10 @@ export async function chatHandler(
   }
 
   // SECURITY_AUDIT_TODO item 3: cap body size BEFORE parsing. sanitizeContent
-  // already truncates to MAX_CONTENT_LENGTH (20KB) + MAX_TITLE_LENGTH (1KB),
+  // already truncates to MAX_CONTENT_LENGTH (200KB) + MAX_TITLE_LENGTH (1KB),
   // but the truncation runs AFTER req.json() which loads the full body into
-  // memory. 64KB gives headroom for JSON envelope + other fields.
-  const oversize = enforceContentLength(req, 65536);
+  // memory. 256KB gives headroom for JSON envelope + other fields.
+  const oversize = enforceContentLength(req, 262144);
   if (oversize) return oversize;
 
   try {
