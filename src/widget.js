@@ -883,6 +883,15 @@
         }
 
         extractArticleContent() {
+            // Only accept absolute http(s) image URLs, and cap their length.
+            // Some pages inline images as `data:` URIs (MB-sized), which would
+            // blow past suggestions/chat body caps if forwarded to the server.
+            const MAX_IMAGE_URL_LEN = 2048;
+            const pickHttpUrl = (u) =>
+                typeof u === 'string' && /^https?:\/\//i.test(u) && u.length <= MAX_IMAGE_URL_LEN
+                    ? u
+                    : null;
+
             // Check if content is already cached
             if (this.contentCache.extracted) {
                 this.log('content', 'Using cached content');
@@ -899,13 +908,13 @@
                     this.articleTitle = diveeArticle.title || document.title || 'Untitled Article';
                     this.articleContent = diveeArticle.content || '';
                     this.articleUrl = diveeArticle.url || window.location.href;
-                    
+
                     // Cache the provided content
                     this.contentCache = {
                         content: this.articleContent,
                         title: this.articleTitle,
                         url: this.articleUrl,
-                        image_url: diveeArticle.image || null,
+                        image_url: pickHttpUrl(diveeArticle.image),
                         og_image: null,
                         extracted: true,
                         articleFound: true
@@ -960,13 +969,7 @@
                     this.articleUrl = window.location.href;
                 }
 
-                // Extract social share image metadata.
-                // Only accept absolute http(s) URLs — some pages inline images as
-                // `data:` URIs which can be MB-sized and would blow past the
-                // suggestions/chat body caps if forwarded to the server.
-                const isHttpUrl = (u) => typeof u === 'string' && /^https?:\/\//i.test(u);
-                const pickHttpUrl = (u) => (isHttpUrl(u) ? u : null);
-
+                // Extract social share image metadata (sanitized via pickHttpUrl).
                 const ogImage = pickHttpUrl(
                     document.querySelector('meta[property="og:image"]')?.getAttribute('content') ||
                     document.querySelector('meta[name="twitter:image"]')?.getAttribute('content') ||
