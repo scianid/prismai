@@ -3,5 +3,6 @@
   "welcomeTitle": "How can I help you?",
   "welcomeSubtitle": "Ask me anything about this article",
   "recommendation": "Recommandation",
-  "disclaimer": "This is an AI driven tool, results might not always be accurate"
+  "disclaimer": "This is an AI driven tool, results might not always be accurate",
+  "askAi": "ASK AI"
 }

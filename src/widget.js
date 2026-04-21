@@ -1444,10 +1444,10 @@
             btn.className = 'divee-floating-ask-ai';
             btn.setAttribute('role', 'button');
             btn.setAttribute('tabindex', '0');
-            btn.setAttribute('aria-label', 'Ask AI');
+            btn.setAttribute('aria-label', this.t('askAi', 'Ask AI'));
             btn.innerHTML = `
                 <span class="divee-fab-pill" aria-hidden="true">
-                    <span class="divee-fab-pill-text">ASK AI</span>
+                    <span class="divee-fab-pill-text">${this.escapeHtml(this.t('askAi', 'ASK AI'))}</span>
                 </span>
                 <span class="divee-fab-circle" aria-hidden="true">
                     <svg class="divee-fab-sparkle" viewBox="0 0 24 24" aria-hidden="true">
