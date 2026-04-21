@@ -2438,3 +2438,215 @@
 .divee-consent-accept:hover {
   box-shadow: 0 2px 8px rgba(104, 229, 253, 0.5);
 }
+
+/* ============================================
+   Floating "Ask AI" button (anchored+floating layout)
+   Sits bottom-right on the page; the pill ("ASK AI")
+   periodically slides out of the dark circle, then retracts.
+   ============================================ */
+
+@property --divee-fab-gradient-angle {
+  syntax: '<angle>';
+  initial-value: 135deg;
+  inherits: true;
+}
+
+@keyframes divee-fab-gradient-rotate {
+  from { --divee-fab-gradient-angle: 135deg; }
+  to   { --divee-fab-gradient-angle: 495deg; }
+}
+
+.divee-floating-ask-ai {
+  /* Theme vars — will be overridden per-project via applyThemeColors() */
+  --divee-color-primary: #68E5FD;
+  --divee-color-secondary: #A389E0;
+  --divee-fab-gradient-angle: 135deg;
+  animation: divee-fab-gradient-rotate 6s linear infinite;
+
+  position: fixed !important;
+  right: 24px !important;
+  bottom: 24px !important;
+  z-index: 999998 !important; /* just under the expanded anchored widget */
+  display: flex !important;
+  align-items: center !important;
+  height: 56px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  /* Soft, non-neon drop shadow — matches the main collapsed widget's shadow language */
+  filter:
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.06))
+    drop-shadow(0 8px 20px rgba(0, 0, 0, 0.10));
+  transition: filter 0.3s ease;
+}
+
+.divee-floating-ask-ai:hover {
+  filter:
+    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.08))
+    drop-shadow(0 12px 28px rgba(0, 0, 0, 0.14));
+}
+
+/* The "ASK AI" pill — white with gradient border, matching the main collapsed search pill */
+.divee-fab-pill {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  height: 34px !important;
+  max-width: 0 !important;
+  padding: 0 0 0 0 !important;
+  margin-right: -22px !important; /* pill tucks under the circle when collapsed */
+  border-radius: 22px !important;
+  background:
+    linear-gradient(var(--divee-fab-gradient-angle),
+      color-mix(in srgb, var(--divee-color-primary) 6%, white) 0%,
+      white 50%,
+      color-mix(in srgb, var(--divee-color-secondary) 6%, white) 100%) padding-box,
+    linear-gradient(var(--divee-fab-gradient-angle), var(--divee-color-primary), var(--divee-color-secondary)) border-box !important;
+  border: 2px solid transparent !important;
+  color: #1f2937 !important;
+  /* Subtle inward glow from the gradient outline */
+  box-shadow:
+    inset 0 0 8px color-mix(in srgb, var(--divee-color-primary) 8%, transparent),
+    inset 0 0 14px color-mix(in srgb, var(--divee-color-secondary) 5%, transparent) !important;
+  opacity: 0 !important;
+  transform: translateX(18px) !important;
+  overflow: hidden !important;
+  /* Gentler, widget-native easing — no bounce, calm fade/slide */
+  transition:
+    max-width 0.9s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.9s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.9s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  pointer-events: none !important;
+}
+
+.divee-fab-pill-text {
+  display: inline-block !important;
+  padding: 0 26px 0 14px !important; /* extra right padding so text clears the circle overlap */
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.1em !important;
+  white-space: nowrap !important;
+  color: #1f2937 !important;
+}
+
+.divee-floating-ask-ai.divee-fab-revealed .divee-fab-pill {
+  max-width: 220px !important;
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+
+/* White circle with gradient outline + dark sparkle */
+.divee-fab-circle {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  background:
+    linear-gradient(white, white) padding-box,
+    linear-gradient(var(--divee-fab-gradient-angle), var(--divee-color-primary), var(--divee-color-secondary)) border-box !important;
+  border: 2px solid transparent !important;
+  flex: 0 0 auto !important;
+  /* Lifted shadow + subtle inward glow from the gradient outline */
+  box-shadow:
+    inset 0 0 8px color-mix(in srgb, var(--divee-color-primary) 22%, transparent),
+    inset 0 0 14px color-mix(in srgb, var(--divee-color-secondary) 14%, transparent),
+    0 4px 10px rgba(0, 0, 0, 0.12),
+    0 10px 24px rgba(0, 0, 0, 0.14) !important;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease !important;
+}
+
+.divee-floating-ask-ai:hover .divee-fab-circle {
+  box-shadow:
+    inset 0 0 10px color-mix(in srgb, var(--divee-color-primary) 28%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--divee-color-secondary) 18%, transparent),
+    0 6px 14px rgba(0, 0, 0, 0.16),
+    0 14px 32px rgba(0, 0, 0, 0.18) !important;
+}
+
+.divee-floating-ask-ai:hover .divee-fab-circle {
+  transform: scale(1.06) !important;
+}
+
+.divee-fab-sparkle {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.divee-fab-sparkle .divee-fab-star-stop-start {
+  stop-color: var(--divee-color-primary);
+}
+.divee-fab-sparkle .divee-fab-star-stop-end {
+  stop-color: var(--divee-color-secondary);
+}
+
+/* LIVE badge — coral/pink gradient pill with bold white text.
+   Soft outer pink halo + inner top highlight for depth. */
+.divee-fab-live {
+  position: absolute !important;
+  top: -8px !important;
+  right: -12px !important;
+  padding: 3px 7px !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #FC325D 0%, #FC2D5B 45%, #FE5757 100%) !important;
+  border-radius: 999px !important;
+  line-height: 1.2 !important;
+  text-shadow: 0 1px 2px rgba(139, 15, 40, 0.35) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(139, 15, 40, 0.18),
+    0 2px 6px rgba(244, 63, 94, 0.35),
+    0 6px 16px rgba(244, 63, 94, 0.28) !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+/* Mobile sizing */
+@media (max-width: 480px) {
+  .divee-floating-ask-ai {
+    right: 16px !important;
+    bottom: 16px !important;
+    height: 50px !important;
+  }
+  .divee-fab-circle {
+    width: 50px !important;
+    height: 50px !important;
+  }
+  .divee-fab-sparkle {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .divee-fab-pill {
+    height: 38px !important;
+    margin-right: -22px !important;
+  }
+  .divee-fab-pill-text {
+    font-size: 13px !important;
+    padding: 0 28px 0 16px !important;
+  }
+}
+
+/* Hide the floating button while the anchored widget is expanded, to avoid overlap */
+.divee-widget[data-state="expanded"] ~ .divee-floating-ask-ai,
+body:has(.divee-widget[data-state="expanded"]) .divee-floating-ask-ai {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(12px) scale(0.95) !important;
+  transition: opacity 0.25s ease, transform 0.25s ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .divee-floating-ask-ai,
+  .divee-fab-pill {
+    animation: none !important;
+    transition: opacity 0.2s ease !important;
+  }
+}

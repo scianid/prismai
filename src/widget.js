@@ -724,7 +724,7 @@
                             : 'right';
                         this.log('config', 'Sidebar position from config:', this.config.sidebarPosition);
                     } else {
-                        // Anchored mode: only allow 'top' or 'bottom'
+                        // Anchored (and anchored+floating): only allow 'top' or 'bottom'
                         this.config.anchoredPosition = ['top', 'bottom'].includes(serverConfig.display_position)
                             ? serverConfig.display_position
                             : 'bottom';
@@ -833,12 +833,18 @@
 
         applyThemeColors(config) {
             if (!this.elements.container) return;
-            
+
             const colors = config?.highlight_color || this.getDefaultConfig().highlight_color;
-            
+
             if (Array.isArray(colors) && colors.length >= 2) {
                 this.elements.container.style.setProperty('--divee-color-primary', colors[0]);
                 this.elements.container.style.setProperty('--divee-color-secondary', colors[1]);
+                // Floating button lives on <body>, outside the widget container —
+                // propagate theme vars to it directly.
+                if (this.elements.floatingAskAi) {
+                    this.elements.floatingAskAi.style.setProperty('--divee-color-primary', colors[0]);
+                    this.elements.floatingAskAi.style.setProperty('--divee-color-secondary', colors[1]);
+                }
                 this.log('ui', 'Applied theme colors:', colors[0], colors[1]);
             }
         }
@@ -1044,6 +1050,9 @@
             } else if (this.config.displayMode === 'cubic') {
                 this.log('ui', 'Cubic mode');
                 container.classList.add('divee-widget-cubic');
+            } else if (this.config.displayMode === 'anchored+floating') {
+                this.log('ui', 'Anchored+floating mode, position:', this.config.anchoredPosition);
+                // Main container renders as anchored (no special class); floating button is injected separately.
             } else {
                 this.log('ui', 'Anchored mode, position:', this.config.anchoredPosition);
             }
@@ -1420,7 +1429,96 @@
                 }
             }
 
+            // For anchored+floating hybrid: also inject the floating Ask AI button into the body.
+            if (this.config.displayMode === 'anchored+floating') {
+                this.injectFloatingAskAiButton();
+            }
+
             this.displayAdsIfNeeded();
+        }
+
+        injectFloatingAskAiButton() {
+            if (this.elements.floatingAskAi) return;
+
+            const btn = document.createElement('div');
+            btn.className = 'divee-floating-ask-ai';
+            btn.setAttribute('role', 'button');
+            btn.setAttribute('tabindex', '0');
+            btn.setAttribute('aria-label', 'Ask AI');
+            btn.innerHTML = `
+                <span class="divee-fab-pill" aria-hidden="true">
+                    <span class="divee-fab-pill-text">ASK AI</span>
+                </span>
+                <span class="divee-fab-circle" aria-hidden="true">
+                    <svg class="divee-fab-sparkle" viewBox="0 0 24 24" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="divee-fab-star-grad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                                <stop class="divee-fab-star-stop-start" offset="0%"/>
+                                <stop class="divee-fab-star-stop-end" offset="100%"/>
+                            </linearGradient>
+                        </defs>
+                        <path fill="url(#divee-fab-star-grad)" d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
+                        <path fill="url(#divee-fab-star-grad)" d="M19 3l0.8 2.4L22 6l-2.2 0.6L19 9l-0.8-2.4L16 6l2.2-0.6L19 3z" opacity="0.9"/>
+                    </svg>
+                    <span class="divee-fab-live">LIVE</span>
+                </span>
+            `;
+
+            const activate = (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                this.handleFloatingAskAiClick();
+            };
+            btn.addEventListener('click', activate);
+            btn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') activate(e);
+            });
+
+            document.body.appendChild(btn);
+            this.elements.floatingAskAi = btn;
+
+            // Apply current theme colors to the floating button (it's outside the widget container).
+            this.applyThemeColors(this.state.serverConfig || this.getDefaultConfig());
+
+            // Reveal the "ASK AI" pill occasionally — feels like a native widget hint,
+            // not an ad. Long gaps between reveals, calm hold time.
+            const showPill = (holdMs) => {
+                if (!this.elements.floatingAskAi) return;
+                this.elements.floatingAskAi.classList.add('divee-fab-revealed');
+                setTimeout(() => {
+                    if (!this.elements.floatingAskAi) return;
+                    this.elements.floatingAskAi.classList.remove('divee-fab-revealed');
+                    scheduleNextReveal();
+                }, holdMs);
+            };
+            const scheduleNextReveal = () => {
+                const delay = 25000 + Math.random() * 20000; // 25–45s between reveals
+                this.elements.floatingAskAiTimer = setTimeout(() => showPill(3500), delay);
+            };
+            // Initial reveal after a short settle delay, held a bit longer so the user reads it.
+            this.elements.floatingAskAiTimer = setTimeout(() => showPill(4000), 2500);
+        }
+
+        handleFloatingAskAiClick() {
+            // Scroll the anchored widget into view, then expand it and focus the input.
+            const target = this.elements.container;
+            if (!target) return;
+
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            const doExpand = () => {
+                if (!this.state.isExpanded) {
+                    this.expand();
+                } else {
+                    // Already expanded — just refocus the input.
+                    const input = this.elements.expandedView?.querySelector('.divee-input');
+                    if (input) input.focus();
+                }
+            };
+            // Let the smooth scroll settle before expanding so the expand animation plays in view.
+            setTimeout(doExpand, 350);
         }
 
         displayAdsIfNeeded() {
