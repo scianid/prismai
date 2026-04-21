@@ -58,8 +58,26 @@ export async function suggestionsHandler(
   req: Request,
   deps: SuggestionsDeps = realSuggestionsDeps,
 ): Promise<Response> {
+  console.log("suggestions: request received", {
+    method: req.method,
+    url: req.url,
+    origin: req.headers.get("origin"),
+    referer: req.headers.get("referer"),
+    host: req.headers.get("host"),
+    userAgent: req.headers.get("user-agent"),
+    contentType: req.headers.get("content-type"),
+    contentLength: req.headers.get("content-length"),
+    hasApiKey: !!req.headers.get("apikey"),
+    hasAuth: !!req.headers.get("authorization"),
+    headerKeys: [...req.headers.keys()],
+  });
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
+    console.log("suggestions: CORS preflight", {
+      acrMethod: req.headers.get("access-control-request-method"),
+      acrHeaders: req.headers.get("access-control-request-headers"),
+    });
     return new Response("ok", { headers: corsHeaders });
   }
 
@@ -71,6 +89,16 @@ export async function suggestionsHandler(
 
   try {
     let { projectId, title, content, url, visitor_id, session_id, metadata } = await req.json();
+
+    console.log("suggestions: body parsed", {
+      projectId,
+      url,
+      titleLen: title?.length,
+      contentLen: content?.length,
+      visitor_id,
+      session_id,
+      hasMetadata: !!metadata,
+    });
 
     // Truncate then sanitize inputs - mitigates stored prompt injection (C-1)
     if (title) title = sanitizeContent(title.substring(0, MAX_TITLE_LENGTH));
@@ -91,6 +119,13 @@ export async function suggestionsHandler(
     const supabase = await deps.supabaseClient();
 
     const project = await deps.getProjectById(projectId, supabase);
+    console.log("suggestions: project loaded", {
+      projectId,
+      found: !!project,
+      widget_mode: project?.widget_mode,
+      language: project?.language,
+      allowed_urls: project?.allowed_urls,
+    });
     const isKnowledgebase = project?.widget_mode === "knowledgebase";
 
     // In article mode, url/title/content are required
@@ -106,6 +141,11 @@ export async function suggestionsHandler(
     if (!url) url = "knowledgebase";
 
     const requestUrl = getRequestOriginUrl(req);
+    console.log("suggestions: origin check", {
+      requestUrl,
+      allowed_urls: project?.allowed_urls,
+      projectId,
+    });
 
     if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
       console.warn("suggestions: origin not allowed", {
