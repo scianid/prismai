@@ -419,9 +419,6 @@
             const conversationKey = `divee_conversation_${window.location.href}`;
             sessionStorage.removeItem(conversationKey);
 
-            // Conversation ID starts null - new conversation on each page load
-            // Server will assign conversation_id on first question
-
             return { visitorId, sessionId };
         }
 
@@ -2202,7 +2199,6 @@
                 content: this.config.widgetMode === 'knowledgebase' ? '' : this.contentCache.content,
                 visitor_id: this.state.visitorId,
                 session_id: this.state.sessionId,
-                conversation_id: this.state.conversationId, // Include if exists
                 widget_mode: this.config.widgetMode || 'article',
                 metadata: {
                     image_url: this.contentCache.image_url,
@@ -2593,7 +2589,6 @@
             // Track analytics
             this.trackEvent('suggestion_shown', {
                 article_id: suggestion.unique_id,
-                conversation_id: this.state.conversationId,
                 position_in_chat: this.state.aiResponseCount
             });
         }
@@ -2627,7 +2622,6 @@
                 if (!e.target.closest('.divee-suggestion-dismiss')) {
                     this.trackEvent('suggestion_clicked', {
                         article_id: suggestion.unique_id,
-                        conversation_id: this.state.conversationId,
                         position_in_chat: this.state.aiResponseCount
                     });
                     if (suggestion.url && /^https?:\/\//i.test(suggestion.url)) window.open(suggestion.url, '_blank');
@@ -2640,7 +2634,6 @@
                     e.preventDefault();
                     this.trackEvent('suggestion_clicked', {
                         article_id: suggestion.unique_id,
-                        conversation_id: this.state.conversationId,
                         position_in_chat: this.state.aiResponseCount
                     });
                     if (suggestion.url && /^https?:\/\//i.test(suggestion.url)) window.open(suggestion.url, '_blank');
@@ -2653,7 +2646,6 @@
                 e.stopPropagation();
                 this.trackEvent('suggestion_x_clicked', {
                     article_id: suggestion.unique_id,
-                    conversation_id: this.state.conversationId,
                     position_in_chat: this.state.aiResponseCount
                 });
                 this.showDismissalConfirmation(card, cardId, suggestion);
@@ -2681,8 +2673,7 @@
             cancelBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.trackEvent('suggestion_dismissed_cancelled', {
-                    article_id: suggestion.unique_id,
-                    conversation_id: this.state.conversationId
+                    article_id: suggestion.unique_id
                 });
                 // Remove the card
                 card.style.opacity = '0';
@@ -2694,8 +2685,7 @@
             confirmBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.trackEvent('suggestion_dismissed_confirmed', {
-                    article_id: suggestion.unique_id,
-                    conversation_id: this.state.conversationId
+                    article_id: suggestion.unique_id
                 });
                 this.suppressSuggestions();
                 // Remove the card
