@@ -210,9 +210,9 @@ short-lived token. The static-key path is gone.
   1. **Rotate + audit**: Add a rotation reminder, write a row to an
      `audit_log` table on every successful bypass with actor,
      timestamp, and source IP. Schedule quarterly rotation.
-  2. **Replace**: Switch to a short-lived HMAC-signed token the same
-     way visitor tokens work. Admin tooling mints a 15-minute token
-     when it needs to debug a config.
+  2. **Replace**: Switch to a short-lived HMAC-signed token, using the
+     same primitive as `configBypassToken.ts`. Admin tooling mints a
+     15-minute token when it needs to debug a config.
 - **SOC2**: CC6.1, CC7.3
 - **Effort**: ~2 hours for (1), ~4 hours for (2).
 
@@ -251,9 +251,12 @@ specifically asks for visitor-event attribution. At that point:
 The analysis above is preserved so the next person doesn't rediscover
 the same tradeoffs.
 
-- **What**: `DELETE /conversations/:id` and `POST /conversations/reset`
-  have no durable record of who did what. Chat token usage is tracked
-  but not security-relevant actions.
+- **What**: ~~`DELETE /conversations/:id` and `POST /conversations/reset`~~
+  *(Update 2026-04-23: both endpoints removed with the rest of `/conversations`.
+  The motivating audit concern is gone; this item is retained only as
+  historical context for any future visitor-initiated destructive
+  actions that might land.)*
+  Chat token usage is tracked but not security-relevant actions.
 - **Why**: SOC2 CC7.3 wants an audit trail for security events. An
   incident responder needs to answer "was this conversation deleted
   by the owner or by an attacker?"
@@ -397,3 +400,31 @@ doesn't re-flag it without reading the schema dump.
 
 Items 1–4 are exploitable today and should land before the next audit
 window. Items 5–9 are SOC2 prep. Items 10–13 are hygiene.
+
+---
+
+## Do-Not-Regress
+
+Invariants established by past security work. Breaking one without a
+replacement is a regression, not a refactor.
+
+- **`/conversations` endpoint — if it comes back, the visitor-token
+  scheme (or an equivalent per-visitor auth mechanism) MUST come back
+  with it.** The original endpoint returned a visitor's full
+  conversation history keyed only by the (publicly visible) `visitor_id`.
+  That was fixed by C-2 (HMAC-signed `X-Visitor-Token`). Endpoint and
+  fix were both removed together on 2026-04-23 because the endpoint had
+  no production callers. If a visitor-facing history UI lands later,
+  re-introducing the endpoint without a per-visitor auth scheme would
+  re-open C-2. See
+  [SECURITY_REVIEW.md](SECURITY_REVIEW.md) C-2, and
+  [CONVERSATIONS_ENDPOINT_REMOVAL.md](../../docs/security/CONVERSATIONS_ENDPOINT_REMOVAL.md)
+  in the parent repo.
+
+## Short-lived follow-ups
+
+- **Remove the `divee_visitor_token` localStorage-cleanup line in
+  `widget.js`** after two release cycles have shipped (earliest:
+  ~2026-06). The line is a one-release bridge to purge residual tokens
+  from visitors upgrading from the pre-removal widget. After the bridge
+  window, the call is dead weight.

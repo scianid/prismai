@@ -46,13 +46,16 @@ The widget sent full article `title` and `content` to the backend, which stored 
 
 ---
 
-### ~~C-2 — Unauthenticated Access to Any Conversation by Visitor ID Spoofing~~ ✅ FIXED
+### ~~C-2 — Unauthenticated Access to Any Conversation by Visitor ID Spoofing~~ ✅ FIXED → 🗑️ OBSOLETE
 
-**Component:** `supabase/functions/conversations/index.ts`, `supabase/functions/_shared/dao/conversationDao.ts`  
+**Component:** `supabase/functions/conversations/index.ts` *(removed 2026-04-23)*, `supabase/functions/_shared/dao/conversationDao.ts`  
 **OWASP:** A01 Broken Access Control  
-**Fixed:** 2026-02-23
+**Fixed:** 2026-02-23  
+**Superseded:** 2026-04-23
 
-**Fix applied:**
+> **Update (2026-04-23):** The `/conversations` edge function and its visitor-token machinery were removed entirely — the endpoint had no production callers. The fix described below is of historical interest only. **If any future endpoint returns a visitor's conversation history without a logged-in dashboard user, the visitor-token scheme (or an equivalent per-visitor auth mechanism) MUST come back with it.** See [docs/security/CONVERSATIONS_ENDPOINT_REMOVAL.md](../../docs/security/CONVERSATIONS_ENDPOINT_REMOVAL.md) (in the parent repo).
+
+**Fix applied (historical — no longer in effect):**
 - Added `supabase/functions/_shared/visitorAuth.ts` — issues and verifies short-lived (24 h) HMAC-SHA256 tokens that cryptographically bind a `visitor_id` to a `project_id`. The secret key is stored in the `VISITOR_TOKEN_SECRET` environment variable (set via `supabase secrets set`).
 - The `/chat` endpoint signs a token after every successful request and returns it in the `X-Visitor-Token` response header.
 - The widget captures `X-Visitor-Token` from chat responses, stores it in memory and `localStorage` (`divee_visitor_token`), and restores it on page reload.
@@ -154,8 +157,8 @@ An attacker can:
 **Fix applied:**
 - Removed `authorization` from `Access-Control-Allow-Headers` — the widget never sends bearer tokens; all AI API calls are server-side, so the header was unnecessary cross-origin exposure.
 - Removed `PUT` from `Access-Control-Allow-Methods` — no endpoint uses PUT cross-origin.
-- `DELETE` is retained because the `/conversations/:id` DELETE endpoint is legitimately called cross-origin by the widget.
-- Added `x-visitor-token` to `Access-Control-Allow-Headers` — required so browsers allow the widget to include the visitor ownership token (C-2 fix) in cross-origin requests to the conversations endpoint.
+- `DELETE` is retained in `Access-Control-Allow-Methods`. *(Update 2026-04-23: originally kept for the `/conversations/:id` DELETE endpoint, which has since been removed. No endpoint currently uses DELETE cross-origin; left in place to avoid scope creep in the removal PR.)*
+- ~~Added `x-visitor-token` to `Access-Control-Allow-Headers`~~ *(Update 2026-04-23: removed along with the `/conversations` endpoint.)*
 
 **Original description:**  
 
@@ -471,7 +474,7 @@ Use a separator that cannot appear in a URL, e.g., `url + '::' + projectId`, or 
 | ID  | Title                                          | Likelihood | Impact   | Severity | Status |
 |-----|------------------------------------------------|------------|----------|----------|--------|
 | C-1 | Stored Prompt Injection via Article Content    | Medium     | Critical | Critical | ✅ Fixed |
-| C-2 | Unauthenticated Conversation Access            | High       | Critical | Critical | ✅ Fixed |
+| C-2 | Unauthenticated Conversation Access            | High       | Critical | Critical | 🗑️ Endpoint removed 2026-04-23 (supersedes fix) |
 | H-1 | IP Spoofing in Analytics                       | High       | High     | High     | ✅ Fixed |
 | H-2 | No Rate Limiting on AI Endpoints               | High       | High     | High     | ✅ Fixed |
 | H-3 | CORS Wildcard + Authorization Header           | Medium     | High     | High     | ✅ Fixed |
@@ -501,7 +504,7 @@ The following events should be alerted on in real-time:
 | Single visitor_id generating > 20 req/min to /chat | Per visitor rate | AI cost abuse / DoS |
 | AI response containing a URL not in article | Response content scan | Active prompt injection exploit |
 | Batch analytics with > 100 events | Single request | Replay / amplification attack |
-| Any request to /conversations without Origin header | Edge Function log | Server-side scraping attempt |
+| ~~Any request to /conversations without Origin header~~ | ~~Edge Function log~~ | ~~Server-side scraping attempt~~ *(endpoint removed 2026-04-23)* |
 | Unusual geo after Supabase direct-URL access | IP header delta | Cloudflare bypass / direct backend hit |
 | `freeform_qa` table growing > 10k rows/hour | DB metric | Storage abuse via unauthenticated freeform |
 

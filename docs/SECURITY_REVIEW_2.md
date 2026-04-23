@@ -6,6 +6,8 @@
 **Reviewer:** AI-assisted static analysis (second pass)  
 **Previous review:** `docs/SECURITY_REVIEW.md` (18 findings, all Critical/High fixed)
 
+> **Update (2026-04-23):** The `/conversations` edge function and its visitor-token scheme (`X-Visitor-Token`, `divee_visitor_token`, `visitorAuth.ts`) were removed entirely because the endpoint had no production callers. Findings that target `/conversations` or rely on the visitor token — **N-M1** (query-param token leak) and **N-L1** (`localStorage` token exposure) — are now **moot** (marked inline). Findings unrelated to `/conversations` are unaffected. See [docs/security/CONVERSATIONS_ENDPOINT_REMOVAL.md](../../docs/security/CONVERSATIONS_ENDPOINT_REMOVAL.md) (parent repo). If the endpoint is ever brought back, the visitor-token scheme (or equivalent) must return with it.
+
 **Components reviewed:**
 - `src/widget.js` — embedded browser widget (full re-audit)
 - `src/content.js` — article content extractor
@@ -228,7 +230,7 @@ Any caller who knows a `conversationId` UUID (which appears in the `X-Conversati
      return errorResp('Origin not allowed', 403);
    ```
 2. Validate that `conversationId` belongs to the same project before reading or writing it.
-3. Require the `X-Visitor-Token` header and verify the conversation's `visitor_id` matches the token, consistent with the `conversations` endpoint pattern.
+3. ~~Require the `X-Visitor-Token` header and verify the conversation's `visitor_id` matches the token, consistent with the `conversations` endpoint pattern.~~ *(2026-04-23: the visitor-token scheme was removed with `/conversations`. If per-visitor ownership of `conversationId` becomes needed, a replacement scheme must be designed.)*
 
 ---
 
@@ -236,11 +238,13 @@ Any caller who knows a `conversationId` UUID (which appears in the `X-Conversati
 
 ---
 
-### N-M1 — Visitor Token Accepted as URL Query Parameter (Token Leakage via Logs and Referer)
+### ~~N-M1 — Visitor Token Accepted as URL Query Parameter (Token Leakage via Logs and Referer)~~ 🗑️ MOOT
 
-**Component:** `supabase/functions/conversations/index.ts`  
+**Component:** `supabase/functions/conversations/index.ts` *(removed 2026-04-23)*  
 **OWASP:** A02 Cryptographic Failures  
 **ASVS:** V3.5.2
+
+> **Update (2026-04-23):** No longer actionable — the `/conversations` endpoint and its visitor-token scheme were removed entirely. Original finding preserved below for historical record.
 
 **Description:**
 
@@ -378,11 +382,13 @@ Even without extreme length, an attacker rotating `projectId` values (e.g., `"re
 
 ---
 
-### N-L1 — `X-Visitor-Token` Stored in `localStorage` Is Accessible to Host-Page XSS
+### ~~N-L1 — `X-Visitor-Token` Stored in `localStorage` Is Accessible to Host-Page XSS~~ 🗑️ MOOT
 
 **Component:** `src/widget.js` → `streamResponse()`  
 **OWASP:** A02 Cryptographic Failures / A07 Identification and Authentication Failures  
 **ASVS:** V3.5.3
+
+> **Update (2026-04-23):** No longer actionable — the token is no longer issued or stored. The widget also removes any residual `divee_visitor_token` from `localStorage` on init as a one-release cleanup. Original finding preserved below for historical record.
 
 **Description:**
 
@@ -404,10 +410,12 @@ Any JavaScript executing in the publisher page's origin (e.g., via XSS in the pu
 
 ---
 
-### N-L2 — `article_url` Incorrectly Extracted in `/conversations` List Response
+### ~~N-L2 — `article_url` Incorrectly Extracted in `/conversations` List Response~~ 🗑️ MOOT
 
-**Component:** `supabase/functions/conversations/index.ts`  
+**Component:** `supabase/functions/conversations/index.ts` *(removed 2026-04-23)*  
 **OWASP:** A04 Insecure Design (data integrity)
+
+> **Update (2026-04-23):** No longer actionable — the endpoint was removed. Original finding preserved below for historical record.
 
 **Description:**
 
@@ -612,11 +620,11 @@ No consent gate has been added before `localStorage` UUID creation or analytics 
 
 1. **N-H1** — Swap the order of entity-decoding and tag-stripping in `sanitizeContent`. This is a one-function change with high impact.
 2. **N-H2** — Apply `escapeHtml()` to `suggestion.title`, `suggestion.image_url`, and `config.icon_url` in all `innerHTML` contexts.
-3. **N-H3** — Add `isAllowedOrigin()` check and visitor token ownership validation to `suggested-articles`.
+3. **N-H3** — Add `isAllowedOrigin()` check and `conversationId`-to-project validation to `suggested-articles`. *(2026-04-23: the visitor-token part of the original recommendation no longer applies — token removed.)*
 
 **Near-term (next sprint):**
 
-4. **N-M1** — Remove `visitor_token` query parameter support; header only.
+4. ~~**N-M1** — Remove `visitor_token` query parameter support; header only.~~ *(2026-04-23: moot — `/conversations` removed.)*
 5. **N-M3** — Add protocol validation before `window.open(suggestion.url)`.
 6. **N-M4** — Add UUID format validation for `visitor_id` and format/length checks for `projectId`.
 7. **N-L3** — Fix `sendBeacon` to use a `Blob` with `application/json` content type.
@@ -625,7 +633,7 @@ No consent gate has been added before `localStorage` UUID creation or analytics 
 **Backlog:**
 
 9. **N-M2** — Add explicit body-size check to all Edge Functions.
-10. **N-L1** — Evaluate dropping `localStorage` persistence for the visitor token.
+10. ~~**N-L1** — Evaluate dropping `localStorage` persistence for the visitor token.~~ *(2026-04-23: moot — token removed.)*
 11. **N-L6** — Cap batch analytics size server-side.
 12. **M-4 (R1)** — Enable RLS on all application tables and audit service-role usage.
 13. **M-2 (R1)** — Implement consent gating for analytics tracking.
@@ -638,8 +646,8 @@ No consent gate has been added before `localStorage` UUID creation or analytics 
 |---|---|---|
 | Requests to `/suggested-articles` without an `Origin` header | > 10/min per project | Automated article enumeration |
 | `article.title` or `article.content` containing `<script`, `javascript:`, or `onerror=` after sanitization | Any occurrence | Sanitization bypass attempt (N-H1) |
-| `visitor_token` appearing in `Referer` headers of subsequent requests | Any | Token was passed as query param and leaked |
-| `/conversations` called with `visitor_token` in query string | Any | Client misconfiguration or token harvesting |
+| ~~`visitor_token` appearing in `Referer` headers of subsequent requests~~ | ~~Any~~ | ~~Token was passed as query param and leaked~~ *(2026-04-23: moot — token removed)* |
+| ~~`/conversations` called with `visitor_token` in query string~~ | ~~Any~~ | ~~Client misconfiguration or token harvesting~~ *(2026-04-23: moot — endpoint removed)* |
 | Rate-limit key in `ai_rate_limits` with `length(key) > 512` | Any | Rate-limit pollution attack (N-M4) |
 | `window.open` target URLs in analytics events with non-`https:` protocol | Any | `javascript:` URL stored in article table |
 | Analytics batch with > 50 events in single request | Any | Direct API abuse, not widget |
