@@ -2923,9 +2923,10 @@
         }
     }
 
-    // Global debug API — accessible from the browser console as window.divee
+    // Debug API — only exposed on window when ?diveeDebug=true. Kept off by default
+    // so visitor/session identifiers aren't trivially dumpable from the browser console.
     const diveeInstances = [];
-    window.divee = {
+    const debugApi = {
         article: function (index) {
             const widget = diveeInstances[index || 0];
             if (!widget) { console.warn('[Divee] No widget instance found'); return; }
@@ -2939,14 +2940,21 @@
         config: function (index) {
             const widget = diveeInstances[index || 0];
             if (!widget) { console.warn('[Divee] No widget instance found'); return; }
+            const safeState = Object.assign({}, widget.state);
+            if ('visitorToken' in safeState) safeState.visitorToken = safeState.visitorToken ? '[redacted]' : null;
             console.group('[Divee] Config');
             console.log('Client config:', widget.config);
             console.log('Server config:', widget.state.serverConfig);
-            console.log('State:        ', widget.state);
+            console.log('State:        ', safeState);
             console.groupEnd();
         },
         instances: function () { return diveeInstances; }
     };
+
+    function installDebugApi() {
+        if (window.divee) return;
+        window.divee = debugApi;
+    }
 
     // Inject a placeholder div right after each script tag so the publisher
     // can target it via containerSelector: '#divee-widget-placeholder'
@@ -2977,6 +2985,8 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const isDebug = urlParams.get('diveeDebug') === 'true';
+
+        if (isDebug) installDebugApi();
 
         scripts.forEach((script, index) => {
             const config = {
