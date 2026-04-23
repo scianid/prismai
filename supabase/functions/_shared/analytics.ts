@@ -1,3 +1,5 @@
+import { scrubUrl } from "./scrubUrlParams.ts";
+
 export interface AnalyticsContext {
   projectId: string;
   visitorId?: string;
@@ -46,10 +48,15 @@ export async function logEvent(
       // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
       Deno.env.get("CONFIG_BYPASS_KEY");
 
+    // I6: scrub URLs before they leave this function — both the log line
+    // (which lands in Sentry / edge logs) and the outbound `referer` header.
+    const scrubbedArticleUrl = ctx.articleUrl ? scrubUrl(ctx.articleUrl) : null;
+    const scrubbedRefererUrl = ctx.url ? scrubUrl(ctx.url) : undefined;
+
     console.log("Analytics: shipping event", {
       eventType,
       projectId: ctx.projectId,
-      articleUrl: ctx.articleUrl,
+      articleUrl: scrubbedArticleUrl,
     });
 
     const res = await fetch(analyticsUrl, {
@@ -58,7 +65,7 @@ export async function logEvent(
         "Content-Type": "application/json",
         ...(apiKey ? { "x-api-key": apiKey } : {}),
         ...(ctx.ip ? { "cf-connecting-ip": ctx.ip } : {}),
-        ...(ctx.url ? { "referer": ctx.url } : {}),
+        ...(scrubbedRefererUrl ? { "referer": scrubbedRefererUrl } : {}),
       },
       body: JSON.stringify({
         project_id: ctx.projectId,
@@ -66,7 +73,7 @@ export async function logEvent(
         session_id: ctx.sessionId || null,
         event_type: eventType,
         event_label: eventLabel || null,
-        article_url: ctx.articleUrl || null,
+        article_url: scrubbedArticleUrl,
       }),
     });
 
@@ -141,7 +148,7 @@ export async function logEventBatch(
           session_id: r.session_id || null,
           event_type: r.event_type,
           event_label: r.event_label || null,
-          article_url: r.article_url || null,
+          article_url: r.article_url ? scrubUrl(r.article_url) : null,
         })),
       }),
     });

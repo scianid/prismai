@@ -303,18 +303,22 @@ Deno.test("analytics: ANALYTICS_PROXY_URL unset returns 503", async () => {
 
 // ── Forwarding contract ──────────────────────────────────────────────────
 
-Deno.test("analytics: happy path forwards raw body verbatim and returns proxy status + body", async () => {
+Deno.test("analytics: happy path forwards parsed body and returns proxy status + body", async () => {
   const proxyBody = '{"accepted":1}';
   const fetchStub = makeFetchStub(new Response(proxyBody, { status: 202 }));
   const deps = makeDeps({ fetchFn: fetchStub.fn });
 
-  // Use a specific raw body string and assert the proxy sees EXACTLY that.
-  // Key thing: the raw body bypasses JSON round-tripping so custom fields
-  // and key order are preserved for downstream analytics.
-  const raw = '{"project_id":"' + PROJECT_ID +
-    '","event_type":"page_view","meta":{"custom":true}}';
+  // The body is JSON-round-tripped (parse → scrub → stringify) so the
+  // I6 query-param scrubber can run. Custom fields are preserved; the
+  // assertion compares parsed JSON rather than raw strings to avoid
+  // coupling the test to JSON.stringify's key-ordering behaviour.
+  const payload = {
+    project_id: PROJECT_ID,
+    event_type: "page_view",
+    meta: { custom: true },
+  };
   const res = await analyticsHandler(
-    postEvent(undefined, { raw }),
+    postEvent(payload),
     deps,
   );
 
@@ -322,11 +326,63 @@ Deno.test("analytics: happy path forwards raw body verbatim and returns proxy st
   const text = await res.text();
   assertEquals(text, proxyBody);
 
-  // Proxy was called exactly once, at the configured URL, with the raw body
   assertEquals(fetchStub.calls.length, 1);
   assertEquals(fetchStub.calls[0].url, PROXY_URL);
   assertEquals(fetchStub.calls[0].init?.method, "POST");
-  assertEquals(fetchStub.calls[0].init?.body, raw);
+  assertEquals(
+    JSON.parse(String(fetchStub.calls[0].init?.body)),
+    payload,
+  );
+});
+
+// ── PII scrubbing (I6) ────────────────────────────────────────────────────
+
+Deno.test("analytics: PII query params are stripped from URL fields before forwarding", async () => {
+  const fetchStub = makeFetchStub(new Response("{}", { status: 200 }));
+  const deps = makeDeps({ fetchFn: fetchStub.fn });
+
+  await analyticsHandler(
+    postEvent({
+      project_id: PROJECT_ID,
+      article_url: "https://publisher.example.com/post?email=foo@bar.com&id=1",
+      batch: [{
+        project_id: PROJECT_ID,
+        event_type: "page_view",
+        event_data: {
+          url: "https://publisher.example.com/?token=abc&utm_source=newsletter",
+          oauth_callback: "https://publisher.example.com/cb#access_token=xyz&type=bearer",
+        },
+      }],
+    }),
+    deps,
+  );
+
+  const sent = JSON.parse(String(fetchStub.calls[0].init?.body));
+  assertEquals(sent.article_url, "https://publisher.example.com/post?id=1");
+  assertEquals(
+    sent.batch[0].event_data.url,
+    "https://publisher.example.com/?utm_source=newsletter",
+  );
+  assertEquals(
+    sent.batch[0].event_data.oauth_callback,
+    "https://publisher.example.com/cb",
+  );
+});
+
+Deno.test("analytics: referer header has PII params stripped before forwarding", async () => {
+  const fetchStub = makeFetchStub(new Response("{}", { status: 200 }));
+  const deps = makeDeps({ fetchFn: fetchStub.fn });
+
+  await analyticsHandler(
+    postEvent(
+      { project_id: PROJECT_ID },
+      { referer: "https://publisher.example.com/article?token=secret&q=hello" },
+    ),
+    deps,
+  );
+
+  const hdrs = fetchStub.calls[0].init?.headers as Record<string, string>;
+  assertEquals(hdrs["referer"], "https://publisher.example.com/article?q=hello");
 });
 
 Deno.test("analytics: cf-connecting-ip, referer, origin headers forwarded when present", async () => {

@@ -6,6 +6,7 @@ import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { enforceContentLength, tooManyRequestsResp } from "../_shared/responses.ts";
 import { captureException, serveWithSentry } from "../_shared/sentry.ts";
+import { scrubUrl, scrubValue } from "../_shared/scrubUrlParams.ts";
 
 // analytics_impressions and analytics_events tables are deprecated.
 // This function now reverse-proxies all analytics traffic to the secondary
@@ -55,11 +56,12 @@ export async function analyticsHandler(
   if (oversize) return oversize;
 
   try {
-    // Read raw body once so we can both parse it (for validation) and forward it
-    let rawBody: string;
+    // Read raw body once so we can parse, validate, and scrub it before
+    // forwarding. The forwarded body is JSON.stringified from the scrubbed
+    // structure — see I6 mitigation in `_shared/scrubUrlParams.ts`.
     let body: Record<string, unknown>;
     try {
-      rawBody = await req.text();
+      const rawBody = await req.text();
       body = JSON.parse(rawBody);
     } catch {
       return jsonResp({ error: "Invalid or empty request body" }, 400);
@@ -132,15 +134,17 @@ export async function analyticsHandler(
     if (clientIp) forwardHeaders["cf-connecting-ip"] = clientIp;
 
     const referer = req.headers.get("referer");
-    if (referer) forwardHeaders["referer"] = referer;
+    if (referer) forwardHeaders["referer"] = scrubUrl(referer);
 
     const origin = req.headers.get("origin");
     if (origin) forwardHeaders["origin"] = origin;
 
+    const scrubbedBody = JSON.stringify(scrubValue(body));
+
     const proxyResponse = await deps.fetchFn(proxyUrl, {
       method: "POST",
       headers: forwardHeaders,
-      body: rawBody,
+      body: scrubbedBody,
     });
 
     const proxyBody = await proxyResponse.text();
