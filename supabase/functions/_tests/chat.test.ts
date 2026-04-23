@@ -168,7 +168,7 @@ Deno.test("chat: request with no Content-Length header returns 411", async () =>
   assertEquals(res.status, 411);
 });
 
-Deno.test("chat: Content-Length above 64KB cap returns 413 without parsing body", async () => {
+Deno.test("chat: Content-Length above 256KB cap returns 413 without parsing body", async () => {
   // Critical: the whole point of the guard is to reject BEFORE req.json()
   // loads the payload. We claim a content-length of 1 MB even though the
   // body is tiny — the header is what the handler trusts.

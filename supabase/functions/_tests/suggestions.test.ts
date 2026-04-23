@@ -126,7 +126,7 @@ function makeDeps(overrides: Record<string, unknown> = {}): any {
 
 // ── Content-length guard (SECURITY_AUDIT_TODO item 3) ────────────────────
 
-Deno.test("suggestions: Content-Length above 64KB cap returns 413 without calling AI or DAO", async () => {
+Deno.test("suggestions: Content-Length above 256KB cap returns 413 without calling AI or DAO", async () => {
   let aiCalled = false;
   let daoCalled = false;
   const deps = makeDeps({
