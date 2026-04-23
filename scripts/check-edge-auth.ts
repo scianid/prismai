@@ -33,14 +33,9 @@ const AUTH_HELPERS: AuthHelper[] = [
     pattern:
       /import\s*\{[^}]*\bisAllowedOrigin\b[^}]*\}\s*from\s*["'][^"']*_shared\/origin(\.ts)?["']/,
   },
-  {
-    name: "verifyVisitorToken / issueVisitorToken (from _shared/visitorAuth.ts)",
-    pattern:
-      /import\s*\{[^}]*\b(verifyVisitorToken|issueVisitorToken)\b[^}]*\}\s*from\s*["'][^"']*_shared\/visitorAuth(\.ts)?["']/,
-  },
 ];
 
-// Functions that are intentionally callable without origin gate or visitor token.
+// Functions that are intentionally callable without an origin gate.
 // Each entry MUST document how the function authorizes its caller instead.
 // Adding an entry here is a security decision — require a second reviewer.
 const PUBLIC_ALLOWLIST: Record<string, string> = {};

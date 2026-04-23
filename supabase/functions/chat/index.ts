@@ -27,7 +27,6 @@ import {
   getOrCreateConversation,
 } from "../_shared/dao/conversationDao.ts";
 import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
-import { issueVisitorToken } from "../_shared/visitorAuth.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getProjectAiSettings } from "../_shared/dao/projectAiSettingsDao.ts";
 import { generateEmbedding } from "../_shared/embeddingService.ts";
@@ -36,11 +35,10 @@ import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 
 // ─── Dependency injection seam ────────────────────────────────────────────
 // `chatHandler` takes a `ChatDeps` object so unit tests can stub external
-// services (OpenAI, Supabase DAOs, rate limiter, visitor-token HMAC, RAG
-// embeddings). Production wires the real implementations below via `realDeps`
-// and calls the handler from Deno.serve. Tests construct their own deps and
-// call `chatHandler` directly — no network, no env setup beyond what Deno
-// itself needs.
+// services (OpenAI, Supabase DAOs, rate limiter, RAG embeddings). Production
+// wires the real implementations below via `realDeps` and calls the handler
+// from Deno.serve. Tests construct their own deps and call `chatHandler`
+// directly — no network, no env setup beyond what Deno itself needs.
 export interface ChatDeps {
   supabaseClient: typeof supabaseClient;
   getProjectById: typeof getProjectById;
@@ -60,7 +58,6 @@ export interface ChatDeps {
   readStreamAndCollectAnswer: typeof readStreamAndCollectAnswer;
   generateEmbedding: typeof generateEmbedding;
   searchSimilarChunks: typeof searchSimilarChunks;
-  issueVisitorToken: typeof issueVisitorToken;
 }
 
 export const realChatDeps: ChatDeps = {
@@ -82,7 +79,6 @@ export const realChatDeps: ChatDeps = {
   readStreamAndCollectAnswer,
   generateEmbedding,
   searchSimilarChunks,
-  issueVisitorToken,
 };
 
 export async function chatHandler(
@@ -548,17 +544,6 @@ export async function chatHandler(
         });
       });
 
-    // Issue a signed visitor token so the client can prove ownership of this
-    // visitor_id when accessing /conversations (C-2 fix).
-    let visitorToken = "";
-    try {
-      if (visitor_id && projectId) {
-        visitorToken = await deps.issueVisitorToken(visitor_id, projectId);
-      }
-    } catch (e) {
-      console.error("chat: failed to issue visitor token", e);
-    }
-
     return new Response(clientStream, {
       status: 200,
       headers: {
@@ -567,7 +552,6 @@ export async function chatHandler(
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
         "X-Conversation-Id": conversation.id,
-        ...(visitorToken && { "X-Visitor-Token": visitorToken }),
       },
     });
   } catch (error) {

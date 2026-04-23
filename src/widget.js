@@ -38,7 +38,6 @@
                 messages: [],
                 serverConfig: null,
                 conversationId: null,
-                visitorToken: null,          // HMAC ownership token, set after first chat
                 aiResponseCount: 0,
                 suggestionsSuppressed: false,
                 widgetVisibleTracked: false,   // Track if widget_visible event has been fired
@@ -409,11 +408,12 @@
             this.state.visitorId = visitorId;
             this.state.sessionId = sessionId;
 
-            // Restore persisted visitor token (issued by /chat, proves visitor ownership)
-            const storedToken = this.storageGet('divee_visitor_token');
-            if (storedToken) {
-                this.state.visitorToken = storedToken;
-            }
+            // One-release cleanup: remove residual divee_visitor_token left in
+            // localStorage by prior widget versions. The token was tied to the
+            // /conversations endpoint, which was removed (see docs/security/
+            // CONVERSATIONS_ENDPOINT_REMOVAL.md). Safe to delete this line after
+            // a release or two once the window of stored tokens has aged out.
+            try { localStorage.removeItem('divee_visitor_token'); } catch (e) { /* ignore */ }
 
             // Clear any old conversation IDs from sessionStorage
             const conversationKey = `divee_conversation_${window.location.href}`;
@@ -2241,13 +2241,6 @@
                 this.state.conversationId = conversationId;
             }
 
-            // Store visitor ownership token for authenticating /conversations calls (C-2 fix)
-            const visitorToken = response.headers.get('X-Visitor-Token');
-            if (visitorToken) {
-                this.state.visitorToken = visitorToken;
-                this.storageSet('divee_visitor_token', visitorToken);
-            }
-
             const contentType = response.headers.get('content-type') || '';
             if (contentType.includes('application/json')) {
                 const data = await response.json();
@@ -2940,12 +2933,10 @@
         config: function (index) {
             const widget = diveeInstances[index || 0];
             if (!widget) { console.warn('[Divee] No widget instance found'); return; }
-            const safeState = Object.assign({}, widget.state);
-            if ('visitorToken' in safeState) safeState.visitorToken = safeState.visitorToken ? '[redacted]' : null;
             console.group('[Divee] Config');
             console.log('Client config:', widget.config);
             console.log('Server config:', widget.state.serverConfig);
-            console.log('State:        ', safeState);
+            console.log('State:        ', widget.state);
             console.groupEnd();
         },
         instances: function () { return diveeInstances; }

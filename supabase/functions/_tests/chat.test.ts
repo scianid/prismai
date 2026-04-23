@@ -13,8 +13,7 @@
  *   - Cached-suggestion fast path (no AI call, no new conversation row)
  *   - 404 when no cached suggestion and freeform disabled
  *   - Happy-path response headers: Cache-Control: no-cache, no-store, private;
- *     Content-Type: text/event-stream; X-Conversation-Id; X-Visitor-Token
- *   - Visitor token is NOT issued when visitor_id is missing
+ *     Content-Type: text/event-stream; X-Conversation-Id
  */
 import { assertEquals, assertExists } from "jsr:@std/assert@1";
 import { setEnv } from "./helpers.ts";
@@ -153,7 +152,6 @@ function makeDeps(overrides: Record<string, unknown> = {}): any {
       }),
     generateEmbedding: unexpected("generateEmbedding"),
     searchSimilarChunks: unexpected("searchSimilarChunks"),
-    issueVisitorToken: () => Promise.resolve("fake-visitor-token"),
     ...overrides,
   };
 }
@@ -304,7 +302,7 @@ Deno.test("chat: non-cached question with no freeform returns 404", async () => 
   }
 });
 
-Deno.test("chat: happy path streams SSE with no-cache + conversation + visitor token headers", async () => {
+Deno.test("chat: happy path streams SSE with no-cache + conversation headers", async () => {
   Deno.env.set("ALLOW_FREEFORM_ASK", "true");
   try {
     const deps = makeDeps();
@@ -316,29 +314,8 @@ Deno.test("chat: happy path streams SSE with no-cache + conversation + visitor t
     // one visitor's conversation to the next.
     assertEquals(res.headers.get("Cache-Control"), "no-cache");
     assertEquals(res.headers.get("X-Conversation-Id"), "conv-test-0001");
-    assertEquals(res.headers.get("X-Visitor-Token"), "fake-visitor-token");
 
     // Drain the body so the readable stream doesn't leak.
-    await res.text();
-  } finally {
-    Deno.env.delete("ALLOW_FREEFORM_ASK");
-  }
-});
-
-Deno.test("chat: no visitor token header when visitor_id is missing from body", async () => {
-  Deno.env.set("ALLOW_FREEFORM_ASK", "true");
-  try {
-    const deps = makeDeps({
-      issueVisitorToken: () => {
-        throw new Error("[test] issueVisitorToken should not be called without visitor_id");
-      },
-    });
-    // Note: if the handler treats visitor_id as required, this test will fail
-    // at input validation. Today it's optional — but the invariant we want to
-    // lock in is "no token without an id".
-    const res = await chatHandler(req(validBody({ visitor_id: undefined })), deps);
-    assertEquals(res.status, 200);
-    assertEquals(res.headers.get("X-Visitor-Token"), null);
     await res.text();
   } finally {
     Deno.env.delete("ALLOW_FREEFORM_ASK");

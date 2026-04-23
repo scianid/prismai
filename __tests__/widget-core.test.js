@@ -176,24 +176,13 @@ describe('DiveeWidget Core', () => {
     });
   });
 
-  describe('Visitor Token Storage (C-2)', () => {
-    test('should initialise visitorToken state as null when no token in localStorage', () => {
-      // localStorage.getItem returns null by default (jsdom)
-      const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
-      eval(widgetJs);
-
-      const widget = new DiveeWidget(mockConfig);
-      widget.getAnalyticsIds();
-
-      // No stored token — state should be falsy
-      expect(widget.state.visitorToken).toBeFalsy();
-    });
-
-    test('should restore visitorToken from localStorage on getAnalyticsIds', () => {
-      const storedToken = 'visitor-abc|proj-123|9999999999999|cafebabe';
-      // Consent must be granted for the widget to read persisted visitor data
+  describe('Visitor Token Cleanup (/conversations removal)', () => {
+    // The /conversations endpoint and its visitor-token scheme were removed
+    // (see docs/security/CONVERSATIONS_ENDPOINT_REMOVAL.md). Residual tokens
+    // left in localStorage by prior widget versions must be purged on init.
+    test('removes any residual divee_visitor_token from localStorage on getAnalyticsIds', () => {
       localStorage.setItem('divee_consent', 'granted');
-      localStorage.setItem('divee_visitor_token', storedToken);
+      localStorage.setItem('divee_visitor_token', 'stale-token-from-prior-release');
 
       const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
       eval(widgetJs);
@@ -201,20 +190,8 @@ describe('DiveeWidget Core', () => {
       const widget = new DiveeWidget(mockConfig);
       widget.getAnalyticsIds();
 
-      expect(widget.state.visitorToken).toBe(storedToken);
-    });
-
-    test('should NOT read visitorToken from localStorage when consent not granted', () => {
-      // Token present in localStorage but no consent — widget must ignore it
-      localStorage.setItem('divee_visitor_token', 'leaked-token');
-
-      const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
-      eval(widgetJs);
-
-      const widget = new DiveeWidget(mockConfig);
-      widget.getAnalyticsIds();
-
-      expect(widget.state.visitorToken).toBeFalsy();
+      expect(localStorage.getItem('divee_visitor_token')).toBeNull();
+      expect(widget.state.visitorToken).toBeUndefined();
     });
   });
 
@@ -333,14 +310,12 @@ describe('DiveeWidget Core', () => {
       widget.elements.expandedView.innerHTML = '<div class="divee-consent" style="display:flex;"></div>';
       widget.trackEvent = jest.fn();
       widget._memStore.divee_visitor_id = 'mem-id';
-      widget._memStore.divee_visitor_token = 'mem-token';
 
       widget.handleConsent(true);
 
       expect(widget.state.consent).toBe('granted');
       expect(localStorage.getItem('divee_consent')).toBe('granted');
       expect(localStorage.getItem('divee_visitor_id')).toBe('mem-id');
-      expect(localStorage.getItem('divee_visitor_token')).toBe('mem-token');
       expect(widget.elements.expandedView.querySelector('.divee-consent').style.display).toBe('none');
       expect(widget.trackEvent).toHaveBeenCalledWith('consent_decision', { accepted: true });
     });
@@ -368,13 +343,13 @@ describe('DiveeWidget Core', () => {
       widget.elements.expandedView.innerHTML = '<div class="divee-consent"></div>';
       widget.trackEvent = jest.fn();
 
-      widget.storageSet('divee_visitor_token', 'tok-1');
-      expect(localStorage.getItem('divee_visitor_token')).toBeNull();
+      widget.storageSet('divee_visitor_id', 'id-1');
+      expect(localStorage.getItem('divee_visitor_id')).toBeNull();
 
       widget.handleConsent(true);
 
-      widget.storageSet('divee_visitor_token', 'tok-2');
-      expect(localStorage.getItem('divee_visitor_token')).toBe('tok-2');
+      widget.storageSet('divee_visitor_id', 'id-2');
+      expect(localStorage.getItem('divee_visitor_id')).toBe('id-2');
     });
   });
 

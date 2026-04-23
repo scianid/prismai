@@ -6,12 +6,11 @@
  *  - 'authorization' must NOT be in Access-Control-Allow-Headers (widget never
  *    sends bearer tokens; AI provider calls are server-side only)
  *  - 'PUT' must NOT be in Access-Control-Allow-Methods (no endpoint uses it)
- *  - 'x-visitor-token' MUST be in Access-Control-Allow-Headers (browser
- *    preflight must permit the header the widget sends for conversations auth)
- *  - 'DELETE' MUST remain (conversations DELETE endpoint is called cross-origin)
+ *  - 'x-visitor-token' must NOT be in Access-Control-Allow-Headers (the
+ *    /conversations endpoint and its visitor-token scheme were removed)
  *  - 'content-type' MUST remain (all POST bodies are application/json)
- *  - 'X-Visitor-Token' and 'X-Conversation-Id' must be in Expose-Headers
- *    (browser must allow the widget to read these response headers)
+ *  - 'x-visitor-token' must NOT be in Expose-Headers (same reason as above)
+ *  - 'X-Conversation-Id' MUST be in Expose-Headers (widget reads it from /chat)
  *
  * The CORS object is read directly from the source file so that any accidental
  * edit to cors.ts is caught immediately, without needing to deploy.
@@ -60,8 +59,8 @@ describe('CORS configuration (H-3)', () => {
       expect(headerList).not.toContain('authorization');
     });
 
-    test('includes "x-visitor-token" (required for conversations auth cross-origin)', () => {
-      expect(headerList).toContain('x-visitor-token');
+    test('does NOT include "x-visitor-token" (/conversations endpoint was removed)', () => {
+      expect(headerList).not.toContain('x-visitor-token');
     });
 
     test('includes "content-type" (all cross-origin POST bodies are JSON)', () => {
@@ -74,15 +73,11 @@ describe('CORS configuration (H-3)', () => {
       expect(methodList).not.toContain('put');
     });
 
-    test('includes "DELETE" (conversations endpoint uses DELETE cross-origin)', () => {
-      expect(methodList).toContain('delete');
-    });
-
     test('includes "POST" (primary method for all AI endpoints)', () => {
       expect(methodList).toContain('post');
     });
 
-    test('includes "GET" (conversations list and messages use GET)', () => {
+    test('includes "GET" (cached config / suggestions endpoints)', () => {
       expect(methodList).toContain('get');
     });
 
@@ -92,8 +87,8 @@ describe('CORS configuration (H-3)', () => {
   });
 
   describe('Access-Control-Expose-Headers', () => {
-    test('exposes "x-visitor-token" so widget can read it from chat responses', () => {
-      expect(exposeList).toContain('x-visitor-token');
+    test('does NOT expose "x-visitor-token" (/conversations endpoint was removed)', () => {
+      expect(exposeList).not.toContain('x-visitor-token');
     });
 
     test('exposes "x-conversation-id" so widget can track conversation state', () => {

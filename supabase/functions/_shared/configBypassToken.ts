@@ -17,10 +17,7 @@
  *      `_shared/analytics.ts` (new `ANALYTICS_PROXY_API_KEY`).
  *
  * Replacement: a signed, time-boxed token with an operator field for
- * attribution. Same HMAC-SHA256 primitive as
- * `_shared/visitorAuth.ts` — the two modules duplicate `hmacHex` and
- * `safeEqual` today; consolidate into `_shared/hmac.ts` if a third
- * consumer ever shows up.
+ * attribution, built on HMAC-SHA256.
  *
  * Token format (pipe-separated, only ASCII alphanumerics + hyphen in
  * the operator field so the separators are unambiguous):
@@ -69,7 +66,7 @@ async function hmacHex(message: string, secret: string): Promise<string> {
     .join("");
 }
 
-/** Constant-time comparison. Same primitive as visitorAuth.safeEqual. */
+/** Constant-time comparison to prevent timing side-channels. */
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
