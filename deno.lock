@@ -1,0 +1,47 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@std/assert@1": "1.0.19",
+    "jsr:@std/internal@^1.0.12": "1.0.12",
+    "jsr:@supabase/functions-js@2": "2.102.0",
+    "jsr:@supabase/functions-js@^0.0.0-automated": "0.0.0-jsr-test.1",
+    "jsr:@supabase/supabase-js@2": "2.103.1"
+  },
+  "jsr": {
+    "@std/assert@1.0.19": {
+      "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
+    "@std/internal@1.0.12": {
+      "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
+    },
+    "@supabase/functions-js@0.0.0-jsr-test.1": {
+      "integrity": "b1b37924af1f0011b4753201e1585a37b030e996c6682492e02575eb27d902b2"
+    },
+    "@supabase/functions-js@2.102.0": {
+      "integrity": "f184eb14b7f4bd8ce8c8a0f5321bae59dc2721c5948fe9f3a7450f395a27c87c"
+    },
+    "@supabase/supabase-js@2.103.1": {
+      "integrity": "1eeb62cdfc4a66082bcfc24c236274f86e8949c1bc1172e31b5c681d3b9b5f6c",
+      "dependencies": [
+        "jsr:@supabase/functions-js@^0.0.0-automated"
+      ]
+    }
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@jest/globals@^30.2.0",
+        "npm:@playwright/test@^1.58.0",
+        "npm:@testing-library/dom@^10.4.1",
+        "npm:@testing-library/jest-dom@^6.9.1",
+        "npm:esbuild@~0.27.2",
+        "npm:jest-environment-jsdom@^30.2.0",
+        "npm:jest@^30.2.0",
+        "npm:jsdom@^27.4.0"
+      ]
+    }
+  }
+}

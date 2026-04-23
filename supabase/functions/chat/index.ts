@@ -118,7 +118,7 @@ export async function chatHandler(
     if (content) {
       content = sanitizeContent(content.substring(0, MAX_CONTENT_LENGTH));
     }
-    if (question) question = sanitizeContent(question.substring(0, 200));
+    if (question) question = sanitizeContent(question.substring(0, 200)).trim();
 
     if (!projectId || !questionId || !question || !url) {
       console.error("chat: missing fields", {
@@ -353,6 +353,7 @@ export async function chatHandler(
       Reply concisely but make sure you respond fully.
       Under any circumstance, do not mention you are an AI model.
       Only answer based on the knowledge base provided. If the knowledge base does not contain relevant information, say "I don't have information about that in my knowledge base." in the same language as the question.
+      If the user's message is empty, a single character, gibberish, or otherwise does not contain a clear question, reply with one short sentence asking them to write an actual question. Do not list options, examples, or suggestions. Reply in the same language as the user.
       `;
 
       aiMessages = [
@@ -373,6 +374,7 @@ export async function chatHandler(
       Reply concisely in under 1000 characters but make sure you respond fully.
       under any circumstance, do not mention you are an AI model.
       if you cant base your answer on the article content, use your own knowledge - but you must say that it did not appear in the article!
+      If the user's message is empty, a single character, gibberish, or otherwise does not contain a clear question, reply with one short sentence asking them to write an actual question. Do not list options, examples, or suggestions. Reply in the same language as the user.
       ${rejectUnrelatedQuestions ? denyUnrelatedQuestionsPrompt : ""}
       `;
 

@@ -219,6 +219,20 @@ Deno.test("chat: POST with missing required fields returns 400", async () => {
   assertExists(body.error);
 });
 
+Deno.test("chat: POST with whitespace-only question returns 400", async () => {
+  const res = await chatHandler(req(validBody({ question: "   " })), makeDeps());
+  assertEquals(res.status, 400);
+  const body = await res.json();
+  assertExists(body.error);
+});
+
+Deno.test("chat: POST with empty-string question returns 400", async () => {
+  const res = await chatHandler(req(validBody({ question: "" })), makeDeps());
+  assertEquals(res.status, 400);
+  const body = await res.json();
+  assertExists(body.error);
+});
+
 Deno.test("chat: origin not in project.allowed_urls returns 403", async () => {
   const deps = makeDeps({
     getProjectById: () => Promise.resolve(fakeProject({ allowed_urls: ["other.example.com"] })),
