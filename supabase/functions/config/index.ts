@@ -102,11 +102,18 @@ export async function configHandler(
       return errorResp("Origin not allowed", 403);
     }
 
-    // Rate-limit per project (SECURITY_AUDIT_TODO item 2). Runs AFTER
-    // origin check so unauthorized traffic never consumes the quota.
-    // visitor_id is unknown at config time (called on initial widget
-    // mount), so we only check the project-level bucket.
-    const rateLimit = await deps.checkRateLimit(supabase, "config", null, projectId);
+    // Rate-limit per IP and per project (SECURITY_AUDIT_TODO item 2).
+    // Runs AFTER origin check so unauthorized traffic never consumes the
+    // quota. visitor_id is unknown at config time (called on initial
+    // widget mount), so we only check the IP-level and project-level
+    // buckets here.
+    const rateLimit = await deps.checkRateLimit(
+      supabase,
+      "config",
+      null,
+      projectId,
+      req.headers.get("cf-connecting-ip"),
+    );
     if (rateLimit.limited) {
       return tooManyRequestsResp(rateLimit.retryAfterSeconds);
     }

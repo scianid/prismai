@@ -26,25 +26,35 @@ export type RateLimitEndpoint =
   | "analytics";
 
 /**
- * Limits by endpoint and key type. Visitor limits apply only when a
- * visitor_id is known (chat, suggestions, analytics event bodies). The
- * project limit is ALWAYS checked — it's the ceiling that protects an
- * individual publisher against bulk enumeration even when the attacker
- * rotates fake visitor IDs.
+ * Limits by endpoint and key type. Visitor and IP limits apply only when
+ * the corresponding identifier is known; a limit of 0 for any key means
+ * "no check for this endpoint". The project limit is ALWAYS checked — it
+ * is the ceiling that protects an individual publisher against bulk
+ * enumeration.
+ *
+ * The IP layer protects the project ceiling from being eaten by a single
+ * attacker who rotates fake visitor_ids within the project budget. IP
+ * budgets are roughly half of the project ceiling: high enough that
+ * shared-NAT traffic from a real office doesn't trip, low enough that a
+ * single IP cannot dominate the project window. Revisit after observing
+ * production traffic patterns.
  *
  * Budgets set per SECURITY_AUDIT_TODO.md:
- *   /chat        — 20 visitor / 500 project  (original, AI path is expensive)
- *   /suggestions — 5 visitor  / 200 project  (original, AI path is expensive)
- *   /config      — visitor unused / 300 project (1 call per page load)
- *   /articles    — visitor unused / 300 project (discovery, not hot)
- *   /analytics   — 60 visitor / 1000 project (hottest, but cheap)
+ *   /chat        — 20 visitor / 250 ip / 500 project  (AI path is expensive)
+ *   /suggestions — 5 visitor  / 100 ip / 200 project  (AI path is expensive)
+ *   /config      — visitor unused / 150 ip / 300 project (1 call per page load)
+ *   /articles    — visitor unused / 150 ip / 300 project (discovery, not hot)
+ *   /analytics   — 60 visitor / 500 ip / 1000 project (hottest, but cheap)
  */
-const LIMITS: Record<RateLimitEndpoint, Record<"visitor" | "project", number>> = {
-  chat: { visitor: 20, project: 500 },
-  suggestions: { visitor: 5, project: 200 },
-  config: { visitor: 0, project: 300 },
-  articles: { visitor: 0, project: 300 },
-  analytics: { visitor: 60, project: 1000 },
+const LIMITS: Record<
+  RateLimitEndpoint,
+  Record<"visitor" | "ip" | "project", number>
+> = {
+  chat: { visitor: 20, ip: 250, project: 500 },
+  suggestions: { visitor: 5, ip: 100, project: 200 },
+  config: { visitor: 0, ip: 150, project: 300 },
+  articles: { visitor: 0, ip: 150, project: 300 },
+  analytics: { visitor: 60, ip: 500, project: 1000 },
 };
 
 /**
@@ -62,6 +72,7 @@ export async function checkRateLimit(
   endpoint: RateLimitEndpoint,
   visitorId: string | null | undefined,
   projectId: string,
+  clientIp: string | null | undefined,
 ): Promise<RateLimitResult> {
   const limits = LIMITS[endpoint];
   const windowStart = new Date(Math.floor(Date.now() / 60_000) * 60_000)
@@ -70,15 +81,14 @@ export async function checkRateLimit(
     (Math.floor(Date.now() / 60_000) * 60_000 + 60_000 - Date.now()) / 1000,
   );
 
-  // Keys to check: always check project; check visitor only if known AND
-  // the endpoint defines a visitor limit. A `visitor: 0` in LIMITS means
-  // "no visitor-level limit for this endpoint" (e.g. config/articles
-  // don't know who the visitor is).
+  // Keys to check: always check project; check visitor and IP only when
+  // the identifier is known AND the endpoint defines a nonzero limit for
+  // that key type. A limit of 0 in LIMITS means "no check".
   //
-  // SECURITY_AUDIT_TODO item 4: the DB `key` must embed the raw visitorId
-  // so the rate-limit bucket is stable across calls, but logs must never
-  // leak that raw value. We pre-compute a `logKey` alongside each check
-  // where the visitor portion is replaced with a hashForLog tag.
+  // SECURITY_AUDIT_TODO item 4: the DB `key` must embed the raw identifier
+  // (visitorId / IP) so each bucket is stable across calls, but logs must
+  // never leak the raw value. We pre-compute a `logKey` alongside each
+  // check where the sensitive portion is replaced with a hashForLog tag.
   const checks: Array<{ key: string; logKey: string; limit: number }> = [
     {
       key: `${endpoint}:project:${projectId}`,
@@ -92,6 +102,14 @@ export async function checkRateLimit(
       key: `${endpoint}:visitor:${visitorId}`,
       logKey: `${endpoint}:visitor:${visitorHash}`,
       limit: limits.visitor,
+    });
+  }
+  if (clientIp && limits.ip > 0) {
+    const ipHash = await hashForLog(clientIp, projectId);
+    checks.push({
+      key: `${endpoint}:ip:${clientIp}`,
+      logKey: `${endpoint}:ip:${ipHash}`,
+      limit: limits.ip,
     });
   }
 

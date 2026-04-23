@@ -173,6 +173,7 @@ export async function suggestionsHandler(
         "suggestions",
         visitor_id,
         projectId,
+        req.headers.get("cf-connecting-ip"),
       );
       if (rateLimit.limited) {
         return new Response(
@@ -259,13 +260,14 @@ export async function suggestionsHandler(
       return successResp({ suggestions: cachedSuggestions });
     }
 
-    // H-2 fix: enforce per-visitor and per-project rate limits before hitting the AI
+    // H-2 fix: enforce per-visitor, per-IP and per-project rate limits before hitting the AI
     // Only runs when a real AI call is needed (cache miss)
     const rateLimit = await deps.checkRateLimit(
       supabase,
       "suggestions",
       visitor_id,
       projectId,
+      req.headers.get("cf-connecting-ip"),
     );
     if (rateLimit.limited) {
       return new Response(

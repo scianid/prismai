@@ -104,7 +104,13 @@ export async function analyticsHandler(
       (Array.isArray(body.batch) && body.batch.length > 0
         ? (body.batch[0] as Record<string, unknown>).visitor_id as string | undefined
         : undefined);
-    const rateLimit = await deps.checkRateLimit(supabase, "analytics", visitorId, projectId);
+    const rateLimit = await deps.checkRateLimit(
+      supabase,
+      "analytics",
+      visitorId,
+      projectId,
+      req.headers.get("cf-connecting-ip"),
+    );
     if (rateLimit.limited) {
       return tooManyRequestsResp(rateLimit.retryAfterSeconds);
     }

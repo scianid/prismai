@@ -159,12 +159,13 @@ export async function chatHandler(
       return errorResp("Origin not allowed", 403);
     }
 
-    // H-2 fix: enforce per-visitor and per-project rate limits before hitting the AI
+    // H-2 fix: enforce per-visitor, per-IP and per-project rate limits before hitting the AI
     const rateLimit = await deps.checkRateLimit(
       supabase,
       "chat",
       visitor_id,
       projectId,
+      req.headers.get("cf-connecting-ip"),
     );
     if (rateLimit.limited) {
       return new Response(

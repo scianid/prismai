@@ -17,6 +17,7 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const PROJECT_ID = "proj-ratelimit-0001";
 const VISITOR_ID = "visitor-secret-0123456789";
+const CLIENT_IP = "203.0.113.42";
 
 /**
  * Build a stub supabase client whose `rpc` returns a sequence of values
@@ -63,15 +64,14 @@ async function withCapturedConsole<T>(
 }
 
 Deno.test("rateLimit: DB key still embeds the raw visitorId (bucket stability)", async () => {
-  // Under the limit → both checks run and return allow. We capture the
+  // Under the limit → all checks run and return allow. We capture the
   // RPC args to prove the DB side gets the raw visitor_id — not the
   // hash. If it got the hash, two different visitors with the same hash
   // prefix (vanishingly unlikely but possible) would share a bucket, or
   // rotating the hash algorithm would invalidate all in-flight windows.
-  const stub = makeSupabaseRpcStub([1, 1]); // project=1, visitor=1
-  await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID);
-  // First call is the project-level check, second is the visitor-level.
-  assertEquals(stub.calls.length, 2);
+  const stub = makeSupabaseRpcStub([1, 1, 1]); // project=1, visitor=1, ip=1
+  await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID, CLIENT_IP);
+  assertEquals(stub.calls.length, 3);
   const visitorCall = stub.calls[1].params as { p_key: string };
   assertEquals(
     visitorCall.p_key.endsWith(`:visitor:${VISITOR_ID}`),
@@ -80,21 +80,32 @@ Deno.test("rateLimit: DB key still embeds the raw visitorId (bucket stability)",
   );
 });
 
+Deno.test("rateLimit: DB key embeds the raw client IP (bucket stability)", async () => {
+  const stub = makeSupabaseRpcStub([1, 1, 1]);
+  await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID, CLIENT_IP);
+  const ipCall = stub.calls[2].params as { p_key: string };
+  assertEquals(
+    ipCall.p_key.endsWith(`:ip:${CLIENT_IP}`),
+    true,
+    `expected DB key to end with raw IP, got ${ipCall.p_key}`,
+  );
+});
+
 Deno.test("rateLimit: rejection log uses hashForLog, not the raw visitor_id", async () => {
   // Visitor check returns 9999 — way over the 20 req/min chat visitor
-  // limit → handler logs a warn and returns {limited: true}.
+  // limit → handler logs a warn and returns {limited: true}. Order is
+  // project→visitor→ip; visitor is second, so it trips before the IP
+  // check even runs.
   const stub = makeSupabaseRpcStub([1, 9999]);
   const { result, captured } = await withCapturedConsole(async () => {
-    return await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID);
+    return await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID, CLIENT_IP);
   });
   assertEquals(result.limited, true);
-  // Raw visitor_id MUST NOT appear anywhere in the captured output.
   assertEquals(
     captured.includes(VISITOR_ID),
     false,
     `raw visitor_id leaked into log output:\n${captured}`,
   );
-  // The hashForLog tag SHOULD appear (marker that the log site fired).
   const expectedTag = await hashForLog(VISITOR_ID, PROJECT_ID);
   assertEquals(
     captured.includes(expectedTag),
@@ -103,12 +114,33 @@ Deno.test("rateLimit: rejection log uses hashForLog, not the raw visitor_id", as
   );
 });
 
+Deno.test("rateLimit: rejection log uses hashForLog, not the raw IP", async () => {
+  // Project + visitor fine, IP bucket way over → {limited: true}. Raw
+  // IP must not appear in logs; hashed tag must.
+  const stub = makeSupabaseRpcStub([1, 1, 9999]);
+  const { result, captured } = await withCapturedConsole(async () => {
+    return await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID, CLIENT_IP);
+  });
+  assertEquals(result.limited, true);
+  assertEquals(
+    captured.includes(CLIENT_IP),
+    false,
+    `raw IP leaked into log output:\n${captured}`,
+  );
+  const expectedTag = await hashForLog(CLIENT_IP, PROJECT_ID);
+  assertEquals(
+    captured.includes(expectedTag),
+    true,
+    `expected hashed IP tag ${expectedTag} in log output:\n${captured}`,
+  );
+});
+
 Deno.test("rateLimit: DB error log uses the hashed key", async () => {
   // Force an error on the visitor check and assert the error log line
   // doesn't contain the raw visitor_id either.
-  const stub = makeSupabaseRpcStub([1, new Error("db down")]);
+  const stub = makeSupabaseRpcStub([1, new Error("db down"), 1]);
   const { captured } = await withCapturedConsole(async () => {
-    return await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID);
+    return await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID, CLIENT_IP);
   });
   assertEquals(
     captured.includes(VISITOR_ID),
@@ -117,12 +149,35 @@ Deno.test("rateLimit: DB error log uses the hashed key", async () => {
   );
 });
 
-Deno.test("rateLimit: project-only check (no visitor) still logs without PII concerns", async () => {
-  const stub = makeSupabaseRpcStub([99999]); // project limit blown
+Deno.test("rateLimit: project-only check (no visitor, no ip) still logs without PII concerns", async () => {
+  const stub = makeSupabaseRpcStub([99999]); // project limit blown, before any other check fires
   const { result, captured } = await withCapturedConsole(async () => {
-    return await checkRateLimit(stub, "config", null, PROJECT_ID);
+    return await checkRateLimit(stub, "config", null, PROJECT_ID, null);
   });
   assertEquals(result.limited, true);
-  // Log should include the projectId (not PII) and the "config:project:" prefix.
   assertEquals(captured.includes(`config:project:${PROJECT_ID}`), true);
+});
+
+Deno.test("rateLimit: IP check is skipped when clientIp is null", async () => {
+  const stub = makeSupabaseRpcStub([1, 1]); // project + visitor only
+  await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID, null);
+  assertEquals(
+    stub.calls.length,
+    2,
+    "expected 2 RPC calls (project + visitor) when clientIp is null",
+  );
+});
+
+Deno.test("rateLimit: IP-only check (no visitor) runs for config endpoint", async () => {
+  // config has visitor: 0 (skip) + ip > 0 (check) + project (always).
+  // Expect 2 calls: project, then ip.
+  const stub = makeSupabaseRpcStub([1, 1]);
+  await checkRateLimit(stub, "config", null, PROJECT_ID, CLIENT_IP);
+  assertEquals(stub.calls.length, 2);
+  const ipCall = stub.calls[1].params as { p_key: string };
+  assertEquals(
+    ipCall.p_key.endsWith(`:ip:${CLIENT_IP}`),
+    true,
+    `expected second call to be the IP check, got ${ipCall.p_key}`,
+  );
 });

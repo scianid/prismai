@@ -103,9 +103,16 @@ export async function articlesHandler(
       return errorResp("Origin not allowed", 403);
     }
 
-    // Rate-limit per project (SECURITY_AUDIT_TODO item 2). Runs AFTER
-    // origin check so unauthorized traffic doesn't consume the quota.
-    const rateLimit = await deps.checkRateLimit(supabase, "articles", null, projectId);
+    // Rate-limit per IP and per project (SECURITY_AUDIT_TODO item 2).
+    // Runs AFTER origin check so unauthorized traffic doesn't consume
+    // the quota.
+    const rateLimit = await deps.checkRateLimit(
+      supabase,
+      "articles",
+      null,
+      projectId,
+      req.headers.get("cf-connecting-ip"),
+    );
     if (rateLimit.limited) {
       return tooManyRequestsResp(rateLimit.retryAfterSeconds);
     }
