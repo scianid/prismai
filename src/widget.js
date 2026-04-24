@@ -26,6 +26,17 @@
     let diveeErrorCount = 0;
     const diveeErrorSeen = new Set();    // stack-hash dedupe
 
+    // Unload guard: errors thrown by pending fetches during navigation/tab-close
+    // surface as `TypeError: Failed to fetch` in most browsers and aren't real
+    // bugs — just requests the browser aborted. Suppress reports once the page
+    // is going away.
+    let diveePageUnloading = false;
+    if (typeof window !== 'undefined') {
+        const markUnloading = () => { diveePageUnloading = true; };
+        window.addEventListener('pagehide', markUnloading);
+        window.addEventListener('beforeunload', markUnloading);
+    }
+
     function diveeHashError(err) {
         const s = (err && (err.stack || err.message)) || String(err);
         let h = 0;
@@ -35,6 +46,7 @@
 
     function diveeReportError(err, phase, projectId) {
         try {
+            if (diveePageUnloading) return;
             if (diveeErrorCount >= DIVEE_ERROR_MAX) return;
             const key = diveeHashError(err);
             if (diveeErrorSeen.has(key)) return;
@@ -920,47 +932,47 @@
             }
         }
 
+        // Retry on network failures (TypeError) and 5xx only. 4xx is an
+        // auth/project misconfiguration that won't self-heal. Thrown errors
+        // carry `.kind` in {client, server, network, unknown} so callers can
+        // tag Sentry reports per cause.
+        async retryFetch(url, options = {}, { maxAttempts = 3, baseDelayMs = 300 } = {}) {
+            let lastError = null;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                    const err = new Error(`Request failed: ${response.status}`);
+                    err.status = response.status;
+                    if (response.status >= 400 && response.status < 500) {
+                        err.kind = 'client';
+                        throw err;
+                    }
+                    err.kind = 'server';
+                    lastError = err;
+                } catch (err) {
+                    if (err && err.kind === 'client') throw err;
+                    if (!err.kind) {
+                        err.kind = err instanceof TypeError ? 'network' : 'unknown';
+                    }
+                    lastError = err;
+                }
+                if (attempt < maxAttempts) {
+                    const delay = baseDelayMs * Math.pow(3, attempt - 1);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            throw lastError;
+        }
+
         async fetchServerConfig(projectId) {
             if (!this.config.cachedBaseUrl) {
                 throw new Error('Missing cachedBaseUrl');
             }
 
             const configUrl = `${this.config.cachedBaseUrl}/config?projectId=${encodeURIComponent(projectId)}`;
-            // Retry network failures and 5xx only. 4xx is an auth/project
-            // misconfiguration that will not self-heal; retrying would just
-            // burn CPU and delay the widget from bailing out.
-            const MAX_ATTEMPTS = 3;
-            const BASE_DELAY_MS = 300; // backoff: 300ms, 900ms
-
-            let lastError = null;
-            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-                try {
-                    const response = await fetch(configUrl, { method: 'GET' });
-                    if (response.ok) {
-                        return response.json();
-                    }
-                    const err = new Error(`Config request failed: ${response.status}`);
-                    err.status = response.status;
-                    if (response.status >= 400 && response.status < 500) {
-                        err.kind = 'client'; // don't retry
-                        throw err;
-                    }
-                    err.kind = 'server'; // retry
-                    lastError = err;
-                } catch (err) {
-                    if (err && err.kind === 'client') throw err;
-                    if (!err.kind) {
-                        // TypeError: Failed to fetch, DNS failure, CSP block, ad blocker.
-                        err.kind = err instanceof TypeError ? 'network' : 'unknown';
-                    }
-                    lastError = err;
-                }
-                if (attempt < MAX_ATTEMPTS) {
-                    const delay = BASE_DELAY_MS * Math.pow(3, attempt - 1);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-            throw lastError;
+            const response = await this.retryFetch(configUrl);
+            return response.json();
         }
 
         getDefaultConfig() {
@@ -2432,9 +2444,8 @@
             try {
                 const url = `${this.config.cachedBaseUrl}/articles/tags?projectId=${encodeURIComponent(this.config.projectId)}&articleId=${encodeURIComponent(articleId)}`;
                 this.log('tags', 'Fetching:', url);
-                const response = await fetch(url);
+                const response = await this.retryFetch(url);
                 this.log('tags', 'Response status:', response.status);
-                if (!response.ok) return;
 
                 const data = await response.json();
                 this.log('tags', 'Response data:', data);
@@ -2446,8 +2457,16 @@
                 this.renderTagPills();
                 this.log('tags', 'Pills rendered');
             } catch (error) {
+                // 4xx (404 for an article without tags, 403 for origin gate)
+                // is an expected non-error — stay silent. Only report the
+                // unexpected kinds.
+                if (error && error.kind === 'client') {
+                    this.log('tags', 'Skipping client error:', error.status);
+                    return;
+                }
                 console.error('[Divee Tags] Failed to fetch:', error);
-                this.reportError(error, 'tags_fetch');
+                const kind = (error && error.kind) ? error.kind : 'unknown';
+                this.reportError(error, `tags_fetch_${kind}`);
             }
         }
 

@@ -125,6 +125,21 @@ describe('widget error reporting', () => {
       expect(getErrorCalls()).toHaveLength(5);
     });
 
+    test('suppresses reports once the page is unloading', () => {
+      mockFetchAllowAll();
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p' });
+
+      fetch.mockClear();
+      // Simulate navigation / tab close — any fetch rejections that arrive
+      // after this are browser aborts, not bugs worth reporting.
+      window.dispatchEvent(new Event('pagehide'));
+
+      widget.reportError(new Error('during unload'), 'phase_a');
+      expect(getErrorCalls()).toHaveLength(0);
+    });
+
     test('never throws when fetch rejects (fire-and-forget)', () => {
       fetch.mockImplementation(() => Promise.reject(new Error('network down')));
       eval(widgetJs);
@@ -452,6 +467,93 @@ describe('widget error reporting', () => {
       const calls = getErrorCalls();
       expect(calls).toHaveLength(1);
       expect(parseErrorPayload(calls[0]).phase).toBe('config_load_client');
+    });
+
+    test('fetchAndRenderArticleTags retries on network error then succeeds', async () => {
+      let tagsAttempt = 0;
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/articles/tags')) {
+          tagsAttempt++;
+          if (tagsAttempt === 1) return Promise.reject(new TypeError('Failed to fetch'));
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ tags: [] }) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p-tags' });
+      // Minimal state so getArticleUniqueId returns something non-null.
+      widget.contentCache = { url: 'https://example.com/a' };
+
+      await widget.fetchAndRenderArticleTags();
+
+      expect(tagsAttempt).toBe(2); // retried once
+      expect(getErrorCalls()).toHaveLength(0); // recovered, no report
+    });
+
+    test('fetchAndRenderArticleTags stays silent on 4xx (no retry, no report)', async () => {
+      let tagsAttempt = 0;
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/articles/tags')) {
+          tagsAttempt++;
+          return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p-tags' });
+      widget.contentCache = { url: 'https://example.com/a' };
+
+      await widget.fetchAndRenderArticleTags();
+
+      expect(tagsAttempt).toBe(1); // 4xx is not retried
+      // 404 / missing-tags is expected for articles without tags yet — silent.
+      expect(getErrorCalls()).toHaveLength(0);
+    });
+
+    test('fetchAndRenderArticleTags tags Sentry with tags_fetch_network on persistent network error', async () => {
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/articles/tags')) return Promise.reject(new TypeError('Failed to fetch'));
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p-tags' });
+      widget.contentCache = { url: 'https://example.com/a' };
+
+      await widget.fetchAndRenderArticleTags();
+
+      const calls = getErrorCalls();
+      expect(calls).toHaveLength(1);
+      expect(parseErrorPayload(calls[0]).phase).toBe('tags_fetch_network');
+    });
+
+    test('fetchAndRenderArticleTags tags Sentry with tags_fetch_server on persistent 5xx', async () => {
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/articles/tags')) {
+          return Promise.resolve({ ok: false, status: 502, json: () => Promise.resolve({}) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p-tags' });
+      widget.contentCache = { url: 'https://example.com/a' };
+
+      await widget.fetchAndRenderArticleTags();
+
+      const calls = getErrorCalls();
+      expect(calls).toHaveLength(1);
+      expect(parseErrorPayload(calls[0]).phase).toBe('tags_fetch_server');
     });
 
     test('tags Sentry report with config_load_server on persistent 5xx', async () => {
