@@ -88,8 +88,8 @@
     // project_config.video_ad_tag_url on the server (the `getVideoAdTagTemplate`
     // helper already reads that field first and falls back to this constant).
     const DIVEE_VIDEO_AD_HARDCODED_TAG =
-        'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/Video1/VCVVTRVD_conjur.com.br&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C[width]x[height]%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s&correlator=[cb]&vad_type=linear&pod=1&ad_type=video&url=[pageHref]&description_url=[pageHref]&pmad=5&pmnd=0&pmxd=180000&vpos=preroll';
-
+        'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/Video1/VCVVTRVD_conjur.com.br&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C[width]x[height]%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s&correlator=[cb]&vad_type=linear&pod=1&ad_type=video&url=[pageHref]&description_url=[pageHref]&pmad=5&pmnd=0&pmxd=180000&vpos=preroll'
+        'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/video1/VHVVTRVD_conjur.com.br' + 
         '&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252' + 
         '&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s' + 
         '&correlator=[timestamp]' + 
@@ -228,14 +228,29 @@
             return (this.state.serverConfig && this.state.serverConfig.video_ad_tag_url) || DIVEE_VIDEO_AD_HARDCODED_TAG;
         }
 
-        buildVideoAdTag() {
+        buildVideoAdTag(width, height) {
             const template = this.getVideoAdTagTemplate();
-            const pageUrl = window.location.href;
+            const encodedUrl = encodeURIComponent(window.location.href);
+            const w = String(width || 640);
+            const h = String(height || 360);
             // TODO(consent): when this.state.consent === 'denied', force npa=1 on the output.
-            return template
-                .replace('[timestamp]', String(Date.now()))
-                .replace('[referrer_url]', encodeURIComponent(pageUrl))
-                .replace('[description_url]', encodeURIComponent(pageUrl));
+            // Any [placeholder] left in the final URL will make GAM reject
+            // the request with 400, so we substitute every macro the tag
+            // might contain (different publisher tags use different names).
+            const subs = {
+                '[timestamp]': String(Date.now()),
+                '[referrer_url]': encodedUrl,
+                '[description_url]': encodedUrl,
+                '[pageHref]': encodedUrl,
+                '[page_url]': encodedUrl,
+                '[width]': w,
+                '[height]': h
+            };
+            let url = template;
+            for (const key in subs) {
+                url = url.split(key).join(subs[key]);
+            }
+            return url;
         }
 
         async playVideoAd() {
@@ -275,11 +290,11 @@
             const instance = { adsManager: null, adsLoader, adDisplayContainer, adEl };
             this.state.videoAdInstance = instance;
 
-            const tagUrl = this.buildVideoAdTag();
-            this.log('videoAd', 'Requesting ad:', tagUrl);
-
             const width = adEl.clientWidth || 640;
             const height = adEl.clientHeight || Math.round(width * 9 / 16);
+
+            const tagUrl = this.buildVideoAdTag(width, height);
+            this.log('videoAd', 'Requesting ad:', tagUrl);
 
             const onSkipClick = () => {
                 this.trackEvent('video_ad_skipped');
