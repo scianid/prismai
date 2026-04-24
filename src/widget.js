@@ -88,7 +88,14 @@
     // project_config.video_ad_tag_url on the server (the `getVideoAdTagTemplate`
     // helper already reads that field first and falls back to this constant).
     const DIVEE_VIDEO_AD_HARDCODED_TAG =
-    'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/video1/VHVVTRVD_conjur.com.br&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s&correlator=[timestamp]&vad_type=linear&pod=1&ad_type=video&url=[referrer_url]&description_url=[description_url]&pmad=5&pmnd=0&pmxd=180000&vpos=preroll&plcmt=4&vpmute=1';
+        'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/Video1/VCVVTRVD_conjur.com.br&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C[width]x[height]%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s&correlator=[cb]&vad_type=linear&pod=1&ad_type=video&url=[pageHref]&description_url=[pageHref]&pmad=5&pmnd=0&pmxd=180000&vpos=preroll';
+
+        '&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252' + 
+        '&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s' + 
+        '&correlator=[timestamp]' + 
+        '&vad_type=linear&pod=1&ad_type=video' +
+        '&url=[referrer_url]&description_url=[description_url]'+
+        '&pmad=5&pmnd=0&pmxd=180000&vpos=preroll&plcmt=4&vpmute=1';
 
     const DIVEE_IMA_SDK_URL = 'https://imasdk.googleapis.com/js/sdkloader/ima3.js';
     let diveeImaSdkPromise = null;
