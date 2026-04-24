@@ -3,6 +3,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { enforceContentLength } from "../_shared/responses.ts";
 import { serveWithSentry } from "../_shared/sentry.ts";
 import { captureWidgetException } from "../_shared/sentryWidget.ts";
+import { detectBrowser } from "../_shared/userAgent.ts";
 
 // Fire-and-forget error reporting from the browser widget.
 // The widget runs on third-party publisher sites where we cannot ship the
@@ -70,6 +71,7 @@ export async function widgetErrorHandler(req: Request): Promise<Response> {
     if (projectId) tags.project_id = projectId;
     if (buildVersion) tags.build_version = buildVersion;
     if (origin) tags.origin = origin;
+    tags.browser = detectBrowser(userAgent);
 
     const extra: Record<string, unknown> = {};
     if (widgetUrl) extra.widget_url = widgetUrl;
