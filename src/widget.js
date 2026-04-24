@@ -233,14 +233,46 @@
             return (this.state.serverConfig && this.state.serverConfig.video_ad_tag_url) || DIVEE_VIDEO_AD_HARDCODED_TAG;
         }
 
-        buildVideoAdTag() {
+        buildVideoAdTag(tcData) {
             const template = this.getVideoAdTagTemplate();
             const pageUrl = window.location.href;
             // TODO(consent): when this.state.consent === 'denied', force npa=1 on the output.
-            return template
+            let url = template
                 .replace('[timestamp]', String(Date.now()))
                 .replace('[referrer_url]', encodeURIComponent(pageUrl))
                 .replace('[description_url]', encodeURIComponent(pageUrl));
+            // IAB TCF v2: if the publisher exposes __tcfapi, pass the consent
+            // string through. Google's IMA SDK claims to auto-detect this, but
+            // in practice (cross-origin iframes, timing) it can miss, and GAM
+            // returns empty VAST (error 303) for GDPR-scoped requests without
+            // a consent signal.
+            if (tcData && tcData.tcString) {
+                const sep = url.includes('?') ? '&' : '?';
+                url += sep + 'gdpr=' + (tcData.gdprApplies ? 1 : 0)
+                    + '&gdpr_consent=' + encodeURIComponent(tcData.tcString);
+            }
+            return url;
+        }
+
+        // Best-effort read of the page's TCF v2 consent via __tcfapi. Resolves
+        // to { gdprApplies, tcString } or null if TCF isn't set up / times out.
+        getTcfData() {
+            return new Promise((resolve) => {
+                if (typeof window.__tcfapi !== 'function') return resolve(null);
+                let settled = false;
+                const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+                try {
+                    window.__tcfapi('getTCData', 2, (tcData, success) => {
+                        if (!success || !tcData) return done(null);
+                        done({
+                            gdprApplies: !!tcData.gdprApplies,
+                            tcString: tcData.tcString || ''
+                        });
+                    });
+                } catch (_) { done(null); }
+                // Don't block the ad request for longer than a second.
+                setTimeout(() => done(null), 1000);
+            });
         }
 
         async playVideoAd() {
@@ -280,7 +312,9 @@
             const instance = { adsManager: null, adsLoader, adDisplayContainer, adEl };
             this.state.videoAdInstance = instance;
 
-            const tagUrl = this.buildVideoAdTag();
+            const tcData = await this.getTcfData();
+            if (tcData) this.log('videoAd', 'TCF data:', { gdprApplies: tcData.gdprApplies, tcStringLen: tcData.tcString.length });
+            const tagUrl = this.buildVideoAdTag(tcData);
             this.log('videoAd', 'Requesting ad:', tagUrl);
 
             const width = adEl.clientWidth || 640;
@@ -317,9 +351,12 @@
                     this.teardownVideoAd();
                 });
                 adsManager.addEventListener(ima.AdErrorEvent.Type.AD_ERROR, (err) => {
-                    const code = err.getError && err.getError().getErrorCode && err.getError().getErrorCode();
-                    this.log('videoAd', 'AdsManager error:', err.getError && err.getError());
-                    this.trackEvent('video_ad_error', { errorCode: code });
+                    const adError = err.getError && err.getError();
+                    const code = adError && adError.getErrorCode && adError.getErrorCode();
+                    const vastCode = adError && adError.getVastErrorCode && adError.getVastErrorCode();
+                    const msg = adError && adError.getMessage && adError.getMessage();
+                    this.log('videoAd', 'AdsManager error. code:', code, 'vast:', vastCode, 'msg:', msg);
+                    this.trackEvent('video_ad_error', { source: 'adsManager', errorCode: code, vastCode });
                     this.teardownVideoAd();
                 });
 
@@ -334,9 +371,13 @@
             }, false);
 
             adsLoader.addEventListener(ima.AdErrorEvent.Type.AD_ERROR, (err) => {
-                const code = err.getError && err.getError().getErrorCode && err.getError().getErrorCode();
-                this.log('videoAd', 'AdsLoader error:', err.getError && err.getError());
-                this.trackEvent('video_ad_error', { errorCode: code });
+                const adError = err.getError && err.getError();
+                const code = adError && adError.getErrorCode && adError.getErrorCode();
+                const vastCode = adError && adError.getVastErrorCode && adError.getVastErrorCode();
+                const msg = adError && adError.getMessage && adError.getMessage();
+                const type = adError && adError.getType && adError.getType();
+                this.log('videoAd', 'AdsLoader error. code:', code, 'vast:', vastCode, 'type:', type, 'msg:', msg);
+                this.trackEvent('video_ad_error', { source: 'adsLoader', errorCode: code, vastCode });
                 this.teardownVideoAd();
             }, false);
 
