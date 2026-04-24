@@ -177,6 +177,14 @@
             diveeReportError(err, phase, this.config && this.config.projectId);
         }
 
+        // Normalizes away stray leading/trailing slashes so "/", "//", "///"
+        // and "" all count as root. Some publishers serve URLs like
+        // `https://example.com//` where pathname is "//".
+        _isRootPath(path) {
+            if (typeof path !== 'string') return false;
+            return path.replace(/^\/+|\/+$/g, '') === '';
+        }
+
         // ============================================
         // SESSION TRACKING
         // ============================================
@@ -755,13 +763,12 @@
                     this.log('init', 'Widget disabled: article content is empty or too short to load', {
                         contentLength
                     });
-                    // Skip reporting on root/home URLs — these are expected to
-                    // be landing pages without an article, not a publisher
-                    // misconfiguration. Strip all leading/trailing slashes so
-                    // "/", "//", "///" etc. all count as root.
+                    // Skip reporting on root/home URLs — these are expected
+                    // to be landing pages without an article, not a publisher
+                    // misconfiguration.
                     let path = '/';
                     try { path = location.pathname || '/'; } catch (_) { /* ignore */ }
-                    const isRoot = path.replace(/^\/+|\/+$/g, '') === '';
+                    const isRoot = this._isRootPath(path);
                     if (!isRoot) {
                         this.reportError(
                             new Error(`Article content too short (length=${contentLength})`),
