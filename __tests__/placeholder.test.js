@@ -71,6 +71,18 @@ describe('Placeholder injection', () => {
     expect(placeholder).toBeNull();
   });
 
+  test('placeholder carries the expected inline layout styles', () => {
+    const script = document.createElement('script');
+    script.setAttribute('data-project-id', 'test-123');
+    document.body.appendChild(script);
+
+    eval(widgetJs);
+
+    const placeholder = document.getElementById('divee-widget-placeholder');
+    expect(placeholder.style.width).toBe('100%');
+    expect(placeholder.style.display).toBe('flex');
+  });
+
   test('injects placeholder between script and its next sibling', () => {
     const script = document.createElement('script');
     script.setAttribute('data-project-id', 'test-123');

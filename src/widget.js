@@ -3112,6 +3112,8 @@
             if (!script.nextElementSibling || script.nextElementSibling.id !== 'divee-widget-placeholder') {
                 const placeholder = document.createElement('div');
                 placeholder.id = 'divee-widget-placeholder';
+                placeholder.style.width = '100%';
+                placeholder.style.display = 'flex';
                 script.parentNode.insertBefore(placeholder, script.nextSibling);
             }
         });
