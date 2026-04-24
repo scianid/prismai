@@ -605,6 +605,7 @@
 
 /* AI identity badge — replaces the old dual-icon approach */
 .divee-ai-identity {
+  margin-bottom: 0 !important;
   display: inline-flex;
   align-items: center;
   gap: 5px;
