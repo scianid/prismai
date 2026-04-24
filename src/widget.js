@@ -1479,6 +1479,20 @@
             // Apply current theme colors to the floating button (it's outside the widget container).
             this.applyThemeColors(this.state.serverConfig || this.getDefaultConfig());
 
+            // Show the floater only when the anchored widget is out of the viewport.
+            // Start hidden (safe default — the common case is anchor visible on load); the
+            // observer will reveal it as soon as the user scrolls past the anchor.
+            btn.classList.add('divee-anchor-in-view');
+            if (this.elements.container && typeof IntersectionObserver !== 'undefined') {
+                const observer = new IntersectionObserver((entries) => {
+                    const entry = entries[0];
+                    if (!entry || !this.elements.floatingAskAi) return;
+                    this.elements.floatingAskAi.classList.toggle('divee-anchor-in-view', entry.isIntersecting);
+                }, { rootMargin: '-80px 0px' });
+                observer.observe(this.elements.container);
+                this.elements.floatingAskAiObserver = observer;
+            }
+
             // Reveal the "ASK AI" pill occasionally — feels like a native widget hint,
             // not an ad. Long gaps between reveals, calm hold time.
             const showPill = (holdMs) => {

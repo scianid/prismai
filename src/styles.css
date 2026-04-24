@@ -2634,9 +2634,10 @@
   }
 }
 
-/* Hide the floating button while the anchored widget is expanded, to avoid overlap */
-.divee-widget[data-state="expanded"] ~ .divee-floating-ask-ai,
-body:has(.divee-widget[data-state="expanded"]) .divee-floating-ask-ai {
+/* Hide the floating button while the anchored widget is in view; show it when the
+   reader has scrolled past, so the CTA is always reachable. Toggled by an
+   IntersectionObserver in widget.js. */
+.divee-floating-ask-ai.divee-anchor-in-view {
   opacity: 0 !important;
   pointer-events: none !important;
   transform: translateY(12px) scale(0.95) !important;
