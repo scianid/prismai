@@ -716,10 +716,18 @@
                     this.log('init', 'Widget disabled: article content is empty or too short to load', {
                         contentLength
                     });
-                    this.reportError(
-                        new Error(`Article content too short (length=${contentLength})`),
-                        'empty_article'
-                    );
+                    // Skip reporting on root/home URLs — these are expected to
+                    // be landing pages without an article, not a publisher
+                    // misconfiguration.
+                    let path = '/';
+                    try { path = location.pathname || '/'; } catch (_) { /* ignore */ }
+                    const isRoot = path === '/' || path === '';
+                    if (!isRoot) {
+                        this.reportError(
+                            new Error(`Article content too short (length=${contentLength})`),
+                            'empty_article'
+                        );
+                    }
                     return;
                 }
             }

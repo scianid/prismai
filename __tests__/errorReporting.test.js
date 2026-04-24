@@ -158,6 +158,11 @@ describe('widget error reporting', () => {
     }
 
     test('reports when articleContent is empty string', async () => {
+      // jsdom defaults to pathname '/', which the widget treats as a root URL
+      // and skips reporting for. Move to a non-root path to exercise the
+      // report path.
+      window.history.pushState({}, '', '/some-article');
+
       mockFetchAllowAll({
         config: {
           enabled: true,
@@ -195,6 +200,7 @@ describe('widget error reporting', () => {
     });
 
     test('reports length value when content is too short (not just 0)', async () => {
+      window.history.pushState({}, '', '/some-article');
       mockFetchAllowAll({
         config: {
           enabled: true,
@@ -225,6 +231,37 @@ describe('widget error reporting', () => {
       const body = parseErrorPayload(errorCalls[0]);
       expect(body.phase).toBe('empty_article');
       expect(body.message).toContain('length=5');
+    });
+
+    test('does NOT report when page is the site root (path = "/")', async () => {
+      window.history.pushState({}, '', '/');
+      mockFetchAllowAll({
+        config: {
+          enabled: true,
+          widget_mode: 'article',
+          display_mode: 'anchored',
+          display_position: 'bottom',
+          direction: 'ltr',
+          language: 'en',
+          highlight_color: ['#68E5FD', '#A389E0'],
+          show_ad: false,
+        },
+      });
+      eval(widgetJs);
+
+      window.DiveeWidget.prototype.initGoogleAds = jest.fn();
+      window.DiveeWidget.prototype.trackEvent = jest.fn();
+      window.DiveeWidget.prototype.getAnalyticsIds = jest.fn();
+      window.DiveeWidget.prototype.extractArticleContent = jest.fn(function () {
+        this.articleContent = '';
+        return true;
+      });
+
+      new window.DiveeWidget({ projectId: 'proj-root' });
+      await flushMicrotasks();
+
+      // Root URL landing pages are expected to lack articles — don't spam Sentry.
+      expect(getErrorCalls()).toHaveLength(0);
     });
 
     test('does NOT report when article content is long enough', async () => {
