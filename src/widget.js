@@ -81,14 +81,26 @@
     // project_config.video_ad_tag_url on the server later — the seam is
     // getVideoAdTagTemplate(). Placeholders [timestamp]/[referrer_url]/
     // [description_url] are resolved in buildVideoAdTag().
+    //
+    // TEMP: pointed at Google's IMA skippable-linear sample tag for end-to-end
+    // UI verification. Always fills, so we can confirm the video player, 16:9
+    // container, skip button, teardown, and suggestions-behind-the-ad flow.
+    // Swap back to the publisher's real tag below once GAM fill is sorted.
     const DIVEE_VIDEO_AD_HARDCODED_TAG =
-        'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/video1/VHVVTRVD_conjur.com.br' +
-        '&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252' +
-        '&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s' +
-        '&correlator=[timestamp]' +
-        '&vad_type=linear&pod=1&ad_type=video' +
-        '&url=[referrer_url]&description_url=[description_url]' +
-        '&pmad=5&pmnd=0&pmxd=180000&vpos=preroll&plcmt=4&vpmute=1';
+        'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/vmap_ad_samples' +
+        '&sz=640x480&cust_params=sample_ar%3Dskippablelinear&ciu_szs=300x250%2C728x90' +
+        '&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&impl=s' +
+        '&cmsid=496&vid=short_onecue&correlator=[timestamp]';
+
+    // Real publisher tag (empty VAST as of last test — likely domain/targeting issue):
+    // const DIVEE_VIDEO_AD_HARDCODED_TAG =
+    //     'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/video1/VHVVTRVD_conjur.com.br' +
+    //     '&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252' +
+    //     '&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s' +
+    //     '&correlator=[timestamp]' +
+    //     '&vad_type=linear&pod=1&ad_type=video' +
+    //     '&url=[referrer_url]&description_url=[description_url]' +
+    //     '&pmad=5&pmnd=0&pmxd=180000&vpos=preroll&plcmt=4&vpmute=1';
 
     const DIVEE_IMA_SDK_URL = 'https://imasdk.googleapis.com/js/sdkloader/ima3.js';
     let diveeImaSdkPromise = null;
@@ -357,6 +369,14 @@
                     if (skipBtn) skipBtn.removeEventListener('click', instance._onSkipClick);
                 }
                 instance.adEl.remove();
+            }
+            // Focus the input if the widget is still open (i.e. ad ended
+            // naturally or via skip, not because collapse() triggered us).
+            // This mirrors expand()'s normal auto-focus and triggers the
+            // cached-suggestions branch in onTextAreaFocus.
+            if (this.state.isExpanded && this.elements.expandedView) {
+                const input = this.elements.expandedView.querySelector('.divee-input');
+                if (input) input.focus();
             }
         }
 
@@ -2235,17 +2255,25 @@
 
             this.trackEvent('widget_expanded', { trigger: 'click' });
 
-            // Focus on input after animation
-            setTimeout(() => {
-                this.elements.expandedView.querySelector('.divee-input').focus();
-            }, 300);
-
             // Play video ad on first open when ?diveeVideoAd=true. One-shot per
             // page load — the videoAdPlayed flag is set before the async work
             // so re-opens don't retrigger even if the first request is in flight.
-            if (this.isVideoAdRequested() && !this.state.videoAdPlayed) {
+            const willPlayVideoAd = this.isVideoAdRequested() && !this.state.videoAdPlayed;
+            if (willPlayVideoAd) {
                 this.state.videoAdPlayed = true;
                 this.playVideoAd().catch((err) => this.reportError(err, 'videoAd'));
+                // Prefetch suggestions silently while the ad plays so they're
+                // ready to display the moment the ad ends (teardown focuses the
+                // input, which hits the state.suggestions.length > 0 branch in
+                // onTextAreaFocus).
+                this.prefetchSuggestions().catch(() => { /* swallowed, logged inside */ });
+            } else {
+                // Normal flow: focus the input after the open animation. We
+                // skip this while a video ad is playing to avoid popping the
+                // mobile keyboard and opening the shimmer popup on top of the ad.
+                setTimeout(() => {
+                    this.elements.expandedView.querySelector('.divee-input').focus();
+                }, 300);
             }
         }
 
@@ -2289,6 +2317,28 @@
                 time_spent: Date.now(),
                 questions_asked: this.state.messages.filter(m => m.role === 'user').length
             });
+        }
+
+        // Silent fetch — populates this.state.suggestions but does NOT open
+        // the shimmer popup. Used while a video ad is playing so that when
+        // the ad ends, the input-focus hits the cached-suggestions branch in
+        // onTextAreaFocus and renders instantly.
+        async prefetchSuggestions() {
+            if (this.config.widgetMode === 'knowledgebase') return;
+            if (this.state.suggestions.length > 0) return;
+            if (this.state.suggestionsSuppressed) return;
+            try {
+                const suggestions = await this.fetchSuggestions();
+                this.state.suggestions = suggestions || [];
+                this.trackEvent('suggestions_fetched', {
+                    article_id: this.config.articleId,
+                    suggestions_count: this.state.suggestions.length,
+                    load_time: 0,
+                    prefetched: true
+                });
+            } catch (err) {
+                this.log('videoAd', 'Prefetch suggestions failed:', err);
+            }
         }
 
         async onTextAreaFocus() {
