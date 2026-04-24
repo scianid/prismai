@@ -14,6 +14,57 @@
     // Singleton guard — prevent duplicate initialization if the script is injected more than once
     if (window.__diveeWidgetLoaded) return;
 
+    // ============================================
+    // ERROR REPORTING (Sentry via server-side proxy)
+    // ============================================
+    // We cannot ship the Sentry DSN in code that runs on publisher sites, so
+    // errors are POSTed to the `widget-error` edge function which forwards
+    // them to Sentry with `project_id`, `build_version`, `phase` tags.
+    // Rate-limited and deduped so one bad publisher page can't flood Sentry.
+    const DIVEE_ERROR_ENDPOINT = 'https://srv.divee.ai/functions/v1/widget-error';
+    const DIVEE_ERROR_MAX = 5;           // max reports per page lifecycle
+    let diveeErrorCount = 0;
+    const diveeErrorSeen = new Set();    // stack-hash dedupe
+
+    function diveeHashError(err) {
+        const s = (err && (err.stack || err.message)) || String(err);
+        let h = 0;
+        for (let i = 0; i < s.length; i++) h = ((h * 31 + s.charCodeAt(i)) | 0);
+        return String(h);
+    }
+
+    function diveeReportError(err, phase, projectId) {
+        try {
+            if (diveeErrorCount >= DIVEE_ERROR_MAX) return;
+            const key = diveeHashError(err);
+            if (diveeErrorSeen.has(key)) return;
+            diveeErrorSeen.add(key);
+            diveeErrorCount++;
+
+            const message = (err && err.message) ? String(err.message) : String(err);
+            const stack = (err && err.stack) ? String(err.stack) : undefined;
+            let widgetUrl = null;
+            try { widgetUrl = location.origin + location.pathname; } catch (_) { /* ignore */ }
+
+            const payload = {
+                message,
+                stack,
+                phase: phase || 'unknown',
+                project_id: projectId || null,
+                build_version: typeof DIVEE_BUILD_VERSION !== 'undefined' ? DIVEE_BUILD_VERSION : 'dev',
+                widget_url: widgetUrl,
+                user_agent: (navigator && navigator.userAgent) || null
+            };
+
+            fetch(DIVEE_ERROR_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                keepalive: true
+            }).catch(() => { /* never block on error reporting */ });
+        } catch (_) { /* reporting must never throw */ }
+    }
+
     class DiveeWidget {
         constructor(config) {
             this.config = {
@@ -103,6 +154,10 @@
         isMockAdRequested() {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get('diveeMockAd') === 'true';
+        }
+
+        reportError(err, phase) {
+            diveeReportError(err, phase, this.config && this.config.projectId);
         }
 
         // ============================================
@@ -484,6 +539,7 @@
                         }
                     } catch (e) {
                         console.error('[Divee] Failed to parse override_desktop_ad_size:', e);
+                        self.reportError(e, 'ads_override_desktop_parse');
                     }
                 }
                 
@@ -497,6 +553,7 @@
                         }
                     } catch (e) {
                         console.error('[Divee] Failed to parse override_mobile_ad_size:', e);
+                        self.reportError(e, 'ads_override_mobile_parse');
                     }
                 }
 
@@ -824,6 +881,7 @@
                 });
             } catch (error) {
                 console.error('[Divee] Failed to load config:', error);
+                this.reportError(error, 'config_load');
                 this.state.serverConfig = null;
             }
         }
@@ -1008,6 +1066,7 @@
                 return articleFound;
             } catch (error) {
                 console.error('[Divee] Error extracting content:', error);
+                this.reportError(error, 'content_extract');
                 this.contentCache = {
                     content: '',
                     title: document.title || 'Untitled Article',
@@ -2001,6 +2060,7 @@
                 });
             } catch (error) {
                 console.error('[Divee] Failed to fetch suggestions:', error);
+                this.reportError(error, 'suggestions_render');
                 if (suggestionsList) {
                     suggestionsList.innerHTML = '<div class="divee-error">Could not load suggestions</div>';
                 }
@@ -2049,6 +2109,7 @@
                 }
             } catch (error) {
                 console.error('[Divee] Suggestions request failed:', error);
+                this.reportError(error, 'suggestions_fetch');
             }
 
             return [];
@@ -2094,6 +2155,7 @@
                 await this.streamResponse(question, messageId, questionId);
             } catch (error) {
                 console.error('[Divee] Failed to get answer:', error);
+                this.reportError(error, 'stream_answer');
                 this.updateMessage(messageId, 'Sorry, I encountered an error. Please try again.');
             } finally {
                 this.state.isStreaming = false;
@@ -2344,6 +2406,7 @@
                 this.log('tags', 'Pills rendered');
             } catch (error) {
                 console.error('[Divee Tags] Failed to fetch:', error);
+                this.reportError(error, 'tags_fetch');
             }
         }
 
@@ -2426,6 +2489,7 @@
                 this.showTagPopup(pillElement, tag, articles);
             } catch (error) {
                 this.log('tags', 'Failed to fetch articles by tag:', error);
+                this.reportError(error, 'tag_articles_fetch');
                 pillElement.classList.remove('loading', 'active');
                 this.state.activeTagPopup = null;
             }
@@ -2580,6 +2644,7 @@
                 return data.suggestion || null;
             } catch (error) {
                 console.error('[Divee] Failed to fetch suggested article:', error);
+                this.reportError(error, 'suggested_article_fetch');
                 return null;
             }
         }
@@ -2847,6 +2912,7 @@
                 });
             } catch (err) {
                 console.error('[Divee Analytics] Error sending batch:', err);
+                this.reportError(err, 'analytics_send');
             }
         }
 
@@ -2994,8 +3060,13 @@
 
             if (isDebug)
                 console.log(`[Divee] Auto-init [${index}]:`, config);
-            const instance = new DiveeWidget(config);
-            diveeInstances.push(instance);
+            try {
+                const instance = new DiveeWidget(config);
+                diveeInstances.push(instance);
+            } catch (err) {
+                console.error('[Divee] Widget init failed:', err);
+                diveeReportError(err, 'init', config.projectId);
+            }
         });
     }
 
