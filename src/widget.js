@@ -230,8 +230,13 @@
             // Any [placeholder] left in the final URL will make GAM reject
             // the request with 400, so we substitute every macro the tag
             // might contain (different publisher tags use different names).
+            const ts = String(Date.now());
             const subs = {
-                '[timestamp]': String(Date.now()),
+                '[timestamp]': ts,
+                '[cb]': ts,
+                '[cachebuster]': ts,
+                '[CACHEBUSTING]': ts, // IAB VAST standard macro
+                '[random]': ts,
                 '[referrer_url]': encodedUrl,
                 '[description_url]': encodedUrl,
                 '[pageHref]': encodedUrl,
@@ -243,6 +248,10 @@
             for (const key in subs) {
                 url = url.split(key).join(subs[key]);
             }
+            // Warn loudly if any [macro] slipped through — leftover brackets
+            // make GAM reject the request or return empty VAST.
+            const leftover = url.match(/\[[a-zA-Z_][a-zA-Z0-9_-]*\]/g);
+            if (leftover) this.log('videoAd', 'WARNING: unsubstituted macros in ad tag:', leftover);
             return url;
         }
 
