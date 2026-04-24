@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.articles]
 verify_jwt = false
+
+[functions.widget-error]
+verify_jwt = false
