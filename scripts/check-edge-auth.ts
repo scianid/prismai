@@ -38,7 +38,15 @@ const AUTH_HELPERS: AuthHelper[] = [
 // Functions that are intentionally callable without an origin gate.
 // Each entry MUST document how the function authorizes its caller instead.
 // Adding an entry here is a security decision — require a second reviewer.
-const PUBLIC_ALLOWLIST: Record<string, string> = {};
+const PUBLIC_ALLOWLIST: Record<string, string> = {
+  // widget-error is a write-only error-reporting proxy to Sentry. It reads
+  // no project data, returns no body, caps payloads at 8KB, and Sentry
+  // itself rate-limits inbound events. Gating by origin would require a DB
+  // lookup per report and would silently drop errors from mis-configured
+  // projects — the opposite of what an error-reporting endpoint should do.
+  "widget-error":
+    "Write-only Sentry proxy; no DB access, no response data, 8KB body cap, Sentry rate-limits inbound events.",
+};
 
 interface Failure {
   fn: string;
