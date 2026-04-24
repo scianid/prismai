@@ -112,6 +112,11 @@
 
             // In-memory fallback store when consent is denied/unanswered
             this._memStore = {};
+            // In-memory fallback when sessionStorage is blocked (Safari private
+            // mode, strict-cookies configs, sandboxed iframes, some publisher
+            // CSPs). All sessionStorage access must go through the safeSession*
+            // helpers — the property access itself can throw SecurityError.
+            this._memSessionStore = {};
             // If user previously granted consent, restore it so we may use localStorage freely
             try {
                 if (localStorage.getItem('divee_consent') === 'granted') {
@@ -178,10 +183,10 @@
 
         getOrCreateSessionTrackingId() {
             const key = 'divee_session_tracking_id';
-            let id = sessionStorage.getItem(key);
+            let id = this.safeSessionGet(key);
             if (!id) {
                 id = this.generateUUID();
-                sessionStorage.setItem(key, id);
+                this.safeSessionSet(key, id);
             }
             return id;
         }
@@ -339,12 +344,12 @@
 
         checkSuggestionsSuppression() {
             const key = `divee_suggestions_suppressed_${window.location.href}`;
-            this.state.suggestionsSuppressed = sessionStorage.getItem(key) === 'true';
+            this.state.suggestionsSuppressed = this.safeSessionGet(key) === 'true';
         }
 
         suppressSuggestions() {
             const key = `divee_suggestions_suppressed_${window.location.href}`;
-            sessionStorage.setItem(key, 'true');
+            this.safeSessionSet(key, 'true');
             this.state.suggestionsSuppressed = true;
         }
 
@@ -461,6 +466,28 @@
             }
         }
 
+        // sessionStorage helpers — the property access itself can throw in
+        // privacy-restricted contexts, so all reads/writes must be guarded.
+        safeSessionGet(key) {
+            try {
+                const v = sessionStorage.getItem(key);
+                if (v !== null) return v;
+            } catch (e) { /* storage blocked */ }
+            return Object.prototype.hasOwnProperty.call(this._memSessionStore, key)
+                ? this._memSessionStore[key]
+                : null;
+        }
+
+        safeSessionSet(key, value) {
+            this._memSessionStore[key] = value;
+            try { sessionStorage.setItem(key, value); } catch (e) { /* storage blocked */ }
+        }
+
+        safeSessionRemove(key) {
+            delete this._memSessionStore[key];
+            try { sessionStorage.removeItem(key); } catch (e) { /* storage blocked */ }
+        }
+
         getAnalyticsIds() {
             // Visitor ID (Persistent when consent granted, else per-page in memory)
             let visitorId = this.storageGet('divee_visitor_id');
@@ -484,7 +511,7 @@
 
             // Clear any old conversation IDs from sessionStorage
             const conversationKey = `divee_conversation_${window.location.href}`;
-            sessionStorage.removeItem(conversationKey);
+            this.safeSessionRemove(conversationKey);
 
             return { visitorId, sessionId };
         }
