@@ -712,9 +712,14 @@
                 }
 
                 if (!this.articleContent || this.articleContent.trim().length < 10) {
+                    const contentLength = this.articleContent?.length || 0;
                     this.log('init', 'Widget disabled: article content is empty or too short to load', {
-                        contentLength: this.articleContent?.length || 0
+                        contentLength
                     });
+                    this.reportError(
+                        new Error(`Article content too short (length=${contentLength})`),
+                        'empty_article'
+                    );
                     return;
                 }
             }
