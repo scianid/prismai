@@ -77,30 +77,18 @@
         } catch (_) { /* reporting must never throw */ }
     }
 
-    // Hardcoded video ad tag. Per-account portion (`iu=...`) will move to
-    // project_config.video_ad_tag_url on the server later — the seam is
-    // getVideoAdTagTemplate(). Placeholders [timestamp]/[referrer_url]/
-    // [description_url] are resolved in buildVideoAdTag().
-    //
-    // TEMP: pointed at Google's IMA skippable-linear sample tag for end-to-end
-    // UI verification. Always fills, so we can confirm the video player, 16:9
-    // container, skip button, teardown, and suggestions-behind-the-ad flow.
-    // Swap back to the publisher's real tag below once GAM fill is sorted.
+    // ═══════════════════════════════════════════════════════════════════
+    //   PASTE THE VIDEO AD TAG HERE
+    // ═══════════════════════════════════════════════════════════════════
+    // Placeholders that buildVideoAdTag() will substitute at request time:
+    //   [timestamp]        → Date.now()
+    //   [referrer_url]     → encoded page URL
+    //   [description_url]  → encoded page URL
+    // Any other params stay literal. Per-account tags will later move to
+    // project_config.video_ad_tag_url on the server (the `getVideoAdTagTemplate`
+    // helper already reads that field first and falls back to this constant).
     const DIVEE_VIDEO_AD_HARDCODED_TAG =
-        'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples' +
-        '&sz=640x480&cust_params=sample_ct%3Dskippablelinear&ciu_szs=300x250%2C728x90' +
-        '&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&impl=s' +
-        '&correlator=[timestamp]';
-
-    // Real publisher tag (empty VAST as of last test — likely domain/targeting issue):
-    // const DIVEE_VIDEO_AD_HARDCODED_TAG =
-    //     'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/video1/VHVVTRVD_conjur.com.br' +
-    //     '&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252' +
-    //     '&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s' +
-    //     '&correlator=[timestamp]' +
-    //     '&vad_type=linear&pod=1&ad_type=video' +
-    //     '&url=[referrer_url]&description_url=[description_url]' +
-    //     '&pmad=5&pmnd=0&pmxd=180000&vpos=preroll&plcmt=4&vpmute=1';
+    'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/video1/VHVVTRVD_conjur.com.br&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s&correlator=[timestamp]&vad_type=linear&pod=1&ad_type=video&url=[referrer_url]&description_url=[description_url]&pmad=5&pmnd=0&pmxd=180000&vpos=preroll&plcmt=4&vpmute=1';
 
     const DIVEE_IMA_SDK_URL = 'https://imasdk.googleapis.com/js/sdkloader/ima3.js';
     let diveeImaSdkPromise = null;
@@ -233,54 +221,14 @@
             return (this.state.serverConfig && this.state.serverConfig.video_ad_tag_url) || DIVEE_VIDEO_AD_HARDCODED_TAG;
         }
 
-        buildVideoAdTag(tcData) {
+        buildVideoAdTag() {
             const template = this.getVideoAdTagTemplate();
             const pageUrl = window.location.href;
             // TODO(consent): when this.state.consent === 'denied', force npa=1 on the output.
-            let url = template
+            return template
                 .replace('[timestamp]', String(Date.now()))
                 .replace('[referrer_url]', encodeURIComponent(pageUrl))
                 .replace('[description_url]', encodeURIComponent(pageUrl));
-            // IAB TCF v2: if the publisher exposes __tcfapi, pass the consent
-            // string through. Google's IMA SDK claims to auto-detect this, but
-            // in practice (cross-origin iframes, timing) it can miss, and GAM
-            // returns empty VAST (error 303) for GDPR-scoped requests without
-            // a consent signal.
-            if (tcData && tcData.tcString) {
-                const sep = url.includes('?') ? '&' : '?';
-                url += sep + 'gdpr=' + (tcData.gdprApplies ? 1 : 0)
-                    + '&gdpr_consent=' + encodeURIComponent(tcData.tcString);
-            }
-            return url;
-        }
-
-        // Best-effort read of the page's TCF v2 consent via __tcfapi. Resolves
-        // to { gdprApplies, tcString } or null if TCF isn't set up / times out.
-        // Polls briefly because some CMPs register __tcfapi a beat after load.
-        getTcfData() {
-            return new Promise((resolve) => {
-                let settled = false;
-                const done = (v) => { if (!settled) { settled = true; resolve(v); } };
-                const callTcfApi = () => {
-                    try {
-                        window.__tcfapi('getTCData', 2, (tcData, success) => {
-                            if (!success || !tcData || !tcData.tcString) return done(null);
-                            done({
-                                gdprApplies: !!tcData.gdprApplies,
-                                tcString: tcData.tcString
-                            });
-                        });
-                    } catch (_) { done(null); }
-                };
-                const poll = (attemptsLeft) => {
-                    if (settled) return;
-                    if (typeof window.__tcfapi === 'function') return callTcfApi();
-                    if (attemptsLeft <= 0) return done(null);
-                    setTimeout(() => poll(attemptsLeft - 1), 250);
-                };
-                poll(10); // up to ~2.5s polling for CMP registration
-                setTimeout(() => done(null), 3000); // hard ceiling
-            });
         }
 
         async playVideoAd() {
@@ -320,9 +268,7 @@
             const instance = { adsManager: null, adsLoader, adDisplayContainer, adEl };
             this.state.videoAdInstance = instance;
 
-            const tcData = await this.getTcfData();
-            if (tcData) this.log('videoAd', 'TCF data:', { gdprApplies: tcData.gdprApplies, tcStringLen: tcData.tcString.length });
-            const tagUrl = this.buildVideoAdTag(tcData);
+            const tagUrl = this.buildVideoAdTag();
             this.log('videoAd', 'Requesting ad:', tagUrl);
 
             const width = adEl.clientWidth || 640;
@@ -359,12 +305,9 @@
                     this.teardownVideoAd();
                 });
                 adsManager.addEventListener(ima.AdErrorEvent.Type.AD_ERROR, (err) => {
-                    const adError = err.getError && err.getError();
-                    const code = adError && adError.getErrorCode && adError.getErrorCode();
-                    const vastCode = adError && adError.getVastErrorCode && adError.getVastErrorCode();
-                    const msg = adError && adError.getMessage && adError.getMessage();
-                    this.log('videoAd', 'AdsManager error. code:', code, 'vast:', vastCode, 'msg:', msg);
-                    this.trackEvent('video_ad_error', { source: 'adsManager', errorCode: code, vastCode });
+                    const code = err.getError && err.getError().getErrorCode && err.getError().getErrorCode();
+                    this.log('videoAd', 'AdsManager error:', err.getError && err.getError());
+                    this.trackEvent('video_ad_error', { errorCode: code });
                     this.teardownVideoAd();
                 });
 
@@ -379,13 +322,9 @@
             }, false);
 
             adsLoader.addEventListener(ima.AdErrorEvent.Type.AD_ERROR, (err) => {
-                const adError = err.getError && err.getError();
-                const code = adError && adError.getErrorCode && adError.getErrorCode();
-                const vastCode = adError && adError.getVastErrorCode && adError.getVastErrorCode();
-                const msg = adError && adError.getMessage && adError.getMessage();
-                const type = adError && adError.getType && adError.getType();
-                this.log('videoAd', 'AdsLoader error. code:', code, 'vast:', vastCode, 'type:', type, 'msg:', msg);
-                this.trackEvent('video_ad_error', { source: 'adsLoader', errorCode: code, vastCode });
+                const code = err.getError && err.getError().getErrorCode && err.getError().getErrorCode();
+                this.log('videoAd', 'AdsLoader error:', err.getError && err.getError());
+                this.trackEvent('video_ad_error', { errorCode: code });
                 this.teardownVideoAd();
             }, false);
 
@@ -395,13 +334,6 @@
             adsRequest.linearAdSlotHeight = height;
             adsRequest.nonLinearAdSlotWidth = width;
             adsRequest.nonLinearAdSlotHeight = height;
-            // Modern browsers require autoplay to be muted; telling IMA this
-            // upfront materially affects fill — GAM filters to ads eligible
-            // for autoplay-muted. Missing these hints is a known cause of
-            // wrapper/no-fill (error 303) even on Google's sample tags.
-            if (typeof adsRequest.setAdWillAutoPlay === 'function') adsRequest.setAdWillAutoPlay(true);
-            if (typeof adsRequest.setAdWillPlayMuted === 'function') adsRequest.setAdWillPlayMuted(true);
-            if (typeof adsRequest.setContinuousPlayback === 'function') adsRequest.setContinuousPlayback(false);
 
             try {
                 adsLoader.requestAds(adsRequest);
