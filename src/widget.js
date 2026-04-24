@@ -256,22 +256,30 @@
 
         // Best-effort read of the page's TCF v2 consent via __tcfapi. Resolves
         // to { gdprApplies, tcString } or null if TCF isn't set up / times out.
+        // Polls briefly because some CMPs register __tcfapi a beat after load.
         getTcfData() {
             return new Promise((resolve) => {
-                if (typeof window.__tcfapi !== 'function') return resolve(null);
                 let settled = false;
                 const done = (v) => { if (!settled) { settled = true; resolve(v); } };
-                try {
-                    window.__tcfapi('getTCData', 2, (tcData, success) => {
-                        if (!success || !tcData) return done(null);
-                        done({
-                            gdprApplies: !!tcData.gdprApplies,
-                            tcString: tcData.tcString || ''
+                const callTcfApi = () => {
+                    try {
+                        window.__tcfapi('getTCData', 2, (tcData, success) => {
+                            if (!success || !tcData || !tcData.tcString) return done(null);
+                            done({
+                                gdprApplies: !!tcData.gdprApplies,
+                                tcString: tcData.tcString
+                            });
                         });
-                    });
-                } catch (_) { done(null); }
-                // Don't block the ad request for longer than a second.
-                setTimeout(() => done(null), 1000);
+                    } catch (_) { done(null); }
+                };
+                const poll = (attemptsLeft) => {
+                    if (settled) return;
+                    if (typeof window.__tcfapi === 'function') return callTcfApi();
+                    if (attemptsLeft <= 0) return done(null);
+                    setTimeout(() => poll(attemptsLeft - 1), 250);
+                };
+                poll(10); // up to ~2.5s polling for CMP registration
+                setTimeout(() => done(null), 3000); // hard ceiling
             });
         }
 
@@ -387,6 +395,13 @@
             adsRequest.linearAdSlotHeight = height;
             adsRequest.nonLinearAdSlotWidth = width;
             adsRequest.nonLinearAdSlotHeight = height;
+            // Modern browsers require autoplay to be muted; telling IMA this
+            // upfront materially affects fill — GAM filters to ads eligible
+            // for autoplay-muted. Missing these hints is a known cause of
+            // wrapper/no-fill (error 303) even on Google's sample tags.
+            if (typeof adsRequest.setAdWillAutoPlay === 'function') adsRequest.setAdWillAutoPlay(true);
+            if (typeof adsRequest.setAdWillPlayMuted === 'function') adsRequest.setAdWillPlayMuted(true);
+            if (typeof adsRequest.setContinuousPlayback === 'function') adsRequest.setContinuousPlayback(false);
 
             try {
                 adsLoader.requestAds(adsRequest);
