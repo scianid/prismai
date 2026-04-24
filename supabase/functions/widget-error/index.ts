@@ -75,7 +75,8 @@ export async function widgetErrorHandler(req: Request): Promise<Response> {
     if (widgetUrl) extra.widget_url = widgetUrl;
     if (userAgent) extra.user_agent = userAgent;
 
-    // Log every accepted report so we can inspect traffic in Supabase logs
+    // Log every accepted report so we can inspect traffic 
+    // in Supabase logs
     console.log(
       "[widget-error]",
       JSON.stringify({
