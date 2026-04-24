@@ -894,7 +894,10 @@
                 });
             } catch (error) {
                 console.error('[Divee] Failed to load config:', error);
-                this.reportError(error, 'config_load');
+                // error.kind is set by fetchServerConfig for network/server/
+                // client distinction. Unknown kinds fall back to a generic phase.
+                const kind = (error && error.kind) ? error.kind : 'unknown';
+                this.reportError(error, `config_load_${kind}`);
                 this.state.serverConfig = null;
             }
         }
@@ -923,16 +926,41 @@
             }
 
             const configUrl = `${this.config.cachedBaseUrl}/config?projectId=${encodeURIComponent(projectId)}`;
+            // Retry network failures and 5xx only. 4xx is an auth/project
+            // misconfiguration that will not self-heal; retrying would just
+            // burn CPU and delay the widget from bailing out.
+            const MAX_ATTEMPTS = 3;
+            const BASE_DELAY_MS = 300; // backoff: 300ms, 900ms
 
-            const response = await fetch(configUrl, {
-                method: 'GET'
-            });
-
-            if (!response.ok) {
-                throw new Error(`Config request failed: ${response.status}`);
+            let lastError = null;
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+                try {
+                    const response = await fetch(configUrl, { method: 'GET' });
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    const err = new Error(`Config request failed: ${response.status}`);
+                    err.status = response.status;
+                    if (response.status >= 400 && response.status < 500) {
+                        err.kind = 'client'; // don't retry
+                        throw err;
+                    }
+                    err.kind = 'server'; // retry
+                    lastError = err;
+                } catch (err) {
+                    if (err && err.kind === 'client') throw err;
+                    if (!err.kind) {
+                        // TypeError: Failed to fetch, DNS failure, CSP block, ad blocker.
+                        err.kind = err instanceof TypeError ? 'network' : 'unknown';
+                    }
+                    lastError = err;
+                }
+                if (attempt < MAX_ATTEMPTS) {
+                    const delay = BASE_DELAY_MS * Math.pow(3, attempt - 1);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
             }
-
-            return response.json();
+            throw lastError;
         }
 
         getDefaultConfig() {

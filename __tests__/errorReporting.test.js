@@ -301,4 +301,177 @@ describe('widget error reporting', () => {
       expect(getErrorCalls()).toHaveLength(0);
     });
   });
+
+  describe('fetchServerConfig retry policy', () => {
+    // Keep retries fast by collapsing setTimeout delays. The widget uses
+    // setTimeout(resolve, 300ms/900ms) for backoff; firing callbacks
+    // immediately preserves order without burning wall-clock time.
+    let realSetTimeout;
+    beforeEach(() => {
+      realSetTimeout = global.setTimeout;
+      global.setTimeout = (cb) => { cb(); return 0; };
+    });
+    afterEach(() => {
+      global.setTimeout = realSetTimeout;
+    });
+
+    function countConfigCalls() {
+      return fetch.mock.calls.filter((c) => String(c[0]).includes('/config')).length;
+    }
+
+    test('retries on network error (TypeError) and succeeds on the second try', async () => {
+      const goodConfig = { enabled: true, widget_mode: 'article' };
+      let configAttempt = 0;
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) {
+          return Promise.resolve({ ok: true, status: 204 });
+        }
+        if (u.includes('/config')) {
+          configAttempt++;
+          if (configAttempt === 1) return Promise.reject(new TypeError('Failed to fetch'));
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(goodConfig) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p' });
+
+      const result = await widget.fetchServerConfig('p');
+      expect(result).toEqual(goodConfig);
+      expect(countConfigCalls()).toBe(2);
+      expect(getErrorCalls()).toHaveLength(0); // success, nothing reported
+    });
+
+    test('retries on 5xx and succeeds on the third try', async () => {
+      const goodConfig = { enabled: true };
+      let configAttempt = 0;
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/config')) {
+          configAttempt++;
+          if (configAttempt < 3) {
+            return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) });
+          }
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(goodConfig) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p' });
+
+      const result = await widget.fetchServerConfig('p');
+      expect(result).toEqual(goodConfig);
+      expect(countConfigCalls()).toBe(3);
+    });
+
+    test('does NOT retry on 4xx (single attempt)', async () => {
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/config')) {
+          return Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({}) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p' });
+
+      await expect(widget.fetchServerConfig('p')).rejects.toMatchObject({
+        kind: 'client',
+        status: 403,
+      });
+      expect(countConfigCalls()).toBe(1);
+    });
+
+    test('exhausts retries on persistent network failure', async () => {
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/config')) return Promise.reject(new TypeError('Failed to fetch'));
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p' });
+
+      await expect(widget.fetchServerConfig('p')).rejects.toMatchObject({
+        kind: 'network',
+      });
+      expect(countConfigCalls()).toBe(3); // MAX_ATTEMPTS
+    });
+  });
+
+  describe('loadServerConfig phase tagging', () => {
+    let realSetTimeout;
+    beforeEach(() => {
+      realSetTimeout = global.setTimeout;
+      global.setTimeout = (cb) => { cb(); return 0; };
+    });
+    afterEach(() => {
+      global.setTimeout = realSetTimeout;
+    });
+
+    test('tags Sentry report with config_load_network on persistent network error', async () => {
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/config')) return Promise.reject(new TypeError('Failed to fetch'));
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p-net' });
+
+      await widget.loadServerConfig();
+
+      const calls = getErrorCalls();
+      expect(calls).toHaveLength(1);
+      expect(parseErrorPayload(calls[0]).phase).toBe('config_load_network');
+    });
+
+    test('tags Sentry report with config_load_client on 4xx', async () => {
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/config')) {
+          return Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({}) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p-403' });
+
+      await widget.loadServerConfig();
+
+      const calls = getErrorCalls();
+      expect(calls).toHaveLength(1);
+      expect(parseErrorPayload(calls[0]).phase).toBe('config_load_client');
+    });
+
+    test('tags Sentry report with config_load_server on persistent 5xx', async () => {
+      fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u.includes('widget-error')) return Promise.resolve({ ok: true, status: 204 });
+        if (u.includes('/config')) {
+          return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+      eval(widgetJs);
+      window.DiveeWidget.prototype.init = jest.fn().mockResolvedValue();
+      const widget = new window.DiveeWidget({ projectId: 'p-503' });
+
+      await widget.loadServerConfig();
+
+      const calls = getErrorCalls();
+      expect(calls).toHaveLength(1);
+      expect(parseErrorPayload(calls[0]).phase).toBe('config_load_server');
+    });
+  });
 });
