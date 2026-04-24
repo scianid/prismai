@@ -109,7 +109,12 @@ function getContent(articleClass) {
 
   const readability = getReadabilityContent();
   const container = pickContainer();
-  const htmlSource = readability?.content || container.innerHTML;
+  const rawHtml = readability?.content || container.innerHTML;
+  // Strip <svg> and <img> before parsing — text extraction doesn't need them,
+  // and malformed SVG attributes (e.g. height="auto") trigger noisy browser parse errors on innerHTML assignment.
+  const htmlSource = rawHtml
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, "")
+    .replace(/<img\b[^>]*>/gi, "");
   const root = document.createElement("div");
   root.innerHTML = htmlSource;
 
