@@ -77,6 +77,42 @@
         } catch (_) { /* reporting must never throw */ }
     }
 
+    // Hardcoded video ad tag. Per-account portion (`iu=...`) will move to
+    // project_config.video_ad_tag_url on the server later — the seam is
+    // getVideoAdTagTemplate(). Placeholders [timestamp]/[referrer_url]/
+    // [description_url] are resolved in buildVideoAdTag().
+    const DIVEE_VIDEO_AD_HARDCODED_TAG =
+        'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/video1/VHVVTRVD_conjur.com.br' +
+        '&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252' +
+        '&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=instream&impl=s' +
+        '&correlator=[timestamp]' +
+        '&vad_type=linear&pod=1&ad_type=video' +
+        '&url=[referrer_url]&description_url=[description_url]' +
+        '&pmad=5&pmnd=0&pmxd=180000&vpos=preroll&plcmt=4&vpmute=1';
+
+    const DIVEE_IMA_SDK_URL = 'https://imasdk.googleapis.com/js/sdkloader/ima3.js';
+    let diveeImaSdkPromise = null;
+    function loadDiveeImaSdk() {
+        if (window.google && window.google.ima) return Promise.resolve();
+        if (diveeImaSdkPromise) return diveeImaSdkPromise;
+        diveeImaSdkPromise = new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[data-divee-ima]');
+            if (existing) {
+                existing.addEventListener('load', () => resolve());
+                existing.addEventListener('error', () => reject(new Error('IMA SDK failed to load')));
+                return;
+            }
+            const s = document.createElement('script');
+            s.src = DIVEE_IMA_SDK_URL;
+            s.async = true;
+            s.setAttribute('data-divee-ima', '1');
+            s.addEventListener('load', () => resolve());
+            s.addEventListener('error', () => reject(new Error('IMA SDK failed to load')));
+            document.head.appendChild(s);
+        });
+        return diveeImaSdkPromise;
+    }
+
     class DiveeWidget {
         constructor(config) {
             this.config = {
@@ -107,7 +143,9 @@
                 adRefreshInterval: null,       // Interval ID for auto-refreshing ads
                 articleTags: [],               // Tags fetched from /articles/tags API
                 activeTagPopup: null,          // Currently open tag popup pill element
-                consent: null                  // null | 'granted' | 'denied' — GDPR-style localStorage consent
+                consent: null,                 // null | 'granted' | 'denied' — GDPR-style localStorage consent
+                videoAdPlayed: false,          // one-shot guard: the ?diveeVideoAd video plays at most once per page load
+                videoAdInstance: null          // { adsManager, adsLoader, adDisplayContainer } while the ad is alive
             };
 
             // In-memory fallback store when consent is denied/unanswered
@@ -171,6 +209,155 @@
         isMockAdRequested() {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get('diveeMockAd') === 'true';
+        }
+
+        isVideoAdRequested() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('diveeVideoAd') === 'true';
+        }
+
+        getVideoAdTagTemplate() {
+            // Seam for server-driven tag (per-account). Today: hardcoded.
+            return (this.state.serverConfig && this.state.serverConfig.video_ad_tag_url) || DIVEE_VIDEO_AD_HARDCODED_TAG;
+        }
+
+        buildVideoAdTag() {
+            const template = this.getVideoAdTagTemplate();
+            const pageUrl = window.location.href;
+            // TODO(consent): when this.state.consent === 'denied', force npa=1 on the output.
+            return template
+                .replace('[timestamp]', String(Date.now()))
+                .replace('[referrer_url]', encodeURIComponent(pageUrl))
+                .replace('[description_url]', encodeURIComponent(pageUrl));
+        }
+
+        async playVideoAd() {
+            const expandedView = this.elements.expandedView;
+            if (!expandedView) return;
+            const adEl = expandedView.querySelector('.divee-video-ad');
+            if (!adEl) return;
+
+            try {
+                await loadDiveeImaSdk();
+            } catch (err) {
+                this.log('videoAd', 'IMA SDK load failed:', err);
+                this.reportError(err, 'videoAd');
+                adEl.remove();
+                return;
+            }
+
+            const ima = window.google && window.google.ima;
+            if (!ima) {
+                this.log('videoAd', 'IMA SDK missing after load');
+                adEl.remove();
+                return;
+            }
+
+            const videoEl = adEl.querySelector('.divee-video-ad-video');
+            const slotEl = adEl.querySelector('.divee-video-ad-slot');
+            const skipBtn = adEl.querySelector('.divee-video-ad-skip');
+
+            adEl.style.display = 'block';
+
+            const adDisplayContainer = new ima.AdDisplayContainer(slotEl, videoEl);
+            // initialize() must run in the user-gesture stack — playVideoAd is
+            // called synchronously from expand() which runs inside the open click.
+            adDisplayContainer.initialize();
+
+            const adsLoader = new ima.AdsLoader(adDisplayContainer);
+            const instance = { adsManager: null, adsLoader, adDisplayContainer, adEl };
+            this.state.videoAdInstance = instance;
+
+            const tagUrl = this.buildVideoAdTag();
+            this.log('videoAd', 'Requesting ad:', tagUrl);
+
+            const width = adEl.clientWidth || 640;
+            const height = adEl.clientHeight || Math.round(width * 9 / 16);
+
+            const onSkipClick = () => {
+                this.trackEvent('video_ad_skipped');
+                this.teardownVideoAd();
+            };
+            skipBtn.addEventListener('click', onSkipClick);
+            instance._onSkipClick = onSkipClick;
+
+            adsLoader.addEventListener(ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED, (e) => {
+                const adsRenderingSettings = new ima.AdsRenderingSettings();
+                adsRenderingSettings.restoreCustomPlaybackStateOnAdBreakComplete = true;
+                const adsManager = e.getAdsManager(videoEl, adsRenderingSettings);
+                instance.adsManager = adsManager;
+
+                const AdEvent = ima.AdEvent.Type;
+                adsManager.addEventListener(AdEvent.STARTED, () => {
+                    this.trackEvent('video_ad_started');
+                });
+                adsManager.addEventListener(AdEvent.COMPLETE, () => {
+                    this.trackEvent('video_ad_completed');
+                });
+                adsManager.addEventListener(AdEvent.SKIPPED, () => {
+                    this.trackEvent('video_ad_skipped');
+                    this.teardownVideoAd();
+                });
+                adsManager.addEventListener(AdEvent.ALL_ADS_COMPLETED, () => {
+                    this.teardownVideoAd();
+                });
+                adsManager.addEventListener(AdEvent.USER_CLOSE, () => {
+                    this.teardownVideoAd();
+                });
+                adsManager.addEventListener(ima.AdErrorEvent.Type.AD_ERROR, (err) => {
+                    const code = err.getError && err.getError().getErrorCode && err.getError().getErrorCode();
+                    this.log('videoAd', 'AdsManager error:', err.getError && err.getError());
+                    this.trackEvent('video_ad_error', { errorCode: code });
+                    this.teardownVideoAd();
+                });
+
+                try {
+                    adsManager.init(width, height, ima.ViewMode.NORMAL);
+                    adsManager.start();
+                } catch (err) {
+                    this.log('videoAd', 'AdsManager start failed:', err);
+                    this.reportError(err, 'videoAd');
+                    this.teardownVideoAd();
+                }
+            }, false);
+
+            adsLoader.addEventListener(ima.AdErrorEvent.Type.AD_ERROR, (err) => {
+                const code = err.getError && err.getError().getErrorCode && err.getError().getErrorCode();
+                this.log('videoAd', 'AdsLoader error:', err.getError && err.getError());
+                this.trackEvent('video_ad_error', { errorCode: code });
+                this.teardownVideoAd();
+            }, false);
+
+            const adsRequest = new ima.AdsRequest();
+            adsRequest.adTagUrl = tagUrl;
+            adsRequest.linearAdSlotWidth = width;
+            adsRequest.linearAdSlotHeight = height;
+            adsRequest.nonLinearAdSlotWidth = width;
+            adsRequest.nonLinearAdSlotHeight = height;
+
+            try {
+                adsLoader.requestAds(adsRequest);
+            } catch (err) {
+                this.log('videoAd', 'requestAds threw:', err);
+                this.reportError(err, 'videoAd');
+                this.teardownVideoAd();
+            }
+        }
+
+        teardownVideoAd() {
+            const instance = this.state.videoAdInstance;
+            if (!instance) return;
+            this.state.videoAdInstance = null;
+            try { instance.adsManager && instance.adsManager.destroy(); } catch (_) { /* ignore */ }
+            try { instance.adsLoader && instance.adsLoader.destroy(); } catch (_) { /* ignore */ }
+            try { instance.adDisplayContainer && instance.adDisplayContainer.destroy(); } catch (_) { /* ignore */ }
+            if (instance.adEl) {
+                if (instance._onSkipClick) {
+                    const skipBtn = instance.adEl.querySelector('.divee-video-ad-skip');
+                    if (skipBtn) skipBtn.removeEventListener('click', instance._onSkipClick);
+                }
+                instance.adEl.remove();
+            }
         }
 
         reportError(err, phase) {
@@ -1419,6 +1606,15 @@
                 ? config.input_text_placeholders[0]
                 : 'Ask anything about this article...';
 
+            const videoAdHtml = this.isVideoAdRequested() ? `
+                    <div class="divee-video-ad" style="display:none;">
+                        <div class="divee-video-ad-inner">
+                            <video class="divee-video-ad-video" playsinline webkit-playsinline muted></video>
+                            <div class="divee-video-ad-slot"></div>
+                            <button type="button" class="divee-video-ad-skip" aria-label="Skip ad">Skip Ad</button>
+                        </div>
+                    </div>` : '';
+
             view.innerHTML = `
                 <div class="divee-header">
                     <div class="divee-header-top">
@@ -1436,7 +1632,7 @@
                         <button class="divee-close" aria-label="Close">✕</button>
                     </div>
                 </div>
-                <div class="divee-content">
+                <div class="divee-content">${videoAdHtml}
                     <div class="divee-chat">
                         <div class="divee-messages"></div>
           </div>
@@ -2043,11 +2239,22 @@
             setTimeout(() => {
                 this.elements.expandedView.querySelector('.divee-input').focus();
             }, 300);
+
+            // Play video ad on first open when ?diveeVideoAd=true. One-shot per
+            // page load — the videoAdPlayed flag is set before the async work
+            // so re-opens don't retrigger even if the first request is in flight.
+            if (this.isVideoAdRequested() && !this.state.videoAdPlayed) {
+                this.state.videoAdPlayed = true;
+                this.playVideoAd().catch((err) => this.reportError(err, 'videoAd'));
+            }
         }
 
         collapse() {
             this.state.isExpanded = false;
             this.elements.container.setAttribute('data-state', 'collapsed');
+            // Kill any in-flight or playing video ad so audio/video stops
+            // immediately when the widget closes.
+            if (this.state.videoAdInstance) this.teardownVideoAd();
 
             if (this.config.displayMode === 'sidebar') {
                 // Sidebar: slide panel out + hide backdrop

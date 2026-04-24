@@ -2651,3 +2651,47 @@
     transition: opacity 0.2s ease !important;
   }
 }
+
+/* Video ad (diveeVideoAd=true) — 16:9 slot above the chat input */
+.divee-video-ad {
+  width: 100%;
+  padding: 8px 12px 0;
+  box-sizing: border-box;
+}
+.divee-video-ad-inner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.divee-video-ad-video,
+.divee-video-ad-slot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.divee-video-ad-slot > div,
+.divee-video-ad-slot iframe,
+.divee-video-ad-slot video {
+  width: 100% !important;
+  height: 100% !important;
+}
+.divee-video-ad-skip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 6px 12px;
+  font: 600 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.divee-video-ad-skip:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
