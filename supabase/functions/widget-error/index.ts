@@ -75,6 +75,20 @@ export async function widgetErrorHandler(req: Request): Promise<Response> {
     if (widgetUrl) extra.widget_url = widgetUrl;
     if (userAgent) extra.user_agent = userAgent;
 
+    // Log every accepted report so we can inspect traffic in Supabase logs
+    // even before Sentry is configured, and grep by phase / project_id. Tags
+    // are logged as a single JSON field for easy filtering.
+    console.log(
+      "[widget-error]",
+      JSON.stringify({
+        message,
+        phase: phase ?? null,
+        tags,
+        widget_url: widgetUrl ?? null,
+        stack_preview: stack ? stack.slice(0, 300) : null,
+      }),
+    );
+
     captureWidgetException(err, { tags, extra });
   } catch (err) {
     // Never let reporting break reporting.
