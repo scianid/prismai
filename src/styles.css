@@ -926,6 +926,7 @@
 }
 
 .divee-suggestion {
+  font-weight: 400;
   background: white;
   border: 1px solid transparent;
   padding: 10px 14px;
