@@ -757,10 +757,11 @@
                     });
                     // Skip reporting on root/home URLs — these are expected to
                     // be landing pages without an article, not a publisher
-                    // misconfiguration.
+                    // misconfiguration. Strip all leading/trailing slashes so
+                    // "/", "//", "///" etc. all count as root.
                     let path = '/';
                     try { path = location.pathname || '/'; } catch (_) { /* ignore */ }
-                    const isRoot = path === '/' || path === '';
+                    const isRoot = path.replace(/^\/+|\/+$/g, '') === '';
                     if (!isRoot) {
                         this.reportError(
                             new Error(`Article content too short (length=${contentLength})`),

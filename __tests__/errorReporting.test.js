@@ -248,6 +248,58 @@ describe('widget error reporting', () => {
       expect(body.message).toContain('length=5');
     });
 
+    test('does NOT report on quirky root paths like "//" or "///"', async () => {
+      // Some users land on URLs like https://mignews.com// — still a root URL
+      // semantically, no reason to spam Sentry. jsdom rejects "//" via
+      // pushState (protocol-relative), so shim location.pathname directly.
+      const origPathnameDesc = Object.getOwnPropertyDescriptor(
+        Object.getPrototypeOf(window.location),
+        'pathname',
+      );
+      Object.defineProperty(window.location, 'pathname', {
+        configurable: true,
+        get: () => '//',
+      });
+      try {
+        mockFetchAllowAll({
+          config: {
+            enabled: true,
+            widget_mode: 'article',
+            display_mode: 'anchored',
+            display_position: 'bottom',
+            direction: 'ltr',
+            language: 'en',
+            highlight_color: ['#68E5FD', '#A389E0'],
+            show_ad: false,
+          },
+        });
+        eval(widgetJs);
+
+        window.DiveeWidget.prototype.initGoogleAds = jest.fn();
+        window.DiveeWidget.prototype.trackEvent = jest.fn();
+        window.DiveeWidget.prototype.getAnalyticsIds = jest.fn();
+        window.DiveeWidget.prototype.extractArticleContent = jest.fn(function () {
+          this.articleContent = '';
+          return true;
+        });
+
+        new window.DiveeWidget({ projectId: 'proj-double-slash' });
+        await flushMicrotasks();
+
+        expect(getErrorCalls()).toHaveLength(0);
+      } finally {
+        if (origPathnameDesc) {
+          Object.defineProperty(
+            Object.getPrototypeOf(window.location),
+            'pathname',
+            origPathnameDesc,
+          );
+        } else {
+          delete window.location.pathname;
+        }
+      }
+    });
+
     test('does NOT report when page is the site root (path = "/")', async () => {
       window.history.pushState({}, '', '/');
       mockFetchAllowAll({
