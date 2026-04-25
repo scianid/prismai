@@ -1995,7 +1995,7 @@
             }
 
             const self = this;
-            const REFRESH_INTERVAL = 60000; // 1 minute in milliseconds
+            const REFRESH_INTERVAL = 30000; // 1 minute in milliseconds
 
             this.state.adRefreshInterval = setInterval(() => {
                 if (!this.isWidgetInViewport()) {
