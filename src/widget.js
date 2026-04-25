@@ -570,13 +570,17 @@
         }
 
         checkSuggestionsSuppression() {
-            const key = `divee_suggestions_suppressed_${window.location.href}`;
-            this.state.suggestionsSuppressed = this.safeSessionGet(key) === 'true';
+            try {
+                const key = `divee_suggestions_suppressed_${window.location.href}`;
+                this.state.suggestionsSuppressed = this.safeSessionGet(key) === 'true';
+            } catch (_) { /* storage blocked (Safari ITP, sandboxed iframe, etc.) */ }
         }
 
         suppressSuggestions() {
-            const key = `divee_suggestions_suppressed_${window.location.href}`;
-            this.safeSessionSet(key, 'true');
+            try {
+                const key = `divee_suggestions_suppressed_${window.location.href}`;
+                this.safeSessionSet(key, 'true');
+            } catch (_) { /* storage blocked (Safari ITP, sandboxed iframe, etc.) */ }
             this.state.suggestionsSuppressed = true;
         }
 
