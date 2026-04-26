@@ -89,7 +89,8 @@
     // helper already reads that field first and falls back to this constant).
     const DIVEE_VIDEO_AD_HARDCODED_TAG =
     'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/Video1/VCVVTRVD_conjur.com.br'+
-        '&sz=480x70&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=[cb]'
+    '&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252'+    
+    '&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=[cb]'
 
     /*    
     'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/nonlinear_ad_samples'+
