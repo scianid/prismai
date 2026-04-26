@@ -88,6 +88,9 @@
     // project_config.video_ad_tag_url on the server (the `getVideoAdTagTemplate`
     // helper already reads that field first and falls back to this constant).
     const DIVEE_VIDEO_AD_HARDCODED_TAG =
+    'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/nonlinear_ad_samples'+
+    '&sz=480x70&cust_params=sample_ct%3Dnonlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=[cb]'
+
     'https://pubads.g.doubleclick.net/gampad/ads?iu=%2F22247219933%2C1008778%2FVideo1%2FVCVVTRVD_conjur.com.br'+
     '&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252'+
     '&ciu_szs=300x250%2C728x90&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=vp&correlator=[cb]'+
@@ -95,10 +98,6 @@
     '&env=vp'+
     '&ref=[document_referrer]'
     
-    /*    
-    'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/nonlinear_ad_samples'+
-    '&sz=480x70&cust_params=sample_ct%3Dnonlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator='
-*/
     
 /*
         '&tfcd=0&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C[width]x[height]%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252'+
