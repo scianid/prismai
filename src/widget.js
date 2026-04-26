@@ -2376,6 +2376,28 @@
             }
         }
 
+        renderSuggestionsList(suggestions) {
+            const suggestionsContainer = this.elements.expandedView?.querySelector('.divee-suggestions-input');
+            const suggestionsList = suggestionsContainer?.querySelector('.divee-suggestions-list');
+            if (!suggestionsList) return;
+            suggestionsList.innerHTML = '';
+            suggestions.forEach((item, idx) => {
+                const questionText = typeof item === 'string' ? item : item.question;
+                const questionId = typeof item === 'string' ? null : item.id;
+                const button = document.createElement('button');
+                button.className = 'divee-suggestion';
+                button.setAttribute('data-index', idx);
+                if (questionId) button.setAttribute('data-id', questionId);
+                button.textContent = questionText;
+                button.addEventListener('click', (e) => {
+                    const question = e.target.textContent;
+                    const id = e.target.getAttribute('data-id');
+                    this.askQuestion(question, 'suggestion', id);
+                });
+                suggestionsList.appendChild(button);
+            });
+        }
+
         async onTextAreaFocus() {
             // Knowledgebase mode: no suggestions
             if (this.config.widgetMode === 'knowledgebase') return;
@@ -2385,6 +2407,13 @@
             // If we already have suggestions, just show them
             if (this.state.suggestions.length > 0) {
                 if (suggestionsContainer && !suggestionsContainer.classList.contains('is-open')) {
+                    // Prefetched suggestions populate state.suggestions but skip
+                    // the DOM render — re-render here if the list is empty so the
+                    // cached path also works after a video-ad prefetch.
+                    const suggestionsList = suggestionsContainer.querySelector('.divee-suggestions-list');
+                    if (suggestionsList && !suggestionsList.children.length) {
+                        this.renderSuggestionsList(this.state.suggestions);
+                    }
                     suggestionsContainer.style.display = 'block';
                     suggestionsContainer.classList.add('is-open');
                     this.trackEvent('suggestions_reopened', { count: this.state.suggestions.length });
@@ -2411,27 +2440,8 @@
                 const suggestions = await this.fetchSuggestions();
                 this.state.suggestions = suggestions;
 
-                // Fade out shimmer first
-                // No complex fade needed, just swap content as structure matches
                 if (!suggestionsList) return;
-                suggestionsList.innerHTML = '';
-
-                // Add suggestions with animation
-                suggestions.forEach((item, idx) => {
-                    const questionText = typeof item === 'string' ? item : item.question;
-                    const questionId = typeof item === 'string' ? null : item.id;
-                    const button = document.createElement('button');
-                    button.className = 'divee-suggestion';
-                    button.setAttribute('data-index', idx);
-                    if (questionId) button.setAttribute('data-id', questionId);
-                    button.textContent = questionText;
-                    button.addEventListener('click', (e) => {
-                        const question = e.target.textContent;
-                        const id = e.target.getAttribute('data-id');
-                        this.askQuestion(question, 'suggestion', id);
-                    });
-                    suggestionsList.appendChild(button);
-                });
+                this.renderSuggestionsList(suggestions);
 
                 this.trackEvent('suggestions_fetched', {
                     article_id: this.config.articleId,

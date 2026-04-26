@@ -2665,7 +2665,7 @@
   bottom: 100% !important;
   margin: 0 0 8px !important;
   padding: 0 !important;
-  z-index: 5 !important;
+  z-index: 200 !important;
   box-sizing: border-box !important;
 }
 .divee-video-ad-inner {
