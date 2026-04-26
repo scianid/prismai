@@ -88,9 +88,7 @@
     // project_config.video_ad_tag_url on the server (the `getVideoAdTagTemplate`
     // helper already reads that field first and falls back to this constant).
     const DIVEE_VIDEO_AD_HARDCODED_TAG =
-    'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&cust_params=sample_ct%3Dlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&correlator=';
-    
-        'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/Video1/VCVVTRVD_conjur.com.br&tfcd=0'+
+    'https://pubads.g.doubleclick.net/gampad/ads?iu=/22247219933,1008778/Video1/VCVVTRVD_conjur.com.br&tfcd=0'+
         '&npa=0&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C[width]x[height]%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252'+
         '&gdfp_req=1&output=xml_vast4'+
         '&unviewed_position_start=1&env=instream&impl=s'+
