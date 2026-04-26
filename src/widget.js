@@ -91,8 +91,9 @@
     'https://pubads.g.doubleclick.net/gampad/ads?iu=%2F22247219933%2C1008778%2FVideo1%2FVCVVTRVD_conjur.com.br'+
     '&sz=1x1%7C400x300%7C640x480%7C640x360%7C300x250%7C320x180%7C1024x768%7C1280x720%7C444x250%7C480x360%7C600x252'+
     '&ciu_szs=300x250%2C728x90&gdfp_req=1&output=xml_vast4&unviewed_position_start=1&env=vp&correlator=[cb]'+
-    // added 
-    '&media_url=https%3A%2F%2Fs0.2mdn.net%2F4253510%2Fgoogle_ddm_animation_480P.mp4'
+    // added
+    '&env=vp'+
+    '&ref=[document_referrer]'
     
     /*    
     'https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/nonlinear_ad_samples'+
@@ -248,6 +249,7 @@
             // the request with 400, so we substitute every macro the tag
             // might contain (different publisher tags use different names).
             const ts = String(Date.now());
+            const encodedReferrer = encodeURIComponent(document.referrer || '');
             const subs = {
                 '[timestamp]': ts,
                 '[cb]': ts,
@@ -255,6 +257,7 @@
                 '[CACHEBUSTING]': ts, // IAB VAST standard macro
                 '[random]': ts,
                 '[referrer_url]': encodedUrl,
+                '[document_referrer]': encodedReferrer,
                 '[description_url]': encodedUrl,
                 '[pageHref]': encodedUrl,
                 '[page_url]': encodedUrl,
