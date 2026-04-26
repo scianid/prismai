@@ -1662,13 +1662,13 @@
                 : 'Ask anything about this article...';
 
             const videoAdHtml = this.isVideoAdRequested() ? `
-                    <div class="divee-video-ad" style="display:none;">
-                        <div class="divee-video-ad-inner">
-                            <video class="divee-video-ad-video" playsinline webkit-playsinline muted></video>
-                            <div class="divee-video-ad-slot"></div>
-                            <button type="button" class="divee-video-ad-skip" aria-label="Skip ad">Skip Ad</button>
-                        </div>
-                    </div>` : '';
+                        <div class="divee-video-ad" style="display:none;">
+                            <div class="divee-video-ad-inner">
+                                <video class="divee-video-ad-video" playsinline webkit-playsinline muted></video>
+                                <div class="divee-video-ad-slot"></div>
+                                <button type="button" class="divee-video-ad-skip" aria-label="Skip ad">Skip Ad</button>
+                            </div>
+                        </div>` : '';
 
             view.innerHTML = `
                 <div class="divee-header">
@@ -1687,7 +1687,7 @@
                         <button class="divee-close" aria-label="Close">✕</button>
                     </div>
                 </div>
-                <div class="divee-content">${videoAdHtml}
+                <div class="divee-content">
                     <div class="divee-chat">
                         <div class="divee-messages"></div>
           </div>
@@ -1704,7 +1704,7 @@
                         <button type="button" class="divee-consent-accept">Accept</button>
                         <button type="button" class="divee-consent-decline">Reject</button>
                     </div>
-                    <div class="divee-input-container">
+                    <div class="divee-input-container">${videoAdHtml}
                         <div class="divee-suggestions-input" style="display: none;">
                             <div class="divee-suggestions-list"></div>
                         </div>
