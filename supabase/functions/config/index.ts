@@ -140,11 +140,15 @@ export async function configHandler(
         : "bottom",
       article_class: project.article_class || null,
       article_class_fallbacks: Array.isArray(project.article_class_fallbacks)
-        ? project.article_class_fallbacks.filter((s: unknown) => typeof s === "string" && s.trim().length > 0)
+        ? project.article_class_fallbacks.filter((s: unknown) =>
+          typeof s === "string" && s.trim().length > 0
+        )
         : [],
       widget_container_class: project.widget_container_class || null,
       widget_container_class_fallbacks: Array.isArray(project.widget_container_class_fallbacks)
-        ? project.widget_container_class_fallbacks.filter((s: unknown) => typeof s === "string" && s.trim().length > 0)
+        ? project.widget_container_class_fallbacks.filter((s: unknown) =>
+          typeof s === "string" && s.trim().length > 0
+        )
         : [],
       override_mobile_container_selector: project.override_mobile_container_selector || null,
       disclaimer_text: project.disclaimer_text || null,

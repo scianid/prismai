@@ -180,7 +180,9 @@
                 anchoredPosition: 'bottom',
                 sidebarPosition: 'right',
                 articleClass: null,
+                articleClassFallbacks: [],
                 containerSelector: config.containerSelector || null,
+                containerSelectorFallbacks: [],
                 attentionAnimation: config.attentionAnimation !== false
             };
 
@@ -1147,7 +1149,14 @@
                     this.config.articleClass = serverConfig.article_class;
                     this.log('config', 'Article class from config:', serverConfig.article_class);
                 }
-                
+                if (Array.isArray(serverConfig.article_class_fallbacks)) {
+                    this.config.articleClassFallbacks = serverConfig.article_class_fallbacks
+                        .filter(s => typeof s === 'string' && s.trim().length > 0);
+                    if (this.config.articleClassFallbacks.length) {
+                        this.log('config', 'Article class fallbacks from config:', this.config.articleClassFallbacks);
+                    }
+                }
+
                 // Handle container selector with mobile override support.
                 // Caller-provided containerSelector (via init config) takes precedence over server config.
                 if (this.config.containerSelector) {
@@ -1160,6 +1169,13 @@
                     } else if (serverConfig.widget_container_class) {
                         this.config.containerSelector = serverConfig.widget_container_class;
                         this.log('config', 'Container selector from config:', serverConfig.widget_container_class);
+                    }
+                }
+                if (Array.isArray(serverConfig.widget_container_class_fallbacks)) {
+                    this.config.containerSelectorFallbacks = serverConfig.widget_container_class_fallbacks
+                        .filter(s => typeof s === 'string' && s.trim().length > 0);
+                    if (this.config.containerSelectorFallbacks.length) {
+                        this.log('config', 'Container selector fallbacks from config:', this.config.containerSelectorFallbacks);
                     }
                 }
 
@@ -1369,34 +1385,59 @@
                     this.articleTitle = document.title || document.querySelector('h1')?.textContent || 'Untitled Article';
                 }
 
-                // Check if article element exists
+                // Walk admin-configured selectors in priority order (primary
+                // first, then each fallback) and pick the first whose element
+                // exists AND yields content >= 10 chars. Falls through to
+                // default heuristic selectors if none of those match.
+                const adminSelectors = [
+                    this.config.articleClass,
+                    ...(Array.isArray(this.config.articleClassFallbacks) ? this.config.articleClassFallbacks : [])
+                ].filter(s => typeof s === 'string' && s.trim().length > 0);
+
                 let articleElement = null;
-                if (this.config.articleClass) {
-                    articleElement = document.querySelector(this.config.articleClass);
+                let articleSelectorUsed = null;
+                let articleContent = '';
+
+                for (const sel of adminSelectors) {
+                    const el = document.querySelector(sel);
+                    if (!el) {
+                        this.log('content', `Selector "${sel}" not found, trying next`);
+                        continue;
+                    }
+                    const candidate = (typeof getContent === 'function')
+                        ? (getContent(sel) || '')
+                        : (el.textContent || '').trim();
+                    if (candidate.trim().length < 10) {
+                        this.log('content', `Selector "${sel}" matched but content too short (${candidate.trim().length}), trying next`);
+                        continue;
+                    }
+                    articleElement = el;
+                    articleSelectorUsed = sel;
+                    articleContent = candidate;
+                    this.log('content', `Article matched via selector: ${sel}`);
+                    break;
                 }
-                
+
                 if (!articleElement) {
-                    // Try default selectors
+                    // Default heuristic fallbacks (legacy behavior). These are
+                    // also tried by getContent's pickContainer when no
+                    // selector is passed.
                     articleElement = document.querySelector('article') ||
                         document.querySelector('[role="article"]') ||
                         document.querySelector('main');
+                    if (articleElement) {
+                        articleContent = (typeof getContent === 'function')
+                            ? (getContent(null) || '')
+                            : (articleElement.textContent || '').trim();
+                    }
                 }
 
-                // If no article element found, don't render widget
-                if (!articleElement) {
+                articleFound = !!articleElement;
+                if (!articleFound) {
                     this.log('content', 'No article element found, widget will not render');
-                    articleFound = false;
-                } else {
-                    articleFound = true;
                 }
-
-                // Use getContent() if available
-                if (typeof getContent === 'function') {
-                    this.articleContent = getContent(this.config.articleClass);
-                } else {
-                    // Fallback to simple extraction
-                    this.articleContent = articleElement ? articleElement.textContent.trim() : '';
-                }
+                this.articleContent = articleContent;
+                this.articleSelectorUsed = articleSelectorUsed;
 
                 // Use getContentUrl() if available
                 if (typeof getContentUrl === 'function') {
@@ -1816,23 +1857,33 @@
 
             let targetElement = null;
 
-            // First, try custom container selector if provided
-            if (this.config.containerSelector) {
-                this.log('dom', '✓ Using containerSelector from server config:', this.config.containerSelector);
-                this.log('dom', 'Attempting to find element with querySelector:', this.config.containerSelector);
-                targetElement = document.querySelector(this.config.containerSelector);
-                if (targetElement) {
-                    this.log('dom', '✓ Found custom container element:', {
-                        selector: this.config.containerSelector,
-                        tagName: targetElement.tagName,
-                        className: targetElement.className,
-                        id: targetElement.id
-                    });
-                } else {
-                    this.log('dom', `✗ Container selector "${this.config.containerSelector}" not found in DOM, falling back to default behavior`);
-                }
-            } else {
+            // Walk primary container selector + fallbacks. First match wins.
+            const containerSelectors = [
+                this.config.containerSelector,
+                ...(Array.isArray(this.config.containerSelectorFallbacks) ? this.config.containerSelectorFallbacks : [])
+            ].filter(s => typeof s === 'string' && s.trim().length > 0);
+
+            if (containerSelectors.length === 0) {
                 this.log('dom', 'No containerSelector from server config, using default auto-detection');
+            } else {
+                for (const sel of containerSelectors) {
+                    this.log('dom', 'Attempting container selector:', sel);
+                    const el = document.querySelector(sel);
+                    if (el) {
+                        targetElement = el;
+                        this.log('dom', '✓ Found custom container element:', {
+                            selector: sel,
+                            tagName: el.tagName,
+                            className: el.className,
+                            id: el.id
+                        });
+                        break;
+                    }
+                    this.log('dom', `✗ Container selector "${sel}" not found, trying next`);
+                }
+                if (!targetElement) {
+                    this.log('dom', '✗ No container selector matched, falling back to default behavior');
+                }
             }
 
             // Fallback: use the placeholder div injected next to the script tag
