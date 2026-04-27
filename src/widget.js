@@ -1546,7 +1546,9 @@
                             </svg>
                             <span class="divee-ai-label">AI</span>
                         </div>
-                        <img class="divee-site-favicon-collapsed" src="${config.icon_url}" alt="" aria-hidden="true" />
+                        <div class="divee-site-favicon-collapsed">
+                            <img class="divee-site-favicon-collapsed-image" src="${config.icon_url}" alt="" aria-hidden="true" />
+                        </div>
                     </div>
                     <div class="divee-cubic-invite">
                         <p class="divee-cubic-headline">${cubicHeadline}</p>
