@@ -1861,13 +1861,16 @@
   min-width: 0;
 }
 
-.divee-site-favicon-header {
-  width: 34px;
-  height: 34px;
+.divee-site-favicon-header-image {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;    
   overflow: clip;
+}
+
+.divee-site-favicon-header {
+  width: 34px !important;
+  height: 34px !important;
 }
 
 /* Collapsed bar: favicon matches AI badge height */

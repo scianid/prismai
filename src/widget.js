@@ -1678,7 +1678,9 @@
                                 <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
                             </svg>
                         </div>
-                        <img class="divee-site-favicon-header" src="${config.icon_url}" alt="" aria-hidden="true" />
+                        <div class="divee-site-favicon-header">
+                            <img class="divee-site-favicon-header-image" src="${config.icon_url}" alt="" aria-hidden="true" />
+                        </div>
                         <div class="divee-header-text">
                             <span class="divee-title">${this.escapeHtml(config.client_name)}</span>
                             <span class="divee-online-badge">● Online</span>
