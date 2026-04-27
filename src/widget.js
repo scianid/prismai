@@ -26,6 +26,12 @@
     let diveeErrorCount = 0;
     const diveeErrorSeen = new Set();    // stack-hash dedupe
 
+    // Non-render telemetry: when the widget skips rendering because the
+    // page has no article text, post a row to `widget_non_renders` so admins
+    // can see which pages are missing content. One report per page lifecycle.
+    const DIVEE_NON_RENDER_ENDPOINT = 'https://srv.divee.ai/functions/v1/widget-non-render';
+    let diveeNonRenderReported = false;
+
     // Unload guard: errors thrown by pending fetches during navigation/tab-close
     // surface as `TypeError: Failed to fetch` in most browsers and aren't real
     // bugs — just requests the browser aborted. Suppress reports once the page
@@ -74,6 +80,37 @@
                 body: JSON.stringify(payload),
                 keepalive: true
             }).catch(() => { /* never block on error reporting */ });
+        } catch (_) { /* reporting must never throw */ }
+    }
+
+    function diveeReportNonRender(reason, projectId, opts) {
+        try {
+            if (diveePageUnloading) return;
+            if (diveeNonRenderReported) return;
+            if (!projectId) return;
+            diveeNonRenderReported = true;
+
+            let url = null;
+            try { url = location.origin + location.pathname; } catch (_) { /* ignore */ }
+            let referrer = null;
+            try { referrer = document.referrer || null; } catch (_) { /* ignore */ }
+
+            const payload = {
+                project_id: projectId,
+                url,
+                reason,
+                referrer,
+                content_length: opts && typeof opts.contentLength === 'number'
+                    ? opts.contentLength
+                    : null
+            };
+
+            fetch(DIVEE_NON_RENDER_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                keepalive: true
+            }).catch(() => { /* never block on telemetry */ });
         } catch (_) { /* reporting must never throw */ }
     }
 
@@ -413,6 +450,10 @@
 
         reportError(err, phase) {
             diveeReportError(err, phase, this.config && this.config.projectId);
+        }
+
+        reportNonRender(reason, opts) {
+            diveeReportNonRender(reason, this.config && this.config.projectId, opts);
         }
 
         // Normalizes away stray leading/trailing slashes so "/", "//", "///"
@@ -997,6 +1038,7 @@
                 // Don't render widget if article element not found or content is empty
                 if (!articleFound) {
                     this.log('init', 'Widget disabled: article element not found');
+                    this.reportNonRender('article_not_found');
                     return;
                 }
 
@@ -1005,9 +1047,12 @@
                     this.log('init', 'Widget disabled: article content is empty or too short to load', {
                         contentLength
                     });
-                    // Skip reporting on root/home URLs — these are expected
-                    // to be landing pages without an article, not a publisher
-                    // misconfiguration.
+                    this.reportNonRender('empty_article', { contentLength });
+                    // Skip Sentry reporting on root/home URLs — these are
+                    // expected to be landing pages without an article, not a
+                    // publisher misconfiguration. The non-render row above is
+                    // still written; the admin page filters out roots by
+                    // default.
                     let path = '/';
                     try { path = location.pathname || '/'; } catch (_) { /* ignore */ }
                     const isRoot = this._isRootPath(path);
