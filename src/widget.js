@@ -458,6 +458,54 @@
             diveeReportNonRender(reason, this.config && this.config.projectId, opts);
         }
 
+        // Walk an ordered list of CSS selectors and return the first whose
+        // element exists AND yields content >= 10 chars (via getContent if
+        // available, otherwise textContent). Returns null when none match.
+        // Pure DOM lookup — extracted from init() for testability.
+        _pickArticleSelector(selectors) {
+            const list = Array.isArray(selectors) ? selectors : [];
+            for (const sel of list) {
+                if (typeof sel !== 'string' || !sel.trim()) continue;
+                const el = document.querySelector(sel);
+                if (!el) {
+                    this.log && this.log('content', `Selector "${sel}" not found, trying next`);
+                    continue;
+                }
+                const candidate = (typeof getContent === 'function')
+                    ? (getContent(sel) || '')
+                    : (el.textContent || '').trim();
+                if (candidate.trim().length < 10) {
+                    this.log && this.log('content', `Selector "${sel}" matched but content too short (${candidate.trim().length}), trying next`);
+                    continue;
+                }
+                this.log && this.log('content', `Article matched via selector: ${sel}`);
+                return { element: el, content: candidate, selectorUsed: sel };
+            }
+            return null;
+        }
+
+        // Walk an ordered list of CSS selectors and return the first matching
+        // element, or null if none match. Used for the widget container.
+        _pickContainerSelector(selectors) {
+            const list = Array.isArray(selectors) ? selectors : [];
+            for (const sel of list) {
+                if (typeof sel !== 'string' || !sel.trim()) continue;
+                this.log && this.log('dom', 'Attempting container selector:', sel);
+                const el = document.querySelector(sel);
+                if (el) {
+                    this.log && this.log('dom', '✓ Found custom container element:', {
+                        selector: sel,
+                        tagName: el.tagName,
+                        className: el.className,
+                        id: el.id
+                    });
+                    return el;
+                }
+                this.log && this.log('dom', `✗ Container selector "${sel}" not found, trying next`);
+            }
+            return null;
+        }
+
         // Normalizes away stray leading/trailing slashes so "/", "//", "///"
         // and "" all count as root. Some publishers serve URLs like
         // `https://example.com//` where pathname is "//".
@@ -1386,37 +1434,17 @@
                 }
 
                 // Walk admin-configured selectors in priority order (primary
-                // first, then each fallback) and pick the first whose element
-                // exists AND yields content >= 10 chars. Falls through to
-                // default heuristic selectors if none of those match.
+                // first, then each fallback). Falls through to default
+                // heuristic selectors if none match.
                 const adminSelectors = [
                     this.config.articleClass,
                     ...(Array.isArray(this.config.articleClassFallbacks) ? this.config.articleClassFallbacks : [])
-                ].filter(s => typeof s === 'string' && s.trim().length > 0);
+                ];
+                const picked = this._pickArticleSelector(adminSelectors);
 
-                let articleElement = null;
-                let articleSelectorUsed = null;
-                let articleContent = '';
-
-                for (const sel of adminSelectors) {
-                    const el = document.querySelector(sel);
-                    if (!el) {
-                        this.log('content', `Selector "${sel}" not found, trying next`);
-                        continue;
-                    }
-                    const candidate = (typeof getContent === 'function')
-                        ? (getContent(sel) || '')
-                        : (el.textContent || '').trim();
-                    if (candidate.trim().length < 10) {
-                        this.log('content', `Selector "${sel}" matched but content too short (${candidate.trim().length}), trying next`);
-                        continue;
-                    }
-                    articleElement = el;
-                    articleSelectorUsed = sel;
-                    articleContent = candidate;
-                    this.log('content', `Article matched via selector: ${sel}`);
-                    break;
-                }
+                let articleElement = picked ? picked.element : null;
+                let articleSelectorUsed = picked ? picked.selectorUsed : null;
+                let articleContent = picked ? picked.content : '';
 
                 if (!articleElement) {
                     // Default heuristic fallbacks (legacy behavior). These are
@@ -1861,26 +1889,13 @@
             const containerSelectors = [
                 this.config.containerSelector,
                 ...(Array.isArray(this.config.containerSelectorFallbacks) ? this.config.containerSelectorFallbacks : [])
-            ].filter(s => typeof s === 'string' && s.trim().length > 0);
+            ];
 
-            if (containerSelectors.length === 0) {
+            const hasAny = containerSelectors.some(s => typeof s === 'string' && s.trim().length > 0);
+            if (!hasAny) {
                 this.log('dom', 'No containerSelector from server config, using default auto-detection');
             } else {
-                for (const sel of containerSelectors) {
-                    this.log('dom', 'Attempting container selector:', sel);
-                    const el = document.querySelector(sel);
-                    if (el) {
-                        targetElement = el;
-                        this.log('dom', '✓ Found custom container element:', {
-                            selector: sel,
-                            tagName: el.tagName,
-                            className: el.className,
-                            id: el.id
-                        });
-                        break;
-                    }
-                    this.log('dom', `✗ Container selector "${sel}" not found, trying next`);
-                }
+                targetElement = this._pickContainerSelector(containerSelectors);
                 if (!targetElement) {
                     this.log('dom', '✗ No container selector matched, falling back to default behavior');
                 }

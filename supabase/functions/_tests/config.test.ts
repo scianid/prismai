@@ -377,6 +377,68 @@ Deno.test("config: show_ad=false from the DB is respected (not defaulted back to
   assertEquals(body.show_ad, false);
 });
 
+// ── Selector fallback fields ──────────────────────────────────────────────
+
+Deno.test("config: empty fallback arrays default to []", async () => {
+  // Default fake project sets *_fallbacks to []. The handler should pass
+  // those through as empty arrays (not null, not omitted) so the widget
+  // can rely on Array.isArray checks.
+  const res = await configHandler(req({ projectId: PROJECT_ID }), makeDeps());
+  const body = await res.json();
+  assertEquals(body.article_class_fallbacks, []);
+  assertEquals(body.widget_container_class_fallbacks, []);
+});
+
+Deno.test("config: fallback arrays preserve order from the DB", async () => {
+  const deps = makeDeps({
+    getProjectById: () => Promise.resolve(fakeProject({
+      article_class_fallbacks: [".primary-fallback", ".secondary-fallback", ".tertiary-fallback"],
+      widget_container_class_fallbacks: ["aside.rail", ".sidebar"],
+    })),
+  });
+  const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
+  const body = await res.json();
+  assertEquals(body.article_class_fallbacks, [
+    ".primary-fallback",
+    ".secondary-fallback",
+    ".tertiary-fallback",
+  ]);
+  assertEquals(body.widget_container_class_fallbacks, ["aside.rail", ".sidebar"]);
+});
+
+Deno.test("config: fallback arrays drop empty / non-string entries", async () => {
+  // Defense in depth — admins editing the DB directly might leave stray
+  // empty strings in the array. The widget would treat them as "selector
+  // not found" anyway, but we strip them at the boundary so the response
+  // is clean and the widget's filter logic doesn't have to think.
+  const deps = makeDeps({
+    getProjectById: () => Promise.resolve(fakeProject({
+      article_class_fallbacks: [".real", "", "   ", null, 42, ".another"],
+      widget_container_class_fallbacks: [null, undefined, ""],
+    })),
+  });
+  const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
+  const body = await res.json();
+  assertEquals(body.article_class_fallbacks, [".real", ".another"]);
+  assertEquals(body.widget_container_class_fallbacks, []);
+});
+
+Deno.test("config: non-array fallback values fall back to []", async () => {
+  // If the DB column is somehow null or a scalar (e.g. during partial
+  // backfill), the handler must NOT crash and must still emit [].
+  const deps = makeDeps({
+    getProjectById: () => Promise.resolve(fakeProject({
+      article_class_fallbacks: null,
+      widget_container_class_fallbacks: "not-an-array",
+    })),
+  });
+  const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body.article_class_fallbacks, []);
+  assertEquals(body.widget_container_class_fallbacks, []);
+});
+
 // ── Teardown ──────────────────────────────────────────────────────────────
 Deno.test("config: teardown (restore env)", () => {
   restoreEnv();
