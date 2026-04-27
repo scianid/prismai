@@ -753,6 +753,13 @@
   border-top-right-radius: inherit;
 }
 
+/* Floating mode: explicitly round header top corners to 16px so the dark
+   gradient doesn't bleed past the floating panel's rounded top edge. */
+.divee-widget-floating[data-state="expanded"] .divee-header {
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+}
+
 .divee-header-top {
   display: flex;
   align-items: center;
