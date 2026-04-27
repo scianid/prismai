@@ -1035,10 +1035,18 @@
                 // Article mode: extract article content (original behavior)
                 const articleFound = this.extractArticleContent();
 
-                // Don't render widget if article element not found or content is empty
+                // Don't render widget if article element not found or content is empty.
+                // Skip telemetry for root/home URLs — these are expected to be
+                // landing pages without an article, not a publisher misconfiguration.
+                let path = '/';
+                try { path = location.pathname || '/'; } catch (_) { /* ignore */ }
+                const isRoot = this._isRootPath(path);
+
                 if (!articleFound) {
                     this.log('init', 'Widget disabled: article element not found');
-                    this.reportNonRender('article_not_found');
+                    if (!isRoot) {
+                        this.reportNonRender('article_not_found');
+                    }
                     return;
                 }
 
@@ -1047,16 +1055,8 @@
                     this.log('init', 'Widget disabled: article content is empty or too short to load', {
                         contentLength
                     });
-                    this.reportNonRender('empty_article', { contentLength });
-                    // Skip Sentry reporting on root/home URLs — these are
-                    // expected to be landing pages without an article, not a
-                    // publisher misconfiguration. The non-render row above is
-                    // still written; the admin page filters out roots by
-                    // default.
-                    let path = '/';
-                    try { path = location.pathname || '/'; } catch (_) { /* ignore */ }
-                    const isRoot = this._isRootPath(path);
                     if (!isRoot) {
+                        this.reportNonRender('empty_article', { contentLength });
                         this.reportError(
                             new Error(`Article content too short (length=${contentLength})`),
                             'empty_article'
