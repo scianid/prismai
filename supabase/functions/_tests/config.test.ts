@@ -391,10 +391,11 @@ Deno.test("config: empty fallback arrays default to []", async () => {
 
 Deno.test("config: fallback arrays preserve order from the DB", async () => {
   const deps = makeDeps({
-    getProjectById: () => Promise.resolve(fakeProject({
-      article_class_fallbacks: [".primary-fallback", ".secondary-fallback", ".tertiary-fallback"],
-      widget_container_class_fallbacks: ["aside.rail", ".sidebar"],
-    })),
+    getProjectById: () =>
+      Promise.resolve(fakeProject({
+        article_class_fallbacks: [".primary-fallback", ".secondary-fallback", ".tertiary-fallback"],
+        widget_container_class_fallbacks: ["aside.rail", ".sidebar"],
+      })),
   });
   const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
   const body = await res.json();
@@ -412,10 +413,11 @@ Deno.test("config: fallback arrays drop empty / non-string entries", async () =>
   // not found" anyway, but we strip them at the boundary so the response
   // is clean and the widget's filter logic doesn't have to think.
   const deps = makeDeps({
-    getProjectById: () => Promise.resolve(fakeProject({
-      article_class_fallbacks: [".real", "", "   ", null, 42, ".another"],
-      widget_container_class_fallbacks: [null, undefined, ""],
-    })),
+    getProjectById: () =>
+      Promise.resolve(fakeProject({
+        article_class_fallbacks: [".real", "", "   ", null, 42, ".another"],
+        widget_container_class_fallbacks: [null, undefined, ""],
+      })),
   });
   const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
   const body = await res.json();
@@ -427,10 +429,11 @@ Deno.test("config: non-array fallback values fall back to []", async () => {
   // If the DB column is somehow null or a scalar (e.g. during partial
   // backfill), the handler must NOT crash and must still emit [].
   const deps = makeDeps({
-    getProjectById: () => Promise.resolve(fakeProject({
-      article_class_fallbacks: null,
-      widget_container_class_fallbacks: "not-an-array",
-    })),
+    getProjectById: () =>
+      Promise.resolve(fakeProject({
+        article_class_fallbacks: null,
+        widget_container_class_fallbacks: "not-an-array",
+      })),
   });
   const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
   assertEquals(res.status, 200);
