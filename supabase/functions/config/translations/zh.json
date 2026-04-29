@@ -6,5 +6,6 @@
   "disclaimer": "这是一个由人工智能驱动的工具，结果可能并不总是准确的",
   "askAi": "问 AI",
   "inputDeterrent": "请勿分享敏感的个人信息或他人的信息。",
-  "redactionNotice": "我们已删除看起来像个人信息的内容。"
+  "redactionNotice": "我们已删除看起来像个人信息的内容。",
+  "redactedToken": "[已删除]"
 }

@@ -6,5 +6,6 @@
   "disclaimer": "Tämä on tekoälypohjainen työkalu, tulokset eivät välttämättä ole aina tarkkoja",
   "askAi": "KYSY AI:LTA",
   "inputDeterrent": "Älä jaa arkaluonteisia henkilötietoja tai tietoja muista.",
-  "redactionNotice": "Poistimme jotain, joka näytti henkilötiedoilta."
+  "redactionNotice": "Poistimme jotain, joka näytti henkilötiedoilta.",
+  "redactedToken": "[poistettu]"
 }

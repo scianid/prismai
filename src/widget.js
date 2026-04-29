@@ -793,25 +793,26 @@
             if (typeof text !== 'string' || text.length === 0) {
                 return { text: text, hits: [] };
             }
+            const marker = this.t('redactedToken', '[redacted]');
             const hits = [];
             let result = text;
 
             // Email addresses
             result = result.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, () => {
                 hits.push('email');
-                return '[redacted]';
+                return marker;
             });
 
             // IBAN (2-letter country code, 2 check digits, 11–30 alphanumerics)
             result = result.replace(/\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/gi, () => {
                 hits.push('iban');
-                return '[redacted]';
+                return marker;
             });
 
             // US SSN
             result = result.replace(/\b\d{3}-\d{2}-\d{4}\b/g, () => {
                 hits.push('ssn');
-                return '[redacted]';
+                return marker;
             });
 
             // Credit cards — 13–19 digit runs (with optional space/dash separators)
@@ -820,7 +821,7 @@
                 const digits = match.replace(/[\s-]/g, '');
                 if (digits.length >= 13 && digits.length <= 19 && this.luhnCheck(digits)) {
                     hits.push('credit_card');
-                    return '[redacted]';
+                    return marker;
                 }
                 return match;
             });
@@ -829,18 +830,18 @@
             // Skips coarse lat/long like "40.7, -74" that's unlikely to be PII.
             result = result.replace(/[-+]?\d{1,3}\.\d{4,}\s*,\s*[-+]?\d{1,3}\.\d{4,}/g, () => {
                 hits.push('coordinates');
-                return '[redacted]';
+                return marker;
             });
 
             // Phone numbers — international `+CC ...` and common US formats.
             // Conservative pattern to keep false positives low.
             result = result.replace(/\+\d{1,3}[\s.-]?\(?\d{1,4}\)?[\s.-]?\d{2,4}[\s.-]?\d{2,4}[\s.-]?\d{0,4}/g, () => {
                 hits.push('phone');
-                return '[redacted]';
+                return marker;
             });
             result = result.replace(/\b\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g, () => {
                 hits.push('phone');
-                return '[redacted]';
+                return marker;
             });
 
             return { text: result, hits };

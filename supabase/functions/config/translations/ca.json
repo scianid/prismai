@@ -6,5 +6,6 @@
   "disclaimer": "Aquesta és una eina basada en IA, els resultats poden no ser sempre precisos",
   "askAi": "PREGUNTA A L'IA",
   "inputDeterrent": "No comparteixis informació personal sensible ni informació sobre altres persones.",
-  "redactionNotice": "Hem eliminat alguna cosa que semblava informació personal."
+  "redactionNotice": "Hem eliminat alguna cosa que semblava informació personal.",
+  "redactedToken": "[eliminat]"
 }

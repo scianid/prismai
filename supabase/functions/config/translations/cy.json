@@ -6,5 +6,6 @@
   "disclaimer": "Offeryn wedi'i yrru gan AI yw hwn, efallai na fydd y canlyniadau bob amser yn gywir",
   "askAi": "GOFYN I AI",
   "inputDeterrent": "Peidiwch â rhannu gwybodaeth bersonol sensitif na gwybodaeth am eraill.",
-  "redactionNotice": "Rydym wedi tynnu rhywbeth a oedd yn edrych fel gwybodaeth bersonol."
+  "redactionNotice": "Rydym wedi tynnu rhywbeth a oedd yn edrych fel gwybodaeth bersonol.",
+  "redactedToken": "[tynnwyd]"
 }

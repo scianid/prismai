@@ -6,5 +6,6 @@
   "disclaimer": "Ceci est un outil basé sur l'IA, les résultats peuvent ne pas toujours être exacts",
   "askAi": "DEMANDER À L'IA",
   "inputDeterrent": "Ne partagez pas d'informations personnelles sensibles ni d'informations sur autrui.",
-  "redactionNotice": "Nous avons supprimé quelque chose qui ressemblait à des informations personnelles."
+  "redactionNotice": "Nous avons supprimé quelque chose qui ressemblait à des informations personnelles.",
+  "redactedToken": "[masqué]"
 }

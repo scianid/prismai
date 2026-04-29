@@ -6,5 +6,6 @@
   "disclaimer": "Hii ni zana inayoendeshwa na AI, matokeo yanaweza yasiwe sahihi kila wakati",
   "askAi": "ULIZA AI",
   "inputDeterrent": "Usishiriki maelezo nyeti ya kibinafsi au maelezo kuhusu wengine.",
-  "redactionNotice": "Tumetoa kitu kilichoonekana kama maelezo ya kibinafsi."
+  "redactionNotice": "Tumetoa kitu kilichoonekana kama maelezo ya kibinafsi.",
+  "redactedToken": "[imeondolewa]"
 }

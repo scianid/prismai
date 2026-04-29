@@ -648,6 +648,23 @@ describe('DiveeWidget Core', () => {
       expect(widget.redactSensitivePatterns(null).hits).toEqual([]);
       expect(widget.redactSensitivePatterns(undefined).hits).toEqual([]);
     });
+
+    test('redactSensitivePatterns uses localized marker when translation provided', () => {
+      const widget = loadWidget();
+      widget.state.serverConfig = { translations: { redactedToken: '[הוסר]' } };
+      const { text, hits } = widget.redactSensitivePatterns('email a@b.co and call (415) 555-0100');
+      expect(text).not.toContain('[redacted]');
+      expect(text).toContain('[הוסר]');
+      expect(hits).toContain('email');
+      expect(hits).toContain('phone');
+    });
+
+    test('redactSensitivePatterns falls back to [redacted] when translations are missing', () => {
+      const widget = loadWidget();
+      // No serverConfig set — fallback path
+      const { text } = widget.redactSensitivePatterns('email a@b.co');
+      expect(text).toBe('email [redacted]');
+    });
   });
 
   describe('stripUrlIdentifiers', () => {

@@ -6,5 +6,6 @@
   "disclaimer": "To je orodje, ki ga poganja umetna inteligenca, rezultati morda niso vedno točni",
   "askAi": "VPRAŠAJ AI",
   "inputDeterrent": "Ne delite občutljivih osebnih podatkov ali podatkov o drugih.",
-  "redactionNotice": "Odstranili smo nekaj, kar je bilo videti kot osebni podatek."
+  "redactionNotice": "Odstranili smo nekaj, kar je bilo videti kot osebni podatek.",
+  "redactedToken": "[odstranjeno]"
 }

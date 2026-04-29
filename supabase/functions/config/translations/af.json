@@ -6,5 +6,6 @@
   "disclaimer": "Dit is 'n KI-gedrewe hulpmiddel, resultate is dalk nie altyd akkuraat nie",
   "askAi": "VRA AI",
   "inputDeterrent": "Moenie sensitiewe persoonlike inligting of inligting oor ander mense deel nie.",
-  "redactionNotice": "Ons het iets verwyder wat soos persoonlike inligting gelyk het."
+  "redactionNotice": "Ons het iets verwyder wat soos persoonlike inligting gelyk het.",
+  "redactedToken": "[verwyder]"
 }

@@ -6,5 +6,6 @@
   "disclaimer": "Dies ist ein KI-gestütztes Tool, die Ergebnisse sind möglicherweise nicht immer genau",
   "askAi": "KI FRAGEN",
   "inputDeterrent": "Teile keine sensiblen persönlichen Daten oder Informationen über andere.",
-  "redactionNotice": "Wir haben etwas entfernt, das wie persönliche Daten aussah."
+  "redactionNotice": "Wir haben etwas entfernt, das wie persönliche Daten aussah.",
+  "redactedToken": "[entfernt]"
 }

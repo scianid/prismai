@@ -6,5 +6,6 @@
   "disclaimer": "ይህ በAI የሚመራ መሳሪያ ነው፣ ውጤቶቹ ሁል ጊዜ ትክክል ላይሆኑ ይችላሉ",
   "askAi": "AI ጠይቅ",
   "inputDeterrent": "ስሜታዊ ግላዊ መረጃ ወይም ስለ ሌሎች መረጃ አታጋራ።",
-  "redactionNotice": "ግላዊ መረጃ የመሰለ ነገር አስወግደናል።"
+  "redactionNotice": "ግላዊ መረጃ የመሰለ ነገር አስወግደናል።",
+  "redactedToken": "[ተደብቋል]"
 }

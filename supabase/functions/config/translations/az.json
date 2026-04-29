@@ -6,5 +6,6 @@
   "disclaimer": "Bu süni intellekt əsaslı alətdir, nəticələr həmişə dəqiq olmaya bilər",
   "askAi": "AI SORUŞ",
   "inputDeterrent": "Həssas şəxsi məlumatları və ya başqaları haqqında məlumatları paylaşmayın.",
-  "redactionNotice": "Şəxsi məlumat kimi görünən bir şeyi sildik."
+  "redactionNotice": "Şəxsi məlumat kimi görünən bir şeyi sildik.",
+  "redactedToken": "[silindi]"
 }

@@ -6,5 +6,6 @@
   "disclaimer": "This is an AI driven tool, results might not always be accurate",
   "askAi": "ASK AI",
   "inputDeterrent": "Don't share sensitive personal info or info about others.",
-  "redactionNotice": "We removed something that looked like personal info."
+  "redactionNotice": "We removed something that looked like personal info.",
+  "redactedToken": "[redacted]"
 }

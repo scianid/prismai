@@ -6,5 +6,6 @@
   "disclaimer": "Šis ir mākslīgā intelekta rīks, rezultāti ne vienmēr var būt precīzi",
   "askAi": "JAUTĀ AI",
   "inputDeterrent": "Nedalieties ar sensitīvu personisko informāciju vai informāciju par citiem.",
-  "redactionNotice": "Mēs noņēmām kaut ko, kas izskatījās pēc personiskās informācijas."
+  "redactionNotice": "Mēs noņēmām kaut ko, kas izskatījās pēc personiskās informācijas.",
+  "redactedToken": "[noņemts]"
 }

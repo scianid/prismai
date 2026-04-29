@@ -6,5 +6,6 @@
   "disclaimer": "Detta är ett AI-drivet verktyg, resultaten kanske inte alltid är korrekta",
   "askAi": "FRÅGA AI",
   "inputDeterrent": "Dela inte känslig personlig information eller information om andra.",
-  "redactionNotice": "Vi tog bort något som såg ut som personlig information."
+  "redactionNotice": "Vi tog bort något som såg ut som personlig information.",
+  "redactedToken": "[borttaget]"
 }

@@ -6,5 +6,6 @@
   "disclaimer": "Esta é unha ferramenta impulsada pola IA, os resultados poden non ser sempre precisos",
   "askAi": "PREGUNTA Á IA",
   "inputDeterrent": "Non compartas información persoal sensible nin información sobre outras persoas.",
-  "redactionNotice": "Eliminamos algo que parecía información persoal."
+  "redactionNotice": "Eliminamos algo que parecía información persoal.",
+  "redactedToken": "[eliminado]"
 }

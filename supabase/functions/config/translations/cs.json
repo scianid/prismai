@@ -6,5 +6,6 @@
   "disclaimer": "Toto je nástroj využívající umělou inteligenci, výsledky nemusí být vždy přesné",
   "askAi": "ZEPTEJ SE AI",
   "inputDeterrent": "Nesdílejte citlivé osobní údaje ani informace o druhých.",
-  "redactionNotice": "Odstranili jsme něco, co vypadalo jako osobní údaje."
+  "redactionNotice": "Odstranili jsme něco, co vypadalo jako osobní údaje.",
+  "redactedToken": "[odstráneno]"
 }

@@ -6,5 +6,6 @@
   "disclaimer": "これはAIを活用したツールであり、結果が常に正確であるとは限りません",
   "askAi": "AIに聞く",
   "inputDeterrent": "機密性の高い個人情報や他人の情報を共有しないでください。",
-  "redactionNotice": "個人情報のように見えるものを削除しました。"
+  "redactionNotice": "個人情報のように見えるものを削除しました。",
+  "redactedToken": "[削除済み]"
 }

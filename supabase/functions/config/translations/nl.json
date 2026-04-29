@@ -6,5 +6,6 @@
   "disclaimer": "Dit is een AI-gestuurde tool, resultaten zijn mogelijk niet altijd nauwkeurig",
   "askAi": "VRAAG AI",
   "inputDeterrent": "Deel geen gevoelige persoonlijke informatie of informatie over anderen.",
-  "redactionNotice": "We hebben iets verwijderd dat eruitzag als persoonlijke informatie."
+  "redactionNotice": "We hebben iets verwijderd dat eruitzag als persoonlijke informatie.",
+  "redactedToken": "[verwijderd]"
 }

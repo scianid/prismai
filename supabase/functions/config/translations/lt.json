@@ -6,5 +6,6 @@
   "disclaimer": "Tai dirbtinio intelekto įrankis, rezultatai gali būti ne visada tikslūs",
   "askAi": "KLAUSK AI",
   "inputDeterrent": "Nesidalykite jautria asmenine informacija ar informacija apie kitus.",
-  "redactionNotice": "Pašalinome tai, kas atrodė kaip asmeninė informacija."
+  "redactionNotice": "Pašalinome tai, kas atrodė kaip asmeninė informacija.",
+  "redactedToken": "[pašalinta]"
 }

@@ -6,5 +6,6 @@
   "disclaimer": "Ito ay isang tool na pinapagana ng AI, ang mga resulta ay maaaring hindi palaging tama",
   "askAi": "TANUNGIN AI",
   "inputDeterrent": "Huwag magbahagi ng sensitibong personal na impormasyon o impormasyon tungkol sa iba.",
-  "redactionNotice": "Mayroon kaming inalis na mukhang personal na impormasyon."
+  "redactionNotice": "Mayroon kaming inalis na mukhang personal na impormasyon.",
+  "redactedToken": "[tinanggal]"
 }

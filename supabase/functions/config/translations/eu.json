@@ -6,5 +6,6 @@
   "disclaimer": "Hau AI bidezko tresna bat da, emaitzak ez dira beti zehatzak izango",
   "askAi": "GALDETU AI-RI",
   "inputDeterrent": "Ez partekatu informazio pertsonal sentikorrik edo besteei buruzko informaziorik.",
-  "redactionNotice": "Informazio pertsonalaren itxura zuen zerbait kendu dugu."
+  "redactionNotice": "Informazio pertsonalaren itxura zuen zerbait kendu dugu.",
+  "redactedToken": "[ezabatuta]"
 }

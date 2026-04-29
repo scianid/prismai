@@ -6,5 +6,6 @@
   "disclaimer": "Kani waa qalab ay wado AI, natiijooyinku mar walba sax ma noqon karaan",
   "askAi": "WEYDII AI",
   "inputDeterrent": "Ha la wadaagin macluumaad shakhsi ah oo xasaasi ah ama macluumaad ku saabsan dadka kale.",
-  "redactionNotice": "Waxaan ka saarnay wax u eg macluumaad shakhsi ah."
+  "redactionNotice": "Waxaan ka saarnay wax u eg macluumaad shakhsi ah.",
+  "redactedToken": "[la saaray]"
 }

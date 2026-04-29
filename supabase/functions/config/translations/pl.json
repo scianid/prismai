@@ -6,5 +6,6 @@
   "disclaimer": "To narzędzie oparte na sztucznej inteligencji, wyniki mogą nie zawsze być dokładne",
   "askAi": "ZAPYTAJ AI",
   "inputDeterrent": "Nie udostępniaj wrażliwych danych osobowych ani informacji o innych osobach.",
-  "redactionNotice": "Usunęliśmy coś, co wyglądało na dane osobowe."
+  "redactionNotice": "Usunęliśmy coś, co wyglądało na dane osobowe.",
+  "redactedToken": "[usunięto]"
 }

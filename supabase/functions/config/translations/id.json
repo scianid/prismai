@@ -6,5 +6,6 @@
   "disclaimer": "Ini adalah alat bertenaga AI, hasilnya mungkin tidak selalu akurat",
   "askAi": "TANYA AI",
   "inputDeterrent": "Jangan bagikan informasi pribadi sensitif atau informasi tentang orang lain.",
-  "redactionNotice": "Kami telah menghapus sesuatu yang terlihat seperti informasi pribadi."
+  "redactionNotice": "Kami telah menghapus sesuatu yang terlihat seperti informasi pribadi.",
+  "redactedToken": "[dihapus]"
 }

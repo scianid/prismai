@@ -6,5 +6,6 @@
   "disclaimer": "Þetta er verkfæri knúið af gervigreind, niðurstöður eru kannski ekki alltaf nákvæmar",
   "askAi": "SPYRJA AI",
   "inputDeterrent": "Ekki deila viðkvæmum persónuupplýsingum eða upplýsingum um aðra.",
-  "redactionNotice": "Við fjarlægðum eitthvað sem leit út eins og persónuupplýsingar."
+  "redactionNotice": "Við fjarlægðum eitthvað sem leit út eins og persónuupplýsingar.",
+  "redactedToken": "[fjarlægt]"
 }
