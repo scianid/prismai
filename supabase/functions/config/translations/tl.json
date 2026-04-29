@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Tanungin mo ako tungkol sa artikulong ito",
   "recommendation": "Rekomendasyon",
   "disclaimer": "Ito ay isang tool na pinapagana ng AI, ang mga resulta ay maaaring hindi palaging tama",
-  "askAi": "TANUNGIN AI"
+  "askAi": "TANUNGIN AI",
+  "inputDeterrent": "Huwag magbahagi ng sensitibong personal na impormasyon o impormasyon tungkol sa iba.",
+  "redactionNotice": "Mayroon kaming inalis na mukhang personal na impormasyon."
 }

@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Întreabă-mă orice despre acest articol",
   "recommendation": "Recomandare",
   "disclaimer": "Acesta este un instrument bazat pe IA, rezultatele pot să nu fie întotdeauna exacte",
-  "askAi": "ÎNTREABĂ AI"
+  "askAi": "ÎNTREABĂ AI",
+  "inputDeterrent": "Nu partaja informații personale sensibile sau informații despre alții.",
+  "redactionNotice": "Am eliminat ceva ce părea informație personală."
 }

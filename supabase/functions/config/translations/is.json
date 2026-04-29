@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Spyrðu mig hvað sem er um þessa grein",
   "recommendation": "Ráðlegging",
   "disclaimer": "Þetta er verkfæri knúið af gervigreind, niðurstöður eru kannski ekki alltaf nákvæmar",
-  "askAi": "SPYRJA AI"
+  "askAi": "SPYRJA AI",
+  "inputDeterrent": "Ekki deila viðkvæmum persónuupplýsingum eða upplýsingum um aðra.",
+  "redactionNotice": "Við fjarlægðum eitthvað sem leit út eins og persónuupplýsingar."
 }

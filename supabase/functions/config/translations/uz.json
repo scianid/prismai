@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Ushbu maqola haqida mendan nima bo'lsa so'rang",
   "recommendation": "Tavsiya",
   "disclaimer": "Bu AI asosidagi vosita, natijalar har doim ham aniq bo'lmasligi mumkin",
-  "askAi": "AI'DAN SO'RA"
+  "askAi": "AI'DAN SO'RA",
+  "inputDeterrent": "Maxfiy shaxsiy ma'lumotlar yoki boshqalar haqidagi ma'lumotlarni baham ko'rmang.",
+  "redactionNotice": "Shaxsiy ma'lumotga o'xshagan narsani olib tashladik."
 }

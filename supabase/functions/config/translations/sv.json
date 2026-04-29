@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Fråga mig vad som helst om den här artikeln",
   "recommendation": "Rekommendation",
   "disclaimer": "Detta är ett AI-drivet verktyg, resultaten kanske inte alltid är korrekta",
-  "askAi": "FRÅGA AI"
+  "askAi": "FRÅGA AI",
+  "inputDeterrent": "Dela inte känslig personlig information eller information om andra.",
+  "redactionNotice": "Vi tog bort något som såg ut som personlig information."
 }

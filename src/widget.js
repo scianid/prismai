@@ -754,6 +754,98 @@
             return (typeof value === 'string' && value.length > 0) ? value : fallback;
         }
 
+        // Strip query string and hash from a URL string. Used on outbound
+        // payloads so we do not leak tokens, session IDs, or tracking params
+        // to our backend / LLM. Aligns with the analytics article_url which
+        // is already origin+pathname only.
+        stripUrlIdentifiers(rawUrl) {
+            if (!rawUrl) return rawUrl;
+            try {
+                const u = new URL(rawUrl);
+                return u.origin + u.pathname;
+            } catch (_) {
+                return String(rawUrl).split('?')[0].split('#')[0];
+            }
+        }
+
+        // Luhn checksum for credit-card validation. Confirms a digit run is a
+        // plausible card number rather than a coincidental sequence.
+        luhnCheck(digits) {
+            if (!/^\d+$/.test(digits)) return false;
+            let sum = 0;
+            let alt = false;
+            for (let i = digits.length - 1; i >= 0; i--) {
+                let n = digits.charCodeAt(i) - 48;
+                if (alt) { n *= 2; if (n > 9) n -= 9; }
+                sum += n;
+                alt = !alt;
+            }
+            return sum % 10 === 0;
+        }
+
+        // Replace high-confidence PII patterns in user-typed text with
+        // [redacted]. Returns { text, hits } where hits is the list of
+        // categories that fired (for telemetry / soft-toast UX). Runs
+        // client-side as a first line of defense; the server-side classifier
+        // (planned in SPECIAL_CATEGORY_DATA_PLAN §3) is the authoritative
+        // backstop because client-side checks are bypassable.
+        redactSensitivePatterns(text) {
+            if (typeof text !== 'string' || text.length === 0) {
+                return { text: text, hits: [] };
+            }
+            const hits = [];
+            let result = text;
+
+            // Email addresses
+            result = result.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, () => {
+                hits.push('email');
+                return '[redacted]';
+            });
+
+            // IBAN (2-letter country code, 2 check digits, 11–30 alphanumerics)
+            result = result.replace(/\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/gi, () => {
+                hits.push('iban');
+                return '[redacted]';
+            });
+
+            // US SSN
+            result = result.replace(/\b\d{3}-\d{2}-\d{4}\b/g, () => {
+                hits.push('ssn');
+                return '[redacted]';
+            });
+
+            // Credit cards — 13–19 digit runs (with optional space/dash separators)
+            // gated by Luhn so that ordinary number sequences don't fire.
+            result = result.replace(/\b(?:\d[\s-]?){12,18}\d\b/g, (match) => {
+                const digits = match.replace(/[\s-]/g, '');
+                if (digits.length >= 13 && digits.length <= 19 && this.luhnCheck(digits)) {
+                    hits.push('credit_card');
+                    return '[redacted]';
+                }
+                return match;
+            });
+
+            // Precise GPS coordinates (≥4 decimal places ≈ ~10m precision).
+            // Skips coarse lat/long like "40.7, -74" that's unlikely to be PII.
+            result = result.replace(/[-+]?\d{1,3}\.\d{4,}\s*,\s*[-+]?\d{1,3}\.\d{4,}/g, () => {
+                hits.push('coordinates');
+                return '[redacted]';
+            });
+
+            // Phone numbers — international `+CC ...` and common US formats.
+            // Conservative pattern to keep false positives low.
+            result = result.replace(/\+\d{1,3}[\s.-]?\(?\d{1,4}\)?[\s.-]?\d{2,4}[\s.-]?\d{2,4}[\s.-]?\d{0,4}/g, () => {
+                hits.push('phone');
+                return '[redacted]';
+            });
+            result = result.replace(/\b\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g, () => {
+                hits.push('phone');
+                return '[redacted]';
+            });
+
+            return { text: result, hits };
+        }
+
         renderMarkdown(text) {
             if (!text) return '';
 
@@ -1935,17 +2027,20 @@
                         <div class="divee-suggestions-input" style="display: none;">
                             <div class="divee-suggestions-list"></div>
                         </div>
-            <textarea 
-                            class="divee-input" 
+            <textarea
+                            class="divee-input"
               placeholder="${placeholder}"
               rows="1"
               maxlength="200"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="sentences"
             ></textarea>
                         <button class="divee-send" aria-label="Send">
               <span class="divee-send-svg" aria-hidden="true">&#10148;</span>
             </button>
             <div class="divee-input-footer">
-                <div class="divee-warning">${this.escapeHtml(config.disclaimer_text || this.t('disclaimer', 'This is an AI driven tool, results might not always be accurate'))}</div>
+                <div class="divee-warning">${this.escapeHtml(this.t('inputDeterrent', "Don't share sensitive personal info or info about others."))} ${this.escapeHtml(config.disclaimer_text || this.t('disclaimer', 'This is an AI driven tool, results might not always be accurate'))}</div>
                 <div class="divee-counter">0/200</div>
             </div>
                         <div class="divee-tag-pills divee-tag-pills-expanded"></div>
@@ -2742,9 +2837,18 @@
 
         sendQuestion() {
             const textarea = this.elements.expandedView.querySelector('.divee-input');
-            const question = textarea.value.trim();
+            const raw = textarea.value.trim();
 
-            if (!question) return;
+            if (!raw) return;
+
+            // Pre-flight redaction of high-confidence PII patterns. The user
+            // sees the redacted version in their chat bubble, which itself is
+            // the signal that we removed something — no separate toast needed
+            // for v1.
+            const { text: question, hits } = this.redactSensitivePatterns(raw);
+            if (hits.length > 0) {
+                this.trackEvent('input_redacted', { categories: hits });
+            }
 
             this.askQuestion(question, 'custom', null);
             textarea.value = '';
@@ -2896,7 +3000,7 @@
                 questionId: questionId || `q-${Date.now()}`,
                 question: question,
                 title: this.contentCache.title,
-                url: this.contentCache.url,
+                url: this.stripUrlIdentifiers(this.contentCache.url),
                 content: this.config.widgetMode === 'knowledgebase' ? '' : this.contentCache.content,
                 visitor_id: this.state.visitorId,
                 session_id: this.state.sessionId,

@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Bu məqalə haqqında məndən hər şeyi soruşun",
   "recommendation": "Tövsiyə",
   "disclaimer": "Bu süni intellekt əsaslı alətdir, nəticələr həmişə dəqiq olmaya bilər",
-  "askAi": "AI SORUŞ"
+  "askAi": "AI SORUŞ",
+  "inputDeterrent": "Həssas şəxsi məlumatları və ya başqaları haqqında məlumatları paylaşmayın.",
+  "redactionNotice": "Şəxsi məlumat kimi görünən bir şeyi sildik."
 }

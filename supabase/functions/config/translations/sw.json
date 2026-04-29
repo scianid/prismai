@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Niulize chochote kuhusu makala hii",
   "recommendation": "Pendekezo",
   "disclaimer": "Hii ni zana inayoendeshwa na AI, matokeo yanaweza yasiwe sahihi kila wakati",
-  "askAi": "ULIZA AI"
+  "askAi": "ULIZA AI",
+  "inputDeterrent": "Usishiriki maelezo nyeti ya kibinafsi au maelezo kuhusu wengine.",
+  "redactionNotice": "Tumetoa kitu kilichoonekana kama maelezo ya kibinafsi."
 }

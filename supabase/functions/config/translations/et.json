@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Küsi minult selle artikli kohta mida iganes",
   "recommendation": "Soovitus",
   "disclaimer": "See on tehisintellektipõhine tööriist, tulemused ei pruugi alati olla täpsed",
-  "askAi": "KÜSI AI-LT"
+  "askAi": "KÜSI AI-LT",
+  "inputDeterrent": "Ärge jagage tundlikku isikuteavet ega teavet teiste kohta.",
+  "redactionNotice": "Eemaldasime midagi, mis nägi välja nagu isikuandmed."
 }

@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Vprašaj me karkoli o tem članku",
   "recommendation": "Priporočilo",
   "disclaimer": "To je orodje, ki ga poganja umetna inteligenca, rezultati morda niso vedno točni",
-  "askAi": "VPRAŠAJ AI"
+  "askAi": "VPRAŠAJ AI",
+  "inputDeterrent": "Ne delite občutljivih osebnih podatkov ali podatkov o drugih.",
+  "redactionNotice": "Odstranili smo nekaj, kar je bilo videti kot osebni podatek."
 }

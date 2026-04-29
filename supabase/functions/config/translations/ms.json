@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Tanya saya apa-apa tentang artikel ini",
   "recommendation": "Cadangan",
   "disclaimer": "Ini adalah alat berkuasa AI, hasilnya mungkin tidak selalu tepat",
-  "askAi": "TANYA AI"
+  "askAi": "TANYA AI",
+  "inputDeterrent": "Jangan kongsi maklumat peribadi sensitif atau maklumat tentang orang lain.",
+  "redactionNotice": "Kami telah membuang sesuatu yang kelihatan seperti maklumat peribadi."
 }

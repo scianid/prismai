@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Kérdezz bármit erről a cikkről",
   "recommendation": "Ajánlás",
   "disclaimer": "Ez egy mesterséges intelligencia által működtetett eszköz, az eredmények nem mindig pontosak",
-  "askAi": "KÉRDEZD AI-T"
+  "askAi": "KÉRDEZD AI-T",
+  "inputDeterrent": "Ne ossz meg érzékeny személyes adatokat vagy másokról szóló információkat.",
+  "redactionNotice": "Eltávolítottunk valamit, ami személyes adatnak tűnt."
 }

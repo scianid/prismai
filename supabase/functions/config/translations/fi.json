@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Kysy minulta mitä tahansa tästä artikkelista",
   "recommendation": "Suositus",
   "disclaimer": "Tämä on tekoälypohjainen työkalu, tulokset eivät välttämättä ole aina tarkkoja",
-  "askAi": "KYSY AI:LTA"
+  "askAi": "KYSY AI:LTA",
+  "inputDeterrent": "Älä jaa arkaluonteisia henkilötietoja tai tietoja muista.",
+  "redactionNotice": "Poistimme jotain, joka näytti henkilötiedoilta."
 }

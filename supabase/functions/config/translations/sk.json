@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Opýtaj sa ma na čokoľvek k tomuto článku",
   "recommendation": "Odporúčanie",
   "disclaimer": "Toto je nástroj poháňaný umelou inteligenciou, výsledky nemusia byť vždy presné",
-  "askAi": "OPÝTAJ SA AI"
+  "askAi": "OPÝTAJ SA AI",
+  "inputDeterrent": "Nezdieľajte citlivé osobné údaje ani informácie o iných.",
+  "redactionNotice": "Odstránili sme niečo, čo vyzeralo ako osobné údaje."
 }

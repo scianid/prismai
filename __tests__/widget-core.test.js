@@ -541,4 +541,156 @@ describe('DiveeWidget Core', () => {
       expect(widget.state.isStreaming).toBe(false);
     });
   });
+
+  describe('PII redaction', () => {
+    const loadWidget = () => {
+      const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
+      eval(widgetJs);
+      return new DiveeWidget(mockConfig);
+    };
+
+    test('luhnCheck accepts a known-valid card number', () => {
+      const widget = loadWidget();
+      // Visa test number — passes Luhn
+      expect(widget.luhnCheck('4111111111111111')).toBe(true);
+      // MasterCard test number
+      expect(widget.luhnCheck('5500000000000004')).toBe(true);
+    });
+
+    test('luhnCheck rejects invalid digit runs', () => {
+      const widget = loadWidget();
+      expect(widget.luhnCheck('4111111111111112')).toBe(false);
+      expect(widget.luhnCheck('1234567890123456')).toBe(false);
+      expect(widget.luhnCheck('abc')).toBe(false);
+    });
+
+    test('redactSensitivePatterns redacts emails', () => {
+      const widget = loadWidget();
+      const { text, hits } = widget.redactSensitivePatterns('contact me at jane.doe+test@example.co.uk for more');
+      expect(text).toBe('contact me at [redacted] for more');
+      expect(hits).toContain('email');
+    });
+
+    test('redactSensitivePatterns redacts SSNs', () => {
+      const widget = loadWidget();
+      const { text, hits } = widget.redactSensitivePatterns('SSN is 123-45-6789 ok?');
+      expect(text).toBe('SSN is [redacted] ok?');
+      expect(hits).toContain('ssn');
+    });
+
+    test('redactSensitivePatterns redacts Luhn-valid credit cards', () => {
+      const widget = loadWidget();
+      const { text, hits } = widget.redactSensitivePatterns('my card 4111 1111 1111 1111 thanks');
+      expect(text).toContain('[redacted]');
+      expect(text).not.toContain('4111');
+      expect(hits).toContain('credit_card');
+    });
+
+    test('redactSensitivePatterns leaves non-Luhn 16-digit numbers alone', () => {
+      const widget = loadWidget();
+      const { text, hits } = widget.redactSensitivePatterns('order 1234567890123456 was delivered');
+      expect(text).toContain('1234567890123456');
+      expect(hits).not.toContain('credit_card');
+    });
+
+    test('redactSensitivePatterns redacts IBANs', () => {
+      const widget = loadWidget();
+      const { text, hits } = widget.redactSensitivePatterns('send to GB82WEST12345698765432 today');
+      expect(text).toBe('send to [redacted] today');
+      expect(hits).toContain('iban');
+    });
+
+    test('redactSensitivePatterns redacts precise GPS coordinates', () => {
+      const widget = loadWidget();
+      const { text, hits } = widget.redactSensitivePatterns('I am at 40.71280, -74.00601 right now');
+      expect(text).toContain('[redacted]');
+      expect(hits).toContain('coordinates');
+    });
+
+    test('redactSensitivePatterns leaves coarse coordinates alone', () => {
+      const widget = loadWidget();
+      const { text, hits } = widget.redactSensitivePatterns('NYC is around 40.7, -74.0');
+      expect(text).toContain('40.7');
+      expect(hits).not.toContain('coordinates');
+    });
+
+    test('redactSensitivePatterns redacts phone numbers', () => {
+      const widget = loadWidget();
+      const a = widget.redactSensitivePatterns('call (415) 555-0100 today');
+      expect(a.text).toContain('[redacted]');
+      expect(a.hits).toContain('phone');
+
+      const b = widget.redactSensitivePatterns('international +44 20 7946 0958 number');
+      expect(b.text).toContain('[redacted]');
+      expect(b.hits).toContain('phone');
+    });
+
+    test('redactSensitivePatterns redacts multiple categories in one string', () => {
+      const widget = loadWidget();
+      const { text, hits } = widget.redactSensitivePatterns('email me at a@b.co or call 4155550100, my SSN is 123-45-6789');
+      expect(text).not.toContain('a@b.co');
+      expect(text).not.toContain('123-45-6789');
+      expect(hits).toContain('email');
+      expect(hits).toContain('ssn');
+    });
+
+    test('redactSensitivePatterns leaves clean text untouched', () => {
+      const widget = loadWidget();
+      const input = 'What is the difference between TCP and UDP?';
+      const { text, hits } = widget.redactSensitivePatterns(input);
+      expect(text).toBe(input);
+      expect(hits).toEqual([]);
+    });
+
+    test('redactSensitivePatterns handles empty / non-string inputs', () => {
+      const widget = loadWidget();
+      expect(widget.redactSensitivePatterns('').hits).toEqual([]);
+      expect(widget.redactSensitivePatterns(null).hits).toEqual([]);
+      expect(widget.redactSensitivePatterns(undefined).hits).toEqual([]);
+    });
+  });
+
+  describe('stripUrlIdentifiers', () => {
+    const loadWidget = () => {
+      const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
+      eval(widgetJs);
+      return new DiveeWidget(mockConfig);
+    };
+
+    test('strips query string', () => {
+      const widget = loadWidget();
+      expect(widget.stripUrlIdentifiers('https://example.com/article?id=12&utm=foo'))
+        .toBe('https://example.com/article');
+    });
+
+    test('strips hash fragment', () => {
+      const widget = loadWidget();
+      expect(widget.stripUrlIdentifiers('https://example.com/article#section-2'))
+        .toBe('https://example.com/article');
+    });
+
+    test('strips both query and hash', () => {
+      const widget = loadWidget();
+      expect(widget.stripUrlIdentifiers('https://example.com/article?x=1#frag'))
+        .toBe('https://example.com/article');
+    });
+
+    test('passes through clean URLs', () => {
+      const widget = loadWidget();
+      expect(widget.stripUrlIdentifiers('https://example.com/article'))
+        .toBe('https://example.com/article');
+    });
+
+    test('handles invalid URLs without throwing', () => {
+      const widget = loadWidget();
+      expect(widget.stripUrlIdentifiers('not a url?with=params#frag'))
+        .toBe('not a url');
+    });
+
+    test('passes through nullish values', () => {
+      const widget = loadWidget();
+      expect(widget.stripUrlIdentifiers(null)).toBeNull();
+      expect(widget.stripUrlIdentifiers('')).toBe('');
+    });
+  });
 });

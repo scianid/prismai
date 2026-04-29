@@ -4,5 +4,7 @@
   "welcomeSubtitle": "ስለ ይህ ጽሑፍ ማንኛውንም ነገር ይጠይቁኝ",
   "recommendation": "ምክር",
   "disclaimer": "ይህ በAI የሚመራ መሳሪያ ነው፣ ውጤቶቹ ሁል ጊዜ ትክክል ላይሆኑ ይችላሉ",
-  "askAi": "AI ጠይቅ"
+  "askAi": "AI ጠይቅ",
+  "inputDeterrent": "ስሜታዊ ግላዊ መረጃ ወይም ስለ ሌሎች መረጃ አታጋራ።",
+  "redactionNotice": "ግላዊ መረጃ የመሰለ ነገር አስወግደናል።"
 }

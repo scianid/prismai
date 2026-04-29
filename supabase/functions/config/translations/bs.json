@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Pitajte me bilo što o ovom članku",
   "recommendation": "Preporuka",
   "disclaimer": "Ovo je alat pokretan vještačkom inteligencijom, rezultati možda neće uvijek biti tačni",
-  "askAi": "PITAJ AI"
+  "askAi": "PITAJ AI",
+  "inputDeterrent": "Nemojte dijeliti osjetljive lične podatke ili podatke o drugima.",
+  "redactionNotice": "Uklonili smo nešto što je izgledalo kao lične informacije."
 }

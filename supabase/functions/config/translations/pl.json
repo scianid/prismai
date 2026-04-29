@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Zapytaj mnie o cokolwiek związanego z tym artykułem",
   "recommendation": "Rekomendacja",
   "disclaimer": "To narzędzie oparte na sztucznej inteligencji, wyniki mogą nie zawsze być dokładne",
-  "askAi": "ZAPYTAJ AI"
+  "askAi": "ZAPYTAJ AI",
+  "inputDeterrent": "Nie udostępniaj wrażliwych danych osobowych ani informacji o innych osobach.",
+  "redactionNotice": "Usunęliśmy coś, co wyglądało na dane osobowe."
 }

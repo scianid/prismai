@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Jautā man jebko par šo rakstu",
   "recommendation": "Ieteikums",
   "disclaimer": "Šis ir mākslīgā intelekta rīks, rezultāti ne vienmēr var būt precīzi",
-  "askAi": "JAUTĀ AI"
+  "askAi": "JAUTĀ AI",
+  "inputDeterrent": "Nedalieties ar sensitīvu personisko informāciju vai informāciju par citiem.",
+  "redactionNotice": "Mēs noņēmām kaut ko, kas izskatījās pēc personiskās informācijas."
 }

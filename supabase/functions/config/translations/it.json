@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Chiedimi qualsiasi cosa su questo articolo",
   "recommendation": "Raccomandazione",
   "disclaimer": "Questo è uno strumento basato sull'IA, i risultati potrebbero non essere sempre accurati",
-  "askAi": "CHIEDI AI"
+  "askAi": "CHIEDI AI",
+  "inputDeterrent": "Non condividere informazioni personali sensibili o informazioni su altre persone.",
+  "redactionNotice": "Abbiamo rimosso qualcosa che sembrava un'informazione personale."
 }

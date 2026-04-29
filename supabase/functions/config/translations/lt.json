@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Klausk manęs bet ko apie šį straipsnį",
   "recommendation": "Rekomendacija",
   "disclaimer": "Tai dirbtinio intelekto įrankis, rezultatai gali būti ne visada tikslūs",
-  "askAi": "KLAUSK AI"
+  "askAi": "KLAUSK AI",
+  "inputDeterrent": "Nesidalykite jautria asmenine informacija ar informacija apie kitus.",
+  "redactionNotice": "Pašalinome tai, kas atrodė kaip asmeninė informacija."
 }

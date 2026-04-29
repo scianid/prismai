@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Pregunta'm qualsevol cosa sobre aquest article",
   "recommendation": "Recomanació",
   "disclaimer": "Aquesta és una eina basada en IA, els resultats poden no ser sempre precisos",
-  "askAi": "PREGUNTA A L'IA"
+  "askAi": "PREGUNTA A L'IA",
+  "inputDeterrent": "No comparteixis informació personal sensible ni informació sobre altres persones.",
+  "redactionNotice": "Hem eliminat alguna cosa que semblava informació personal."
 }

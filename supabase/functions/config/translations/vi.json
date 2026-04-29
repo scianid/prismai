@@ -4,5 +4,7 @@
   "welcomeSubtitle": "Hỏi tôi bất cứ điều gì về bài viết này",
   "recommendation": "Đề xuất",
   "disclaimer": "Đây là công cụ sử dụng AI, kết quả có thể không phải lúc nào cũng chính xác",
-  "askAi": "HỎI AI"
+  "askAi": "HỎI AI",
+  "inputDeterrent": "Đừng chia sẻ thông tin cá nhân nhạy cảm hoặc thông tin về người khác.",
+  "redactionNotice": "Chúng tôi đã xoá nội dung trông giống thông tin cá nhân."
 }
