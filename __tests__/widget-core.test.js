@@ -195,31 +195,37 @@ describe('DiveeWidget Core', () => {
     });
   });
 
-  describe('Cookie Consent', () => {
+  describe('Consent', () => {
     const loadWidget = () => {
       const widgetJs = require('fs').readFileSync('./src/widget.js', 'utf8');
       eval(widgetJs);
       return new DiveeWidget(mockConfig);
     };
 
-    test('initial consent is null when nothing stored', () => {
+    const denied = () => ({ storage: false, ads: false, source: 'banner', determined: true });
+
+    test('initial consent is undetermined when nothing stored and no CMP', () => {
       const widget = loadWidget();
-      expect(widget.state.consent).toBeNull();
+      expect(widget.state.consent.storage).toBe(false);
+      expect(widget.state.consent.ads).toBe(false);
+      expect(widget.state.consent.determined).toBe(false);
+      expect(widget.state.consent.source).toBeNull();
     });
 
     test('initial consent restored from localStorage when previously granted', () => {
       localStorage.setItem('divee_consent', 'granted');
       const widget = loadWidget();
-      expect(widget.state.consent).toBe('granted');
+      expect(widget.state.consent.storage).toBe(true);
+      expect(widget.state.consent.source).toBe('restored');
+      expect(widget.state.consent.determined).toBe(true);
     });
 
     test('previously declined consent does NOT persist across page loads', () => {
-      // Simulate a prior decline (which by contract never wrote anything)
       const widget = loadWidget();
-      expect(widget.state.consent).toBeNull();
+      expect(widget.state.consent.determined).toBe(false);
     });
 
-    test('storageSet writes to memory only when consent is null', () => {
+    test('storageSet writes to memory only when consent is undetermined', () => {
       const widget = loadWidget();
       widget.storageSet('divee_visitor_id', 'mem-id');
       expect(widget._memStore.divee_visitor_id).toBe('mem-id');
@@ -228,13 +234,13 @@ describe('DiveeWidget Core', () => {
 
     test('storageSet writes to memory only when consent is denied', () => {
       const widget = loadWidget();
-      widget.state.consent = 'denied';
+      widget.state.consent = denied();
       widget.storageSet('divee_visitor_id', 'mem-id');
       expect(widget._memStore.divee_visitor_id).toBe('mem-id');
       expect(localStorage.getItem('divee_visitor_id')).toBeNull();
     });
 
-    test('storageSet writes to localStorage when consent is granted', () => {
+    test('storageSet writes to localStorage when storage consent is granted', () => {
       localStorage.setItem('divee_consent', 'granted');
       const widget = loadWidget();
       widget.storageSet('divee_visitor_id', 'persisted-id');
@@ -250,8 +256,7 @@ describe('DiveeWidget Core', () => {
       expect(widget.storageGet('divee_visitor_id')).toBe('from-mem');
     });
 
-    test('storageGet ignores localStorage when consent not granted', () => {
-      // Use a key the widget itself never touches, so memStore stays empty
+    test('storageGet ignores localStorage when storage consent not granted', () => {
       localStorage.setItem('divee_unrelated_key', 'leaked-value');
       const widget = loadWidget();
       expect(widget.storageGet('divee_unrelated_key')).toBeNull();
@@ -266,7 +271,7 @@ describe('DiveeWidget Core', () => {
 
     test('getAnalyticsIds keeps visitor ID in memory only when consent denied', () => {
       const widget = loadWidget();
-      widget.state.consent = 'denied';
+      widget.state.consent = denied();
       widget.getAnalyticsIds();
       expect(widget.state.visitorId).toBeTruthy();
       expect(localStorage.getItem('divee_visitor_id')).toBeNull();
@@ -296,7 +301,18 @@ describe('DiveeWidget Core', () => {
     test('maybeShowConsent does not reshow when already decided', () => {
       const widget = loadWidget();
       widget.state.serverConfig = { ask_concent: true };
-      widget.state.consent = 'denied';
+      widget.state.consent = denied();
+      widget.elements.expandedView = document.createElement('div');
+      widget.elements.expandedView.innerHTML = '<div class="divee-consent" style="display:none;"></div>';
+      widget.maybeShowConsent();
+      const consentEl = widget.elements.expandedView.querySelector('.divee-consent');
+      expect(consentEl.style.display).toBe('none');
+    });
+
+    test('maybeShowConsent does not show banner when CMP is detected', () => {
+      const widget = loadWidget();
+      widget._cmpAttached = true;
+      widget.state.serverConfig = { ask_concent: true };
       widget.elements.expandedView = document.createElement('div');
       widget.elements.expandedView.innerHTML = '<div class="divee-consent" style="display:none;"></div>';
       widget.maybeShowConsent();
@@ -313,7 +329,10 @@ describe('DiveeWidget Core', () => {
 
       widget.handleConsent(true);
 
-      expect(widget.state.consent).toBe('granted');
+      expect(widget.state.consent.storage).toBe(true);
+      expect(widget.state.consent.ads).toBe(false); // banner never grants ads consent
+      expect(widget.state.consent.source).toBe('banner');
+      expect(widget.state.consent.determined).toBe(true);
       expect(localStorage.getItem('divee_consent')).toBe('granted');
       expect(localStorage.getItem('divee_visitor_id')).toBe('mem-id');
       expect(widget.elements.expandedView.querySelector('.divee-consent').style.display).toBe('none');
@@ -329,7 +348,9 @@ describe('DiveeWidget Core', () => {
 
       widget.handleConsent(false);
 
-      expect(widget.state.consent).toBe('denied');
+      expect(widget.state.consent.storage).toBe(false);
+      expect(widget.state.consent.source).toBe('banner');
+      expect(widget.state.consent.determined).toBe(true);
       expect(localStorage.getItem('divee_consent')).toBeNull();
       expect(localStorage.getItem('divee_visitor_id')).toBeNull();
       expect(widget._memStore.divee_visitor_id).toBe('mem-id');

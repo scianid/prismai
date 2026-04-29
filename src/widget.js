@@ -199,7 +199,12 @@
                 adRefreshInterval: null,       // Interval ID for auto-refreshing ads
                 articleTags: [],               // Tags fetched from /articles/tags API
                 activeTagPopup: null,          // Currently open tag popup pill element
-                consent: null,                 // null | 'granted' | 'denied' — GDPR-style localStorage consent
+                consent: {
+                    storage: false,            // gates localStorage writes (TCF Purpose 1 / Divee banner)
+                    ads: false,                // gates personalized ads (TCF Purposes 1+3+4); false ⇒ NPA mode
+                    source: null,              // 'cmp' | 'banner' | 'restored' | null
+                    determined: false          // true once CMP responded, banner used, or no-banner fallback resolved
+                },
                 videoAdPlayed: false,          // one-shot guard: the ?diveeVideoAd video plays at most once per page load
                 videoAdInstance: null          // { adsManager, adsLoader, adDisplayContainer } while the ad is alive
             };
@@ -211,12 +216,20 @@
             // CSPs). All sessionStorage access must go through the safeSession*
             // helpers — the property access itself can throw SecurityError.
             this._memSessionStore = {};
-            // If user previously granted consent, restore it so we may use localStorage freely
-            try {
-                if (localStorage.getItem('divee_consent') === 'granted') {
-                    this.state.consent = 'granted';
-                }
-            } catch (e) { /* storage blocked */ }
+            // Probe for a publisher CMP (TCF v2.2) — if present, it is authoritative
+            // for both storage and ads consent. Otherwise fall back to a previously
+            // stored Divee-banner decision in localStorage.
+            this._cmpAttached = this.probeCMP();
+
+            if (!this._cmpAttached) {
+                try {
+                    if (localStorage.getItem('divee_consent') === 'granted') {
+                        this.state.consent.storage = true;
+                        this.state.consent.source = 'restored';
+                        this.state.consent.determined = true;
+                    }
+                } catch (e) { /* storage blocked */ }
+            }
 
             // Session tracking state
             this.sessionTracking = {
@@ -282,12 +295,12 @@
             const encodedUrl = encodeURIComponent(window.location.href);
             const w = String(width || 640);
             const h = String(height || 360);
-            // TODO(consent): when this.state.consent === 'denied', force npa=1 on the output.
             // Any [placeholder] left in the final URL will make GAM reject
             // the request with 400, so we substitute every macro the tag
             // might contain (different publisher tags use different names).
             const ts = String(Date.now());
             const encodedReferrer = encodeURIComponent(document.referrer || '');
+            const npa = this.state.consent.ads ? '0' : '1';
             const subs = {
                 '[timestamp]': ts,
                 '[cb]': ts,
@@ -300,7 +313,8 @@
                 '[pageHref]': encodedUrl,
                 '[page_url]': encodedUrl,
                 '[width]': w,
-                '[height]': h
+                '[height]': h,
+                '[npa]': npa
             };
             let url = template;
             for (const key in subs) {
@@ -310,6 +324,11 @@
             // make GAM reject the request or return empty VAST.
             const leftover = url.match(/\[[a-zA-Z_][a-zA-Z0-9_-]*\]/g);
             if (leftover) this.log('videoAd', 'WARNING: unsubstituted macros in ad tag:', leftover);
+            // If the tag template doesn't carry an npa macro, force the param.
+            // GAM accepts &npa=1 as the canonical non-personalized signal.
+            if (!/[?&]npa=/i.test(url)) {
+                url += (url.indexOf('?') === -1 ? '?' : '&') + 'npa=' + npa;
+            }
             return url;
         }
 
@@ -788,13 +807,14 @@
             }).join('');
         }
 
-        // Persisted-storage wrapper: writes to localStorage only when consent is granted,
-        // otherwise keeps the value in memory for the current page session.
+        // Persisted-storage wrapper: writes to localStorage only when storage
+        // consent is granted (via CMP Purpose 1 or the Divee banner), otherwise
+        // keeps the value in memory for the current page session.
         storageGet(key) {
             if (Object.prototype.hasOwnProperty.call(this._memStore, key)) {
                 return this._memStore[key];
             }
-            if (this.state.consent === 'granted') {
+            if (this.state.consent.storage) {
                 try { return localStorage.getItem(key); } catch (e) { return null; }
             }
             return null;
@@ -802,7 +822,7 @@
 
         storageSet(key, value) {
             this._memStore[key] = value;
-            if (this.state.consent === 'granted') {
+            if (this.state.consent.storage) {
                 try { localStorage.setItem(key, value); } catch (e) { /* ignore */ }
             }
         }
@@ -827,6 +847,73 @@
         safeSessionRemove(key) {
             delete this._memSessionStore[key];
             try { sessionStorage.removeItem(key); } catch (e) { /* storage blocked */ }
+        }
+
+        // Read-only TCF v2.2 integration. We are a publisher-embedded widget,
+        // so we consume the publisher's CMP signal — we do not emit our own
+        // TC string. Returns true if a CMP was found and a listener was
+        // attached; the listener fires asynchronously when the CMP is loaded
+        // or the user completes a consent UI interaction.
+        probeCMP() {
+            if (typeof window.__tcfapi !== 'function') return false;
+            try {
+                window.__tcfapi('addEventListener', 2, (tcData, success) => {
+                    if (!success || !tcData) return;
+                    // Only act on terminal events; ignore intermediate UI states.
+                    const status = tcData.eventStatus;
+                    if (status !== 'tcloaded' && status !== 'useractioncomplete') return;
+                    const purposes = (tcData.purpose && tcData.purpose.consents) || {};
+                    this.applyCMPConsent({
+                        storage: !!purposes[1],
+                        ads: !!(purposes[1] && purposes[3] && purposes[4])
+                    });
+                });
+                this.log('cmp', 'CMP detected, listener attached');
+                return true;
+            } catch (e) {
+                this.log('cmp', 'CMP probe failed:', e);
+                return false;
+            }
+        }
+
+        applyCMPConsent({ storage, ads }) {
+            const prev = this.state.consent;
+            this.state.consent = {
+                storage: !!storage,
+                ads: !!ads,
+                source: 'cmp',
+                determined: true
+            };
+            this.log('cmp', 'Applied CMP consent:', { storage, ads });
+
+            if (storage && !prev.storage) {
+                // Storage just granted — flush in-memory store to localStorage.
+                try { localStorage.setItem('divee_consent', 'granted'); } catch (e) { /* ignore */ }
+                try {
+                    for (const k of Object.keys(this._memStore)) {
+                        localStorage.setItem(k, this._memStore[k]);
+                    }
+                } catch (e) { /* ignore */ }
+            } else if (!storage && prev.storage) {
+                // Storage just revoked mid-session — purge the consent flag and
+                // anything we've written to localStorage (tracked via _memStore).
+                try {
+                    localStorage.removeItem('divee_consent');
+                    for (const k of Object.keys(this._memStore)) {
+                        localStorage.removeItem(k);
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            // If GPT is already initialized, switch its NPA mode live. Otherwise
+            // initGoogleAds will pick up the current state when it runs.
+            if (window.googletag && window.googletag.cmd) {
+                try {
+                    googletag.cmd.push(() => {
+                        googletag.pubads().setRequestNonPersonalizedAds(this.state.consent.ads ? 0 : 1);
+                    });
+                } catch (e) { /* ignore */ }
+            }
         }
 
         getAnalyticsIds() {
@@ -1034,6 +1121,11 @@
                 });
                 googletag.pubads().setTargeting('content_type', 'article');
                 googletag.pubads().setTargeting('display_mode', self.config.displayMode || 'anchored');
+                // Default to non-personalized ads. Flip to personalized only if
+                // ads consent is positively confirmed (CMP grants TCF Purposes
+                // 1+3+4). applyCMPConsent will switch this live if the CMP
+                // signal arrives later.
+                googletag.pubads().setRequestNonPersonalizedAds(self.state.consent.ads ? 0 : 1);
                 googletag.enableServices();
                 
                 // If GPT was already loaded, mark slots for refresh
@@ -1813,7 +1905,7 @@
                     <div class="divee-chat">
                         <div class="divee-messages"></div>
           </div>
-                    <div class="divee-consent" style="display:none;" role="dialog" aria-label="Cookie consent">
+                    <div class="divee-consent" style="display:none;" role="dialog" aria-label="Privacy preference">
                         <svg class="divee-consent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M21.54 15.88A8 8 0 1 1 8.12 2.46"/>
                             <circle cx="9" cy="13" r="1"/>
@@ -1822,9 +1914,9 @@
                             <circle cx="19" cy="5" r="1"/>
                             <circle cx="14" cy="6" r="1"/>
                         </svg>
-                        <span class="divee-consent-text">We use cookies to enhance your experience. By continuing, you agree to our use of cookies.</span>
-                        <button type="button" class="divee-consent-accept">Accept</button>
-                        <button type="button" class="divee-consent-decline">Reject</button>
+                        <span class="divee-consent-text">Allow Divee to remember you across visits so your conversation history is preserved? Your choice can be changed at any time.</span>
+                        <button type="button" class="divee-consent-accept">Allow</button>
+                        <button type="button" class="divee-consent-decline">No thanks</button>
                     </div>
                     <div class="divee-input-container">${videoAdHtml}
                         <div class="divee-suggestions-input" style="display: none;">
@@ -2342,8 +2434,13 @@
 
         maybeShowConsent() {
             const cfg = this.state.serverConfig;
+            // Banner is suppressed when:
+            //   - publisher disabled it (ask_concent=false) — they own the consent surface,
+            //   - a publisher CMP is present — TCF is authoritative,
+            //   - storage consent has already been determined (banner used, or restored).
             if (!cfg || !cfg.ask_concent) return;
-            if (this.state.consent !== null) return;
+            if (this._cmpAttached) return;
+            if (this.state.consent.determined) return;
             const consentEl = this.elements.expandedView?.querySelector('.divee-consent');
             if (!consentEl) return;
             consentEl.style.display = 'flex';
@@ -2351,18 +2448,22 @@
 
         handleConsent(accepted) {
             const consentEl = this.elements.expandedView?.querySelector('.divee-consent');
+            // The Divee banner only governs first-party storage. It does NOT
+            // grant ads consent — personalized ads require granular TCF
+            // signals that a generic banner cannot provide.
+            this.state.consent = {
+                storage: !!accepted,
+                ads: false,
+                source: 'banner',
+                determined: true
+            };
             if (accepted) {
-                this.state.consent = 'granted';
                 try { localStorage.setItem('divee_consent', 'granted'); } catch (e) { /* ignore */ }
-                // Flush in-memory values collected before consent into localStorage
                 try {
                     for (const k of Object.keys(this._memStore)) {
                         localStorage.setItem(k, this._memStore[k]);
                     }
                 } catch (e) { /* ignore */ }
-            } else {
-                this.state.consent = 'denied';
-                // Intentionally do not persist anything — memory-only for this page load
             }
             if (consentEl) consentEl.style.display = 'none';
             this.trackEvent('consent_decision', { accepted });
