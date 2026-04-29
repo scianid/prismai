@@ -148,6 +148,7 @@ describe('Widget Integration Tests', () => {
 
       widget.state.visitorId = 'test-visitor';
       widget.state.sessionId = 'test-session';
+      widget.state.consent.analytics = true;
 
       widget.contentCache = {
         title: 'Test',
@@ -208,6 +209,7 @@ describe('Widget Integration Tests', () => {
       // Set up analytics IDs
       widget.state.visitorId = 'test-visitor';
       widget.state.sessionId = 'test-session';
+      widget.state.consent.analytics = true;
 
       // Set content cache
       widget.contentCache = {
@@ -331,6 +333,7 @@ describe('Widget Integration Tests', () => {
 
       widget.state.visitorId = 'test-visitor';
       widget.state.sessionId = 'test-session';
+      widget.state.consent.analytics = true;
 
       // Clear previous fetch calls from init
       fetch.mockClear();

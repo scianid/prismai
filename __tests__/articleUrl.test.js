@@ -106,6 +106,8 @@ describe('article_url in analytics event payload (widget.js trackEvent)', () => 
         });
         widget.state.visitorId = 'visitor-abc';
         widget.state.sessionId = 'session-xyz';
+        // Grant analytics consent so trackEvent emits full payloads
+        widget.state.consent.analytics = true;
     });
 
     test('event sent immediately includes article_url field (string, no ? or #)', () => {

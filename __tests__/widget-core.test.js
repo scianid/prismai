@@ -331,6 +331,7 @@ describe('DiveeWidget Core', () => {
 
       expect(widget.state.consent.storage).toBe(true);
       expect(widget.state.consent.ads).toBe(false); // banner never grants ads consent
+      expect(widget.state.consent.analytics).toBe(true); // banner grants analytics
       expect(widget.state.consent.source).toBe('banner');
       expect(widget.state.consent.determined).toBe(true);
       expect(localStorage.getItem('divee_consent')).toBe('granted');
@@ -356,6 +357,75 @@ describe('DiveeWidget Core', () => {
       expect(widget._memStore.divee_visitor_id).toBe('mem-id');
       expect(widget.elements.expandedView.querySelector('.divee-consent').style.display).toBe('none');
       expect(widget.trackEvent).toHaveBeenCalledWith('consent_decision', { accepted: false });
+    });
+
+    describe('trackEvent gating on analytics consent', () => {
+      const granted = () => ({ storage: true, ads: false, analytics: true, source: 'banner', determined: true });
+
+      test('drops non-essential events when analytics consent is missing', () => {
+        const widget = loadWidget();
+        widget.state.visitorId = 'v1';
+        widget.state.sessionId = 's1';
+        widget.sendAnalyticsBatch = jest.fn();
+        widget.recordSessionEvent = jest.fn();
+
+        widget.trackEvent('widget_visible', { foo: 'bar' });
+        widget.trackEvent('suggestions_fetched', { count: 3 });
+
+        expect(widget.sendAnalyticsBatch).not.toHaveBeenCalled();
+      });
+
+      test('sends widget_loaded in aggregated form when analytics consent is missing', () => {
+        const widget = loadWidget();
+        widget.state.visitorId = 'v1';
+        widget.state.sessionId = 's1';
+        widget.sendAnalyticsBatch = jest.fn();
+        widget.recordSessionEvent = jest.fn();
+
+        widget.trackEvent('widget_loaded', { position: 'bottom-right' });
+
+        expect(widget.sendAnalyticsBatch).toHaveBeenCalledTimes(1);
+        const [batch] = widget.sendAnalyticsBatch.mock.calls[0];
+        expect(batch).toHaveLength(1);
+        expect(batch[0].visitor_id).toBeNull();
+        expect(batch[0].session_id).toBeNull();
+        expect(batch[0].article_url).toBeNull();
+        expect(batch[0].event_type).toBe('widget_loaded');
+        expect(batch[0].event_data).toEqual({ aggregated: true });
+      });
+
+      test('consent_decision aggregated payload retains the binary outcome', () => {
+        const widget = loadWidget();
+        widget.state.visitorId = 'v1';
+        widget.state.sessionId = 's1';
+        widget.sendAnalyticsBatch = jest.fn();
+        widget.recordSessionEvent = jest.fn();
+
+        widget.trackEvent('consent_decision', { accepted: false });
+
+        expect(widget.sendAnalyticsBatch).toHaveBeenCalledTimes(1);
+        const [batch] = widget.sendAnalyticsBatch.mock.calls[0];
+        expect(batch[0].visitor_id).toBeNull();
+        expect(batch[0].event_data).toEqual({ aggregated: true, accepted: false });
+      });
+
+      test('full event payload sent when analytics consent is granted', () => {
+        const widget = loadWidget();
+        widget.state.consent = granted();
+        widget.state.visitorId = 'v1';
+        widget.state.sessionId = 's1';
+        widget.sendAnalyticsBatch = jest.fn();
+        widget.recordSessionEvent = jest.fn();
+
+        widget.trackEvent('widget_loaded', { position: 'bottom-right' });
+
+        expect(widget.sendAnalyticsBatch).toHaveBeenCalledTimes(1);
+        const [batch] = widget.sendAnalyticsBatch.mock.calls[0];
+        expect(batch[0].visitor_id).toBe('v1');
+        expect(batch[0].session_id).toBe('s1');
+        expect(batch[0].event_type).toBe('widget_loaded');
+        expect(batch[0].event_data).toEqual({ position: 'bottom-right' });
+      });
     });
 
     test('after granting consent, subsequent storageSet writes to localStorage', () => {

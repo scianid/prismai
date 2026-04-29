@@ -202,6 +202,7 @@
                 consent: {
                     storage: false,            // gates localStorage writes (TCF Purpose 1 / Divee banner)
                     ads: false,                // gates personalized ads (TCF Purposes 1+3+4); false ⇒ NPA mode
+                    analytics: false,          // gates trackEvent IDs (TCF Purposes 8∨9 / Divee banner)
                     source: null,              // 'cmp' | 'banner' | 'restored' | null
                     determined: false          // true once CMP responded, banner used, or no-banner fallback resolved
                 },
@@ -224,7 +225,9 @@
             if (!this._cmpAttached) {
                 try {
                     if (localStorage.getItem('divee_consent') === 'granted') {
+                        // Legacy banner accept implied tracking, so analytics is restored too.
                         this.state.consent.storage = true;
+                        this.state.consent.analytics = true;
                         this.state.consent.source = 'restored';
                         this.state.consent.determined = true;
                     }
@@ -248,7 +251,12 @@
             this.analyticsConfig = {
                 maxBatchSize: 10,      // Flush when queue reaches this size
                 flushInterval: 3000,   // Flush after 3 seconds of inactivity
-                immediateEvents: ['widget_loaded', 'impression', 'widget_visible'] // Events to send immediately
+                immediateEvents: ['widget_loaded', 'impression', 'widget_visible'], // Events to send immediately
+                // Events that fire even without analytics consent, in aggregated form
+                // (no visitor_id / session_id / event_data details). Operational
+                // counts proving the widget loaded + an audit trail of consent
+                // choices — both defensible as strictly necessary.
+                essentialEvents: ['widget_loaded', 'consent_decision']
             };
 
             this.elements = {};
@@ -865,7 +873,11 @@
                     const purposes = (tcData.purpose && tcData.purpose.consents) || {};
                     this.applyCMPConsent({
                         storage: !!purposes[1],
-                        ads: !!(purposes[1] && purposes[3] && purposes[4])
+                        ads: !!(purposes[1] && purposes[3] && purposes[4]),
+                        // TCF Purpose 8 (measure content) or 9 (audience stats) — either suffices
+                        // for first-party analytics. TCF doesn't have a clean "1st-party
+                        // analytics" purpose so we accept either as the closest signal.
+                        analytics: !!(purposes[8] || purposes[9])
                     });
                 });
                 this.log('cmp', 'CMP detected, listener attached');
@@ -876,15 +888,16 @@
             }
         }
 
-        applyCMPConsent({ storage, ads }) {
+        applyCMPConsent({ storage, ads, analytics }) {
             const prev = this.state.consent;
             this.state.consent = {
                 storage: !!storage,
                 ads: !!ads,
+                analytics: !!analytics,
                 source: 'cmp',
                 determined: true
             };
-            this.log('cmp', 'Applied CMP consent:', { storage, ads });
+            this.log('cmp', 'Applied CMP consent:', { storage, ads, analytics });
 
             if (storage && !prev.storage) {
                 // Storage just granted — flush in-memory store to localStorage.
@@ -2448,12 +2461,14 @@
 
         handleConsent(accepted) {
             const consentEl = this.elements.expandedView?.querySelector('.divee-consent');
-            // The Divee banner only governs first-party storage. It does NOT
+            // The Divee banner governs first-party storage and (because the
+            // copy says "remember you across visits") analytics. It does NOT
             // grant ads consent — personalized ads require granular TCF
             // signals that a generic banner cannot provide.
             this.state.consent = {
                 storage: !!accepted,
                 ads: false,
+                analytics: !!accepted,
                 source: 'banner',
                 determined: true
             };
@@ -3425,24 +3440,51 @@
         trackEvent(eventName, data = {}) {
             this.log('[Divee Analytics]', eventName, data);
 
-            // Update session tracking interaction state
+            // Update session tracking interaction state regardless of consent —
+            // it's local-only and never leaves the page.
             this.recordSessionEvent(eventName);
-            
-            // Get visitor and session IDs from state (already initialized in init())
-            const visitorId = this.state.visitorId;
-            const sessionId = this.state.sessionId;
+
             const projectId = this.config.projectId;
-            
             if (!projectId) {
                 console.warn('[Divee Analytics] No project ID available for tracking');
                 return;
             }
-            
+
+            // Without analytics consent, drop non-essential events outright.
+            // For essential events (operational counts, consent audit trail)
+            // send an aggregated payload with no identifiers.
+            if (!this.state.consent.analytics) {
+                if (!this.analyticsConfig.essentialEvents.includes(eventName)) {
+                    this.log('[Divee Analytics] Dropped (no analytics consent):', eventName);
+                    return;
+                }
+                const aggregated = {
+                    project_id: projectId,
+                    visitor_id: null,
+                    session_id: null,
+                    event_type: eventName,
+                    event_label: null,
+                    article_url: null,
+                    // For consent_decision keep just the binary outcome; otherwise
+                    // strip caller-supplied event_data entirely.
+                    event_data: eventName === 'consent_decision'
+                        ? { aggregated: true, accepted: !!data.accepted }
+                        : { aggregated: true },
+                    timestamp: Date.now()
+                };
+                this.sendAnalyticsBatch([aggregated]);
+                return;
+            }
+
+            // Get visitor and session IDs from state (already initialized in init())
+            const visitorId = this.state.visitorId;
+            const sessionId = this.state.sessionId;
+
             if (!visitorId || !sessionId) {
                 console.warn('[Divee Analytics] Missing visitor or session IDs');
                 return;
             }
-            
+
             // Prepare event payload
             const articleUrl = window.location.origin + window.location.pathname;
             const event = {
@@ -3455,7 +3497,7 @@
                 event_data: data,
                 timestamp: Date.now()
             };
-            
+
             // Check if this event should be sent immediately
             if (this.analyticsConfig.immediateEvents.includes(eventName)) {
                 this.sendAnalyticsBatch([event]);
