@@ -665,6 +665,60 @@ describe('DiveeWidget Core', () => {
       const { text } = widget.redactSensitivePatterns('email a@b.co');
       expect(text).toBe('email [redacted]');
     });
+
+    test('addSystemMessage renders a system-styled message bubble', () => {
+      const widget = loadWidget();
+      // Build minimal DOM the method expects
+      widget.elements.expandedView = document.createElement('div');
+      widget.elements.expandedView.innerHTML = '<div class="divee-chat"><div class="divee-messages"></div></div>';
+
+      widget.addSystemMessage('We removed something that looked like personal info.');
+
+      const messages = widget.elements.expandedView.querySelectorAll('.divee-message');
+      expect(messages).toHaveLength(1);
+      expect(messages[0].classList.contains('divee-message-system')).toBe(true);
+      expect(messages[0].querySelector('.divee-message-content').textContent)
+        .toBe('We removed something that looked like personal info.');
+    });
+
+    test('addSystemMessage does NOT push to state.messages (transient UI signal)', () => {
+      const widget = loadWidget();
+      widget.elements.expandedView = document.createElement('div');
+      widget.elements.expandedView.innerHTML = '<div class="divee-chat"><div class="divee-messages"></div></div>';
+      const before = widget.state.messages.length;
+
+      widget.addSystemMessage('test notice');
+
+      expect(widget.state.messages.length).toBe(before);
+    });
+
+    test('askQuestion emits a system notice when redactionHits is non-empty', async () => {
+      const widget = loadWidget();
+      widget.elements.expandedView = document.createElement('div');
+      widget.elements.expandedView.innerHTML = '<div class="divee-chat"><div class="divee-messages"></div></div>';
+      widget.state.serverConfig = { translations: { redactionNotice: 'Removed something private.' } };
+      widget.streamResponse = jest.fn().mockResolvedValue();
+      widget.trackEvent = jest.fn();
+
+      await widget.askQuestion('clean question', 'custom', null, ['email']);
+
+      const system = widget.elements.expandedView.querySelector('.divee-message-system');
+      expect(system).not.toBeNull();
+      expect(system.querySelector('.divee-message-content').textContent)
+        .toBe('Removed something private.');
+    });
+
+    test('askQuestion does NOT emit a system notice when redactionHits is empty', async () => {
+      const widget = loadWidget();
+      widget.elements.expandedView = document.createElement('div');
+      widget.elements.expandedView.innerHTML = '<div class="divee-chat"><div class="divee-messages"></div></div>';
+      widget.streamResponse = jest.fn().mockResolvedValue();
+      widget.trackEvent = jest.fn();
+
+      await widget.askQuestion('clean question', 'custom', null, []);
+
+      expect(widget.elements.expandedView.querySelector('.divee-message-system')).toBeNull();
+    });
   });
 
   describe('stripUrlIdentifiers', () => {

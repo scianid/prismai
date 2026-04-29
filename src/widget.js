@@ -2842,16 +2842,16 @@
 
             if (!raw) return;
 
-            // Pre-flight redaction of high-confidence PII patterns. The user
-            // sees the redacted version in their chat bubble, which itself is
-            // the signal that we removed something — no separate toast needed
-            // for v1.
+            // Pre-flight redaction of high-confidence PII patterns. When
+            // anything fires, askQuestion surfaces a system notice in chat
+            // (using the redactionNotice translation) right after the user's
+            // message so they understand why their text looks different.
             const { text: question, hits } = this.redactSensitivePatterns(raw);
             if (hits.length > 0) {
                 this.trackEvent('input_redacted', { categories: hits });
             }
 
-            this.askQuestion(question, 'custom', null);
+            this.askQuestion(question, 'custom', null, hits);
             textarea.value = '';
             textarea.style.height = 'auto';
 
@@ -2862,7 +2862,7 @@
             }
         }
 
-        async askQuestion(question, type, questionId) {
+        async askQuestion(question, type, questionId, redactionHits) {
             // Track question event for session tracking
             this.trackEvent(type === 'suggestion' ? 'suggestion_question_asked' : 'custom_question_asked', {
                 question_type: type
@@ -2876,6 +2876,13 @@
 
             // Add user message
             this.addMessage('user', question);
+
+            // If we redacted anything from the user's input client-side, surface
+            // a system notice between the user bubble and the AI response so
+            // they understand why their message looks different.
+            if (redactionHits && redactionHits.length > 0) {
+                this.addSystemMessage(this.t('redactionNotice', 'We removed something that looked like personal info.'));
+            }
 
             // Start streaming response
             this.state.isStreaming = true;
@@ -2945,6 +2952,31 @@
             this.state.messages.push({ id: messageId, role, content });
 
             return messageId;
+        }
+
+        // System message — used for inline notices like "we redacted PII".
+        // No avatar, no label, centered small text. Not recorded in
+        // state.messages because it's a transient UI signal, not part of
+        // the conversation transcript.
+        addSystemMessage(content) {
+            const messagesContainer = this.elements.expandedView?.querySelector('.divee-messages');
+            if (!messagesContainer) return;
+
+            const emptyState = messagesContainer.querySelector('.divee-empty-state');
+            if (emptyState) emptyState.remove();
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'divee-message divee-message-system';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'divee-message-content';
+            contentDiv.textContent = content;
+            messageDiv.appendChild(contentDiv);
+
+            messagesContainer.appendChild(messageDiv);
+
+            const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
+            if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         updateMessage(messageId, content, append = false) {
