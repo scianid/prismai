@@ -152,6 +152,9 @@ function makeDeps(overrides: Record<string, unknown> = {}): any {
       }),
     generateEmbedding: unexpected("generateEmbedding"),
     searchSimilarChunks: unexpected("searchSimilarChunks"),
+    // Default: pass-through (no Art. 9 detections). Tests that exercise the
+    // classifier override this to assert behavior.
+    classifySensitive: (text: string) => ({ text, hits: [] as string[] }),
     ...overrides,
   };
 }
@@ -380,6 +383,142 @@ Deno.test("chat: visitor_id is never written to console in plaintext", async () 
     true,
     "expected 'chat: getting/creating conversation' log to fire",
   );
+});
+
+// ── Art. 9 server-side classifier (SPECIAL_CATEGORY_DATA_PLAN.md §3b) ────
+// The classifier runs after sanitizeContent and before the question reaches
+// the AI prompt or the conversation transcript. These tests pin that
+// contract end-to-end at the chat handler level — the unit tests for
+// classifySensitive itself live in classifySensitive.test.ts.
+
+Deno.test("chat: redacted question is what flows to streamAnswer (not the original)", async () => {
+  Deno.env.set("ALLOW_FREEFORM_ASK", "true");
+  try {
+    let capturedAiMessages: { role: string; content: string }[] = [];
+    const deps = makeDeps({
+      classifySensitive: (text: string) => ({
+        text: text.replace(/HIV/gi, "[redacted]"),
+        hits: ["health"],
+      }),
+      streamAnswer: (messages: { role: string; content: string }[]) => {
+        capturedAiMessages = messages;
+        return Promise.resolve({
+          response: new Response("data: ok\n\n", {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          }),
+          model: "test-model",
+        });
+      },
+    });
+
+    const res = await chatHandler(
+      req(validBody({ question: "I have HIV, what should I do?" })),
+      deps,
+    );
+    assertEquals(res.status, 200);
+    await res.text();
+
+    const userMsg = capturedAiMessages.findLast?.((m) => m.role === "user")
+      ?? capturedAiMessages.filter((m) => m.role === "user").pop();
+    assertEquals(userMsg?.content.includes("HIV"), false);
+    assertEquals(userMsg?.content.includes("[redacted]"), true);
+  } finally {
+    Deno.env.delete("ALLOW_FREEFORM_ASK");
+  }
+});
+
+Deno.test("chat: each fired Art. 9 category emits a sensitive_data_detected event", async () => {
+  Deno.env.set("ALLOW_FREEFORM_ASK", "true");
+  try {
+    const events: { type: string; label: string | undefined }[] = [];
+    const deps = makeDeps({
+      classifySensitive: (_text: string) => ({
+        text: "[redacted] [redacted]",
+        hits: ["health", "religion", "health"], // two health hits, one religion
+      }),
+      logEvent: (
+        _ctx: unknown,
+        eventType: string,
+        eventLabel: string | undefined,
+      ) => {
+        events.push({ type: eventType, label: eventLabel });
+      },
+    });
+
+    const res = await chatHandler(req(validBody()), deps);
+    assertEquals(res.status, 200);
+    await res.text();
+
+    const sensitive = events.filter((e) => e.type === "sensitive_data_detected");
+    // Two unique categories → two events. Counts in label.
+    assertEquals(sensitive.length, 2);
+    const byLabel = new Set(sensitive.map((e) => e.label));
+    assertEquals(byLabel.has("health:2"), true);
+    assertEquals(byLabel.has("religion:1"), true);
+  } finally {
+    Deno.env.delete("ALLOW_FREEFORM_ASK");
+  }
+});
+
+Deno.test("chat: clean question fires zero sensitive_data_detected events", async () => {
+  Deno.env.set("ALLOW_FREEFORM_ASK", "true");
+  try {
+    const events: { type: string }[] = [];
+    const deps = makeDeps({
+      // Default classifier in makeDeps already returns hits: []
+      logEvent: (_ctx: unknown, eventType: string) => {
+        events.push({ type: eventType });
+      },
+    });
+
+    const res = await chatHandler(req(validBody()), deps);
+    assertEquals(res.status, 200);
+    await res.text();
+
+    assertEquals(
+      events.filter((e) => e.type === "sensitive_data_detected").length,
+      0,
+    );
+  } finally {
+    Deno.env.delete("ALLOW_FREEFORM_ASK");
+  }
+});
+
+Deno.test("chat: system prompt includes the Art. 9 privacy instruction", async () => {
+  Deno.env.set("ALLOW_FREEFORM_ASK", "true");
+  try {
+    let captured: { role: string; content: string }[] = [];
+    const deps = makeDeps({
+      streamAnswer: (messages: { role: string; content: string }[]) => {
+        captured = messages;
+        return Promise.resolve({
+          response: new Response("data: ok\n\n", {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          }),
+          model: "test-model",
+        });
+      },
+    });
+
+    const res = await chatHandler(req(validBody()), deps);
+    assertEquals(res.status, 200);
+    await res.text();
+
+    const systemMsg = captured.find((m) => m.role === "system");
+    // Pin the privacy instruction is wired in. Match a stable substring —
+    // the full sentence text can be tweaked, but the keyword "PRIVACY" plus
+    // "special-category personal information" should always be present so
+    // the model has the right cue.
+    assertEquals(systemMsg?.content.includes("PRIVACY"), true);
+    assertEquals(
+      systemMsg?.content.includes("special-category personal information"),
+      true,
+    );
+  } finally {
+    Deno.env.delete("ALLOW_FREEFORM_ASK");
+  }
 });
 
 // ── Teardown ──────────────────────────────────────────────────────────────

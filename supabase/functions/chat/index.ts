@@ -21,6 +21,7 @@ import {
 } from "../_shared/dao/articleDao.ts";
 import { insertFreeformQuestion, updateFreeformAnswer } from "../_shared/dao/freeformQaDao.ts";
 import { MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH, sanitizeContent } from "../_shared/constants.ts";
+import { classifySensitive } from "../_shared/classifySensitive.ts";
 import {
   appendMessagesToConversation,
   type ConversationMessage,
@@ -58,6 +59,7 @@ export interface ChatDeps {
   readStreamAndCollectAnswer: typeof readStreamAndCollectAnswer;
   generateEmbedding: typeof generateEmbedding;
   searchSimilarChunks: typeof searchSimilarChunks;
+  classifySensitive: typeof classifySensitive;
 }
 
 export const realChatDeps: ChatDeps = {
@@ -79,6 +81,7 @@ export const realChatDeps: ChatDeps = {
   readStreamAndCollectAnswer,
   generateEmbedding,
   searchSimilarChunks,
+  classifySensitive,
 };
 
 export async function chatHandler(
@@ -115,6 +118,19 @@ export async function chatHandler(
       content = sanitizeContent(content.substring(0, MAX_CONTENT_LENGTH));
     }
     if (question) question = sanitizeContent(question.substring(0, 200)).trim();
+
+    // Server-side Art. 9 classifier — backstop for the client-side regex
+    // layer in the widget. Runs ONLY on user-typed `question` (article title
+    // and content are publisher-supplied and out of scope for Art. 9).
+    // Replaces detected spans with `[redacted]` BEFORE the question reaches
+    // the AI prompt, the conversation transcript, or `freeform_qa`. See
+    // SPECIAL_CATEGORY_DATA_PLAN.md §3b.
+    let sensitiveHits: string[] = [];
+    if (question) {
+      const classified = deps.classifySensitive(question);
+      question = classified.text;
+      sensitiveHits = classified.hits;
+    }
 
     if (!projectId || !questionId || !question || !url) {
       console.error("chat: missing fields", {
@@ -287,6 +303,31 @@ export async function chatHandler(
       articleUrl: url,
     }, `${questionType}_question_asked`);
 
+    // Server-side Art. 9 telemetry — one event per unique category that
+    // fired, with the count carried in the label. Categories are metadata
+    // (no payload), safe to log without analytics consent.
+    //
+    // visitor_id and session_id are deliberately omitted: the event is a
+    // count metric, not a per-visitor record. Including them would create a
+    // linkage of "visitor X had a `health` disclosure on date Y", which is
+    // itself Art. 9-adjacent metadata even when the content was redacted.
+    // articleUrl is kept because analytics.scrubUrl() strips query/hash
+    // before the event leaves this function.
+    if (sensitiveHits.length > 0) {
+      const counts = new Map<string, number>();
+      for (const cat of sensitiveHits) counts.set(cat, (counts.get(cat) ?? 0) + 1);
+      for (const [category, count] of counts) {
+        deps.logEvent(
+          {
+            projectId,
+            articleUrl: url,
+          },
+          "sensitive_data_detected",
+          `${category}:${count}`,
+        );
+      }
+    }
+
     // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
     const allowFreeForm = Deno.env.get("ALLOW_FREEFORM_ASK") === "true";
 
@@ -340,6 +381,29 @@ export async function chatHandler(
       "I'm sorry, I can only answer questions related to the article." but in the same language as the question.
     `;
 
+    // PRIVACY layer — model-side defense for Art. 9 special-category data.
+    // The LLM is multilingual by default, so this complements the English-
+    // only server-side regex classifier. See SPECIAL_CATEGORY_DATA_PLAN.md §3.
+    //
+    // The instruction is deliberately narrow: only fires when the user
+    // *volunteers* personal information about themselves or another named
+    // person. Asking about a topic in general ("what is HIV?", "explain
+    // Catholicism") is allowed — that's the article's job. Reply MUST be in
+    // the user's language so the deterrent reads naturally regardless of
+    // locale.
+    const sensitiveDataInstruction = `
+      PRIVACY: If the user volunteers special-category personal information
+      about themselves or another identifiable person — health conditions,
+      religious beliefs, political opinions, racial or ethnic origin, sexual
+      orientation, trade union membership, criminal convictions, or biometric/
+      genetic data — DO NOT echo, repeat, store, or analyze that information
+      in your response. Briefly suggest they not share such personal details,
+      and continue answering the underlying question without referencing the
+      sensitive content. Asking ABOUT a topic in general (e.g. "what is X?",
+      "explain Y") is different from disclosing one's own information and
+      should be answered normally. Always reply in the user's language.
+    `;
+
     let systemPrompt: string;
     let aiMessages: Message[];
 
@@ -351,6 +415,7 @@ export async function chatHandler(
       Under any circumstance, do not mention you are an AI model.
       Only answer based on the knowledge base provided. If the knowledge base does not contain relevant information, say "I don't have information about that in my knowledge base." in the same language as the question.
       If the user's message is empty, a single character, gibberish, or otherwise does not contain a clear question, reply with one short sentence asking them to write an actual question. Do not list options, examples, or suggestions. Reply in the same language as the user.
+      ${sensitiveDataInstruction}
       `;
 
       aiMessages = [
@@ -377,6 +442,7 @@ export async function chatHandler(
       The article in <article_context> was attached by the system because the user is reading that page in their browser. The user did NOT share, paste, send, or upload it to you. Only treat as "shared by the user" content that appears inside the user's own messages in this conversation.
       Never say "the page/article you shared", "the document you provided", or anything implying the user supplied the article unless they send it in their question. Refer to it as "this article", "the article", "this page", or by its title.
       ${rejectUnrelatedQuestions ? denyUnrelatedQuestionsPrompt : ""}
+      ${sensitiveDataInstruction}
       `;
 
       // Build message array for AI
