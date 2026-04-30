@@ -308,7 +308,7 @@ export async function chatHandler(
     // (no payload), safe to log without analytics consent.
     //
     // visitor_id and session_id are deliberately omitted: the event is a
-    // count metric, not a per-visitor record. Including them would create a
+    // count metric. Including them would create a
     // linkage of "visitor X had a `health` disclosure on date Y", which is
     // itself Art. 9-adjacent metadata even when the content was redacted.
     // articleUrl is kept because analytics.scrubUrl() strips query/hash

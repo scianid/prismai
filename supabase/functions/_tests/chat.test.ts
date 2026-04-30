@@ -419,8 +419,8 @@ Deno.test("chat: redacted question is what flows to streamAnswer (not the origin
     assertEquals(res.status, 200);
     await res.text();
 
-    const userMsg = capturedAiMessages.findLast?.((m) => m.role === "user")
-      ?? capturedAiMessages.filter((m) => m.role === "user").pop();
+    const userMsg = capturedAiMessages.findLast?.((m) => m.role === "user") ??
+      capturedAiMessages.filter((m) => m.role === "user").pop();
     assertEquals(userMsg?.content.includes("HIV"), false);
     assertEquals(userMsg?.content.includes("[redacted]"), true);
   } finally {
