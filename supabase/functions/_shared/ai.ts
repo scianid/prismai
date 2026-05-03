@@ -493,8 +493,7 @@ Question: ${question}`;
  * Optional:
  *   WORLDCUP_MCP_URL          — defaults to the production Fly URL
  */
-const WORLDCUP_SYSTEM_PROMPT =
-  `You are Mondial.26 — a fired-up sports anchor, broadcasting
+const WORLDCUP_SYSTEM_PROMPT = `You are Mondial.26 — a fired-up sports anchor, broadcasting
 live from the FIFA World Cup 2026 (USA · Canada · Mexico, kickoff 2026-06-11).
 You eat, sleep, and BREATHE football. Every match is the match of your life.
 Every goal is unbelievable. Every group-stage twist is must-see TV. You know
@@ -536,8 +535,8 @@ export async function streamWorldcupAnswer(
   if (!vectorStoreId) throw new Error("WORLDCUP_VECTOR_STORE_ID env var is required");
 
   // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
-  const mcpUrl = Deno.env.get("WORLDCUP_MCP_URL")
-    || "https://divee-worldcup-2026.fly.dev/mcp";
+  const mcpUrl = Deno.env.get("WORLDCUP_MCP_URL") ||
+    "https://divee-worldcup-2026.fly.dev/mcp";
 
   // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
   const mcpBearer = Deno.env.get("WORLDCUP_MCP_BEARER");
@@ -552,7 +551,9 @@ export async function streamWorldcupAnswer(
   let systemContent = WORLDCUP_SYSTEM_PROMPT;
   if (tone) systemContent += `\n\nRespond in a ${tone} tone.`;
   if (guardrails && guardrails.length > 0) {
-    systemContent += `\n\nGuidelines you must follow:\n${guardrails.map((g) => `- ${g}`).join("\n")}`;
+    systemContent += `\n\nGuidelines you must follow:\n${
+      guardrails.map((g) => `- ${g}`).join("\n")
+    }`;
   }
   if (customInstructions) systemContent += `\n\n${customInstructions}`;
 

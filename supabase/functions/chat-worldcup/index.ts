@@ -12,10 +12,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { enforceContentLength, errorResp } from "../_shared/responses.ts";
 import { hashForLog } from "../_shared/logSafe.ts";
-import {
-  getArticleById,
-  insertArticle,
-} from "../_shared/dao/articleDao.ts";
+import { getArticleById, insertArticle } from "../_shared/dao/articleDao.ts";
 import { insertFreeformQuestion, updateFreeformAnswer } from "../_shared/dao/freeformQaDao.ts";
 import { sanitizeContent } from "../_shared/constants.ts";
 import { classifySensitive } from "../_shared/classifySensitive.ts";
