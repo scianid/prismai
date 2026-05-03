@@ -126,6 +126,9 @@ export async function generateSuggestions(
     ? { max_completion_tokens: MAX_TOKENS_SUGGESTIONS }
     : { max_tokens: MAX_TOKENS_SUGGESTIONS };
 
+  // Opt out of OpenAI's 30-day response logging (ignored by other providers)
+  const storeParam = provider === "openai" ? { store: false } : {};
+
   const prompt =
     `You are generating ${TOTAL_SUGGESTIONS} short, helpful questions a reader might want to ask about the content below.
   Make the questions the most interesting and engaging questions about the content! you want to hook the reader and make them want to ask these questions to learn more.
@@ -158,6 +161,7 @@ export async function generateSuggestions(
       response_format: { type: "json_object" },
       temperature: 0.4,
       ...tokenParam,
+      ...storeParam,
     }),
   });
 
@@ -423,6 +427,7 @@ Question: ${question}`;
         input: messages,
         tools: [{ type: "web_search_preview" }],
         stream: true,
+        store: false,
       }),
     });
     if (!rawResponse.ok || !rawResponse.body) {
@@ -462,6 +467,149 @@ Question: ${question}`;
   }
 
   return { response: aiResponse, model };
+}
+
+/**
+ * World Cup variant: invoke the Responses API directly with two built-in tools
+ * the model can call as needed:
+ *   1. `file_search` over a vector store of World Cup PDFs (1930–present).
+ *   2. `mcp` pointing at the divee-worldcup MCP server on Fly (live SportsData
+ *      coverage of the 2026 tournament — schedule, scores, standings, squads,
+ *      players, news, odds).
+ *
+ * Replaces an earlier attempt that tried to invoke an Agent Builder workflow
+ * (`wf_…`) — those IDs aren't accepted by the Responses API and require the
+ * ChatKit Sessions / browser SDK path, which doesn't fit the custom widget.
+ *
+ * Same signature as `streamAnswer` so it slots into `chatHandler` deps as a
+ * drop-in replacement. Returns SSE in Chat Completions format (via
+ * `transformResponsesApiStream`) so the widget client and
+ * `readStreamAndCollectAnswer` need no changes.
+ *
+ * Required env:
+ *   OPENAI_API_KEY            — already provisioned for the project
+ *   WORLDCUP_VECTOR_STORE_ID  — vs_… for the World Cup archive
+ *   WORLDCUP_MCP_BEARER       — bearer token configured on the Fly MCP
+ * Optional:
+ *   WORLDCUP_MCP_URL          — defaults to the production Fly URL
+ */
+const WORLDCUP_SYSTEM_PROMPT =
+  `You are Mondial.26 — a fired-up sports anchor, broadcasting
+live from the FIFA World Cup 2026 (USA · Canada · Mexico, kickoff 2026-06-11).
+You eat, sleep, and BREATHE football. Every match is the match of your life.
+Every goal is unbelievable. Every group-stage twist is must-see TV. You know
+the history cold and you live for the game.
+
+Your sources:
+1. The "divee-worldcup" MCP — your live wire to the 2026 tournament: fixtures,
+   live scores, standings, squads, players, news, odds. Use this for ANYTHING
+   happening in the 2026 cup right now. Live data sits on a ~30–60s broadcast
+   delay — own it: "fresh off the wire, give or take a minute".
+2. file_search over a deep archive of World Cup PDFs from 1930 onward — your
+   personal library for legendary moments, historic records, classic players,
+   "remember when…" deep cuts.
+
+How you talk:
+- Big energy. Punchy sentences. Earn your exclamations.
+- Vivid imagery over dry stats — "ripped down the wing", "thunderbolt of a shot",
+  "absolute clinic". You're the friend who explains every tactical detail with
+  passion but never loses the thread.
+- Cite like a pro: "live from our feed:" or "from the archives:".
+- Right tool, right job: 2026 questions → live MCP + archive. Historical → archive.
+  Eras compared? Cut between both like a producer with two cameras.
+- Tight by default (under ~600 chars).
+- Always answer in the viewer's language — your enthusiasm crosses every border.
+- Try your best not to break character. You are Mondial.26, anchor extraordinaire.
+- Sign off with a teaser, a follow-up, or a "want me to pull up the…" — keep
+  the conversation rolling like a halftime show that never ends.`;
+
+export async function streamWorldcupAnswer(
+  messages: Message[],
+  customization?: AiCustomization,
+): Promise<StreamResult> {
+  // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) throw new Error("OPENAI_API_KEY key not set");
+
+  // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
+  const vectorStoreId = Deno.env.get("WORLDCUP_VECTOR_STORE_ID");
+  if (!vectorStoreId) throw new Error("WORLDCUP_VECTOR_STORE_ID env var is required");
+
+  // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
+  const mcpUrl = Deno.env.get("WORLDCUP_MCP_URL")
+    || "https://divee-worldcup-2026.fly.dev/mcp";
+
+  // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
+  const mcpBearer = Deno.env.get("WORLDCUP_MCP_BEARER");
+  if (!mcpBearer) throw new Error("WORLDCUP_MCP_BEARER env var is required");
+
+  // Drop any system message the caller passed in (chat/index.ts still constructs
+  // one for the article/knowledgebase use case) and prepend our own. RAG chunks
+  // from `customization` are intentionally ignored — file_search replaces them.
+  const tone = customization?.tone;
+  const guardrails = customization?.guardrails;
+  const customInstructions = customization?.custom_instructions;
+  let systemContent = WORLDCUP_SYSTEM_PROMPT;
+  if (tone) systemContent += `\n\nRespond in a ${tone} tone.`;
+  if (guardrails && guardrails.length > 0) {
+    systemContent += `\n\nGuidelines you must follow:\n${guardrails.map((g) => `- ${g}`).join("\n")}`;
+  }
+  if (customInstructions) systemContent += `\n\n${customInstructions}`;
+
+  const finalMessages: Message[] = [
+    { role: "system", content: systemContent },
+    ...messages.filter((m) => m.role !== "system"),
+  ];
+
+  const model = AI_PROVIDERS.openai.model;
+  console.info("ai: streamWorldcupAnswer", { vectorStoreId, mcpUrl, model });
+
+  const rawResponse = await fetch(AI_PROVIDERS.openai.responsesUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      input: finalMessages,
+      tools: [
+        {
+          type: "file_search",
+          vector_store_ids: [vectorStoreId],
+          max_num_results: 5,
+        },
+        {
+          type: "mcp",
+          server_label: "divee-worldcup",
+          server_url: mcpUrl,
+          // OpenAI does not persist these — they're forwarded to the MCP on
+          // every tool call and must be resent with every Responses request.
+          headers: { Authorization: `Bearer ${mcpBearer}` },
+          require_approval: "never",
+        },
+      ],
+      stream: true,
+      store: false,
+    }),
+  });
+
+  if (!rawResponse.ok || !rawResponse.body) {
+    let errDetail = "";
+    try {
+      errDetail = await rawResponse.text();
+    } catch { /* ignore */ }
+    console.error("ai: worldcup request failed", {
+      status: rawResponse.status,
+      vectorStoreId,
+      mcpUrl,
+      error: errDetail.slice(0, 500),
+    });
+    throw new Error(`worldcup request failed: ${rawResponse.status}`);
+  }
+
+  const aiResponse = new Response(transformResponsesApiStream(rawResponse.body));
+  return { response: aiResponse, model: `worldcup:${model}` };
 }
 
 type DeepSeekStreamChunk = {
