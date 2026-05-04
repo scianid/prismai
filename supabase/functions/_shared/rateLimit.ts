@@ -23,7 +23,8 @@ export type RateLimitEndpoint =
   | "suggestions"
   | "config"
   | "articles"
-  | "analytics";
+  | "analytics"
+  | "games";
 
 /**
  * Limits by endpoint and key type. Visitor and IP limits apply only when
@@ -45,6 +46,9 @@ export type RateLimitEndpoint =
  *   /config      — visitor unused / 150 ip / 300 project (1 call per page load)
  *   /articles    — visitor unused / 150 ip / 300 project (discovery, not hot)
  *   /analytics   — 60 visitor / 500 ip / 1000 project (hottest, but cheap)
+ *   /games       — visitor unused / 300 ip / 2000 project (live polling; CDN
+ *                  absorbs duplicates so most edge hits come from cache misses
+ *                  and unique IPs, but a single NAT can host many viewers)
  */
 const LIMITS: Record<
   RateLimitEndpoint,
@@ -55,6 +59,7 @@ const LIMITS: Record<
   config: { visitor: 0, ip: 150, project: 300 },
   articles: { visitor: 0, ip: 150, project: 300 },
   analytics: { visitor: 60, ip: 500, project: 1000 },
+  games: { visitor: 0, ip: 300, project: 2000 },
 };
 
 /**
