@@ -260,41 +260,24 @@ async function fetchDay(
   schedule: SDGame[],
   names: Map<number, string>,
 ): Promise<{ date: string; matches: ReturnType<typeof summarizeMatch>[] }> {
-  const t0 = Date.now();
   // Prefer Day if present (date-only, matches our `date` directly), fall
   // back to DateTime/DateTimeUTC. SD Schedule entries usually have all three.
   const dayGames = schedule.filter((g) => {
     const ds = (g.Day ?? g.DateTimeUTC ?? g.DateTime ?? "").slice(0, 10);
     return ds === date;
   });
-
-  let boxScoreErrors = 0;
   const goalFetches = await Promise.all(
     dayGames.map((g) =>
       shouldFetchGoals(g)
         ? sdFetch<SDBoxScore>("stats", `BoxScore/${g.GameId}`)
           .then((box) => box.Goals ?? [])
-          .catch((err) => {
-            boxScoreErrors++;
-            console.warn(
-              `[games-worldcup] fetchDay ${date}: BoxScore ${g.GameId} failed`,
-              err && err.message ? err.message : err,
-            );
-            return [] as SDGoal[];
-          })
+          // 404 here means the box score isn't published yet; just show
+          // the match without goals rather than failing the whole batch.
+          .catch(() => [] as SDGoal[])
         : Promise.resolve([] as SDGoal[])
     ),
   );
-  const totalGoals = goalFetches.reduce((n, gs) => n + gs.length, 0);
-  const liveOrFinal = dayGames.filter(shouldFetchGoals).length;
   const matches = dayGames.map((g, i) => summarizeMatch(g, goalFetches[i], names));
-  console.log(
-    `[games-worldcup] fetchDay ${date}: ` +
-      `matchedFromSchedule=${dayGames.length} ` +
-      `boxScoresAttempted=${liveOrFinal} ` +
-      `boxScoreErrors=${boxScoreErrors} goals=${totalGoals} ` +
-      `ms=${Date.now() - t0}`,
-  );
   return { date, matches };
 }
 
@@ -339,13 +322,11 @@ export async function gamesHandler(req: Request): Promise<Response> {
     return errorResp("Method not allowed", 405);
   }
 
-  const reqStart = Date.now();
   try {
     const url = new URL(req.url);
     const projectId = url.searchParams.get("projectId") ||
       url.searchParams.get("client_id");
     if (!projectId) {
-      console.warn("[games-worldcup] missing projectId");
       return errorResp("Missing projectId", 400);
     }
 
@@ -378,16 +359,6 @@ export async function gamesHandler(req: Request): Promise<Response> {
     }
     const dateRange = Array.from({ length: dayCount }, (_, i) => addDaysIso(startDate, i));
     const endDate = dateRange[dateRange.length - 1];
-    if (previewDateParam) {
-      console.log(
-        `[games-worldcup] PREVIEW mode: realToday=${realToday} ` +
-          `previewDate=${previewDateParam}`,
-      );
-    }
-    console.log(
-      `[games-worldcup] request projectId=${projectId} ` +
-        `range=${startDate}..${endDate} (${dayCount}d) competition=${COMPETITION_ID}`,
-    );
 
     // Origin allowlist: same pattern as /config. Origin is stripped by the
     // CDN, so we fall back to Referer. Requests without either are treated
@@ -396,10 +367,6 @@ export async function gamesHandler(req: Request): Promise<Response> {
     const project = await getProjectById(projectId, supabase);
     const requestUrl = getRequestOriginUrl(req);
     if (!isAllowedOrigin(requestUrl, project.allowed_urls)) {
-      console.warn("[games-worldcup] origin not allowed", {
-        attempted: requestUrl,
-        projectId,
-      });
       return errorResp("Origin not allowed", 403);
     }
 
@@ -414,10 +381,6 @@ export async function gamesHandler(req: Request): Promise<Response> {
       req.headers.get("cf-connecting-ip"),
     );
     if (rateLimit.limited) {
-      console.warn(
-        `[games-worldcup] rate limited projectId=${projectId} ` +
-          `retryAfter=${rateLimit.retryAfterSeconds}s`,
-      );
       return tooManyRequestsResp(rateLimit.retryAfterSeconds);
     }
 
@@ -425,7 +388,6 @@ export async function gamesHandler(req: Request): Promise<Response> {
     // data source — `GamesByDate/{date}` returns 404 in v4 soccer, so we
     // pull the season schedule and filter by date client-side.
     // Memberships is fetched in parallel; both share the same season resolver.
-    const tFetch = Date.now();
     const [schedule, names] = await Promise.all([
       getSchedule().catch((err) => {
         console.error("[games-worldcup] getSchedule failed", err);
@@ -433,20 +395,10 @@ export async function gamesHandler(req: Request): Promise<Response> {
       }),
       getPlayerNames().catch(() => new Map<number, string>()),
     ]);
-    console.log(
-      `[games-worldcup] schedule games=${schedule.length} ` +
-        `players=${names.size} ms=${Date.now() - tFetch}`,
-    );
 
     // Fan out per-day filtering + BoxScore fetches in parallel.
     const days = await Promise.all(
       dateRange.map((d) => fetchDay(d, schedule, names)),
-    );
-    const totalMatches = days.reduce((n, d) => n + d.matches.length, 0);
-    console.log(
-      `[games-worldcup] response projectId=${projectId} ` +
-        `range=${startDate}..${endDate} totalMatches=${totalMatches} ` +
-        `ms=${Date.now() - reqStart}`,
     );
 
     // Cache headers: if any day in the range is "today or future", treat the
