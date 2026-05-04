@@ -330,9 +330,20 @@ export async function gamesHandler(req: Request): Promise<Response> {
       return errorResp("Missing projectId", 400);
     }
 
+    // `previewDate` is a dev-time override that pretends "today" is some other
+    // date — useful before the WC starts, so we can render real Scheduled
+    // fixtures from June onward against today's UI. When set, it wins over
+    // the widget's `date` param (the widget always passes today UTC) and
+    // also drives the past/future cache decision below.
+    const previewDateParam = url.searchParams.get("previewDate");
+    if (previewDateParam && !isValidIsoDate(previewDateParam)) {
+      return errorResp("Invalid 'previewDate' (expected YYYY-MM-DD)", 400);
+    }
+
     const dateParam = url.searchParams.get("date");
-    const today = todayIsoUtc();
-    const startDate = dateParam ?? today;
+    const realToday = todayIsoUtc();
+    const today = previewDateParam ?? realToday;
+    const startDate = previewDateParam ?? dateParam ?? realToday;
 
     if (!isValidIsoDate(startDate)) {
       return errorResp("Invalid 'date' (expected YYYY-MM-DD)", 400);
@@ -348,6 +359,12 @@ export async function gamesHandler(req: Request): Promise<Response> {
     }
     const dateRange = Array.from({ length: dayCount }, (_, i) => addDaysIso(startDate, i));
     const endDate = dateRange[dateRange.length - 1];
+    if (previewDateParam) {
+      console.log(
+        `[games-worldcup] PREVIEW mode: realToday=${realToday} ` +
+          `previewDate=${previewDateParam}`,
+      );
+    }
     console.log(
       `[games-worldcup] request projectId=${projectId} ` +
         `range=${startDate}..${endDate} (${dayCount}d) competition=${COMPETITION_ID}`,
@@ -415,10 +432,12 @@ export async function gamesHandler(req: Request): Promise<Response> {
 
     // Cache headers: if any day in the range is "today or future", treat the
     // whole response as live (15s s-maxage). Pure-past ranges are immutable
-    // and can be cached aggressively.
+    // and can be cached aggressively. Preview-mode responses bypass the CDN
+    // entirely so two devs scrubbing different dates don't poison each
+    // other's cache entry.
     const allPast = dateRange.every((d) => d < today);
-    const sMaxAge = allPast ? 3600 : 15;
-    const maxAge = allPast ? 300 : 5;
+    const sMaxAge = previewDateParam ? 0 : (allPast ? 3600 : 15);
+    const maxAge = previewDateParam ? 0 : (allPast ? 300 : 5);
 
     return new Response(
       JSON.stringify({
