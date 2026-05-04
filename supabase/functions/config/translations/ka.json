@@ -10,5 +10,9 @@
   "redactedToken": "[წაშლილია]",
   "launcherAsk": "ჰკითხე",
   "launcherWorldCup": "მსოფლიო თასი",
-  "tonight": "ამაღამ"
+  "tonight": "ამაღამ",
+  "todaysMatches": "დღევანდელი მატჩები",
+  "topPlayersToday": "დღევანდელი საუკეთესო მოთამაშეები",
+  "more": "მეტი",
+  "sponsoredInsight": "სპონსორის ინფორმაცია"
 }

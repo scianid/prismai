@@ -10,5 +10,9 @@
   "redactedToken": "[fjernet]",
   "launcherAsk": "SPØR",
   "launcherWorldCup": "VM",
-  "tonight": "I kveld"
+  "tonight": "I kveld",
+  "todaysMatches": "Dagens kamper",
+  "topPlayersToday": "Dagens beste spillere",
+  "more": "Mer",
+  "sponsoredInsight": "Sponset innhold"
 }

@@ -10,5 +10,9 @@
   "redactedToken": "[fjarlægt]",
   "launcherAsk": "SPYRJA",
   "launcherWorldCup": "HM",
-  "tonight": "Í kvöld"
+  "tonight": "Í kvöld",
+  "todaysMatches": "Leikir dagsins",
+  "topPlayersToday": "Bestu leikmenn dagsins",
+  "more": "Meira",
+  "sponsoredInsight": "Kostuð innsýn"
 }

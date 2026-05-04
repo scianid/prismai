@@ -10,5 +10,9 @@
   "redactedToken": "[eltávolítva]",
   "launcherAsk": "KÉRDEZZ",
   "launcherWorldCup": "VILÁGBAJNOKSÁG",
-  "tonight": "Ma este"
+  "tonight": "Ma este",
+  "todaysMatches": "Mai mérkőzések",
+  "topPlayersToday": "A nap legjobb játékosai",
+  "more": "Több",
+  "sponsoredInsight": "Szponzorált tartalom"
 }

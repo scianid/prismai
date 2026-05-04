@@ -10,5 +10,9 @@
   "redactedToken": "[pašalinta]",
   "launcherAsk": "KLAUSK",
   "launcherWorldCup": "PASAULIO TAURĖ",
-  "tonight": "Šįvakar"
+  "tonight": "Šįvakar",
+  "todaysMatches": "Šiandienos rungtynės",
+  "topPlayersToday": "Geriausi šiandienos žaidėjai",
+  "more": "Daugiau",
+  "sponsoredInsight": "Remiamas turinys"
 }

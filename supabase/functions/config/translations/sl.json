@@ -10,5 +10,9 @@
   "redactedToken": "[odstranjeno]",
   "launcherAsk": "VPRAŠAJ",
   "launcherWorldCup": "SVETOVNO PRVENSTVO",
-  "tonight": "Nocoj"
+  "tonight": "Nocoj",
+  "todaysMatches": "Današnje tekme",
+  "topPlayersToday": "Najboljši igralci danes",
+  "more": "Več",
+  "sponsoredInsight": "Sponzorirana vsebina"
 }

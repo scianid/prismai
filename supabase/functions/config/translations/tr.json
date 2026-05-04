@@ -10,5 +10,9 @@
   "redactedToken": "[kaldırıldı]",
   "launcherAsk": "SOR",
   "launcherWorldCup": "DÜNYA KUPASI",
-  "tonight": "Bu gece"
+  "tonight": "Bu gece",
+  "todaysMatches": "Bugünkü maçlar",
+  "topPlayersToday": "Bugünün en iyi oyuncuları",
+  "more": "Daha fazla",
+  "sponsoredInsight": "Sponsorlu içerik"
 }

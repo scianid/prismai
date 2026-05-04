@@ -10,5 +10,9 @@
   "redactedToken": "[entfernt]",
   "launcherAsk": "FRAGEN",
   "launcherWorldCup": "WELTMEISTERSCHAFT",
-  "tonight": "Heute Abend"
+  "tonight": "Heute Abend",
+  "todaysMatches": "Heutige Spiele",
+  "topPlayersToday": "Top-Spieler heute",
+  "more": "Mehr",
+  "sponsoredInsight": "Gesponserter Beitrag"
 }

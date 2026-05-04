@@ -10,5 +10,9 @@
   "redactedToken": "[ลบแล้ว]",
   "launcherAsk": "ถาม",
   "launcherWorldCup": "ฟุตบอลโลก",
-  "tonight": "คืนนี้"
+  "tonight": "คืนนี้",
+  "todaysMatches": "การแข่งขันวันนี้",
+  "topPlayersToday": "นักเตะยอดเยี่ยมวันนี้",
+  "more": "เพิ่มเติม",
+  "sponsoredInsight": "เนื้อหาผู้สนับสนุน"
 }

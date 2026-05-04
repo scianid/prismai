@@ -10,5 +10,9 @@
   "redactedToken": "[tinanggal]",
   "launcherAsk": "ITANONG",
   "launcherWorldCup": "WORLD CUP",
-  "tonight": "Ngayong gabi"
+  "tonight": "Ngayong gabi",
+  "todaysMatches": "Mga laban ngayon",
+  "topPlayersToday": "Pinakamahusay na manlalaro ngayon",
+  "more": "Higit pa",
+  "sponsoredInsight": "Sponsored Insight"
 }

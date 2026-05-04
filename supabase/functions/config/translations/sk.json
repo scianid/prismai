@@ -10,5 +10,9 @@
   "redactedToken": "[odstránené]",
   "launcherAsk": "OPÝTAJ SA",
   "launcherWorldCup": "MAJSTROVSTVÁ SVETA",
-  "tonight": "Dnes večer"
+  "tonight": "Dnes večer",
+  "todaysMatches": "Dnešné zápasy",
+  "topPlayersToday": "Najlepší hráči dnes",
+  "more": "Viac",
+  "sponsoredInsight": "Sponzorovaný obsah"
 }

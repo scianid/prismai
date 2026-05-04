@@ -10,5 +10,9 @@
   "redactedToken": "[выдалена]",
   "launcherAsk": "СПЫТАЙ",
   "launcherWorldCup": "КУБАК СВЕТУ",
-  "tonight": "Сёння ўвечары"
+  "tonight": "Сёння ўвечары",
+  "todaysMatches": "Сённяшнія матчы",
+  "topPlayersToday": "Лепшыя гульцы сёння",
+  "more": "Яшчэ",
+  "sponsoredInsight": "Спонсарскі агляд"
 }

@@ -10,5 +10,9 @@
   "redactedToken": "[oʻchirildi]",
   "launcherAsk": "SO'RA",
   "launcherWorldCup": "JAHON CHEMPIONATI",
-  "tonight": "Bugun kechqurun"
+  "tonight": "Bugun kechqurun",
+  "todaysMatches": "Bugungi o'yinlar",
+  "topPlayersToday": "Bugungi eng yaxshi o'yinchilar",
+  "more": "Ko'proq",
+  "sponsoredInsight": "Homiylik kontenti"
 }

@@ -10,5 +10,9 @@
   "redactedToken": "[ဖယ်ရှား]",
   "launcherAsk": "မေးပါ",
   "launcherWorldCup": "ကမ္ဘာ့ဖလား",
-  "tonight": "ဒီည"
+  "tonight": "ဒီည",
+  "todaysMatches": "ယနေ့ ပြိုင်ပွဲများ",
+  "topPlayersToday": "ယနေ့ ထိပ်တန်းကစားသမားများ",
+  "more": "နောက်ထပ်",
+  "sponsoredInsight": "ပံ့ပိုးပေးသောအကြောင်းအရာ"
 }

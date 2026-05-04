@@ -10,5 +10,9 @@
   "redactedToken": "[устгасан]",
   "launcherAsk": "АСУУХ",
   "launcherWorldCup": "ДЭЛХИЙН АВАРГА",
-  "tonight": "Өнөө орой"
+  "tonight": "Өнөө орой",
+  "todaysMatches": "Өнөөдрийн тоглолтууд",
+  "topPlayersToday": "Өнөөдрийн шилдэг тоглогчид",
+  "more": "Илүү",
+  "sponsoredInsight": "Ивээн тэтгэсэн агуулга"
 }

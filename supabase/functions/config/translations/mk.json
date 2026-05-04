@@ -10,5 +10,9 @@
   "redactedToken": "[отстрането]",
   "launcherAsk": "ПРАШАЈ",
   "launcherWorldCup": "СВЕТСКО ПРВЕНСТВО",
-  "tonight": "Вечерва"
+  "tonight": "Вечерва",
+  "todaysMatches": "Денешните натпревари",
+  "topPlayersToday": "Најдобрите играчи денес",
+  "more": "Повеќе",
+  "sponsoredInsight": "Спонзорирана содржина"
 }

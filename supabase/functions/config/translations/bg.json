@@ -10,5 +10,9 @@
   "redactedToken": "[премахнато]",
   "launcherAsk": "ПИТАЙ",
   "launcherWorldCup": "СВЕТОВНА КУПА",
-  "tonight": "Тази вечер"
+  "tonight": "Тази вечер",
+  "todaysMatches": "Днешните мачове",
+  "topPlayersToday": "Най-добрите играчи днес",
+  "more": "Още",
+  "sponsoredInsight": "Спонсорирано съдържание"
 }

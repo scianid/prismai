@@ -10,5 +10,9 @@
   "redactedToken": "[odstráneno]",
   "launcherAsk": "ZEPTEJ SE",
   "launcherWorldCup": "MISTROVSTVÍ SVĚTA",
-  "tonight": "Dnes večer"
+  "tonight": "Dnes večer",
+  "todaysMatches": "Dnešní zápasy",
+  "topPlayersToday": "Nejlepší hráči dnes",
+  "more": "Více",
+  "sponsoredInsight": "Sponzorovaný obsah"
 }

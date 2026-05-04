@@ -10,5 +10,9 @@
   "redactedToken": "[bainte]",
   "launcherAsk": "FIAFRAIGH",
   "launcherWorldCup": "CORN AN DOMHAIN",
-  "tonight": "Anocht"
+  "tonight": "Anocht",
+  "todaysMatches": "Cluichí an lae inniu",
+  "topPlayersToday": "Imreoirí is fearr inniu",
+  "more": "Tuilleadh",
+  "sponsoredInsight": "Léargas urraithe"
 }

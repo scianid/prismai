@@ -10,5 +10,9 @@
   "redactedToken": "[silindi]",
   "launcherAsk": "SORUŞ",
   "launcherWorldCup": "DÜNYA KUBOKU",
-  "tonight": "Bu gecə"
+  "tonight": "Bu gecə",
+  "todaysMatches": "Bugünkü oyunlar",
+  "topPlayersToday": "Bugünün ən yaxşı oyunçuları",
+  "more": "Daha çox",
+  "sponsoredInsight": "Sponsorlu məlumat"
 }

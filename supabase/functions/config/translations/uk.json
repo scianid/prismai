@@ -10,5 +10,9 @@
   "redactedToken": "[видалено]",
   "launcherAsk": "ЗАПИТАЙ",
   "launcherWorldCup": "ЧЕМПІОНАТ СВІТУ",
-  "tonight": "Сьогодні ввечері"
+  "tonight": "Сьогодні ввечері",
+  "todaysMatches": "Сьогоднішні матчі",
+  "topPlayersToday": "Найкращі гравці сьогодні",
+  "more": "Більше",
+  "sponsoredInsight": "Спонсорський матеріал"
 }

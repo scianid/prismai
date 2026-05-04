@@ -10,5 +10,9 @@
   "redactedToken": "[удалено]",
   "launcherAsk": "СПРОСИ",
   "launcherWorldCup": "ЧЕМПИОНАТ МИРА",
-  "tonight": "Сегодня вечером"
+  "tonight": "Сегодня вечером",
+  "todaysMatches": "Сегодняшние матчи",
+  "topPlayersToday": "Лучшие игроки сегодня",
+  "more": "Ещё",
+  "sponsoredInsight": "Спонсорский материал"
 }

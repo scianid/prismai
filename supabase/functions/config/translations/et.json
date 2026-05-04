@@ -10,5 +10,9 @@
   "redactedToken": "[eemaldatud]",
   "launcherAsk": "KÜSI",
   "launcherWorldCup": "MM",
-  "tonight": "Täna õhtul"
+  "tonight": "Täna õhtul",
+  "todaysMatches": "Tänased mängud",
+  "topPlayersToday": "Tänased parimad mängijad",
+  "more": "Veel",
+  "sponsoredInsight": "Sponsoreeritud sisu"
 }

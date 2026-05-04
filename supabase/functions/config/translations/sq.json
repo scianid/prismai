@@ -10,5 +10,9 @@
   "redactedToken": "[hequr]",
   "launcherAsk": "PYET",
   "launcherWorldCup": "KUPA E BOTËS",
-  "tonight": "Sonte"
+  "tonight": "Sonte",
+  "todaysMatches": "Ndeshjet e sotme",
+  "topPlayersToday": "Lojtarët më të mirë sot",
+  "more": "Më shumë",
+  "sponsoredInsight": "Përmbajtje e sponsorizuar"
 }

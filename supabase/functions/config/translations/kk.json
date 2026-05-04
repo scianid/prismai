@@ -10,5 +10,9 @@
   "redactedToken": "[жойылды]",
   "launcherAsk": "СҰРА",
   "launcherWorldCup": "ӘЛЕМ КУБОГЫ",
-  "tonight": "Бүгін кешке"
+  "tonight": "Бүгін кешке",
+  "todaysMatches": "Бүгінгі ойындар",
+  "topPlayersToday": "Бүгінгі үздік ойыншылар",
+  "more": "Тағы",
+  "sponsoredInsight": "Демеушілік мазмұн"
 }

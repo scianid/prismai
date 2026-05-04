@@ -10,5 +10,9 @@
   "redactedToken": "[verwyder]",
   "launcherAsk": "VRA",
   "launcherWorldCup": "WÊRELDBEKER",
-  "tonight": "Vanaand"
+  "tonight": "Vanaand",
+  "todaysMatches": "Vandag se wedstryde",
+  "topPlayersToday": "Top spelers vandag",
+  "more": "Meer",
+  "sponsoredInsight": "Geborgde insig"
 }

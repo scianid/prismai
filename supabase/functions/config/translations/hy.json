@@ -10,5 +10,9 @@
   "redactedToken": "[հեռացված]",
   "launcherAsk": "ՀԱՐՑՐՈՒ",
   "launcherWorldCup": "ԱՇԽԱՐՀԻ ԱՌԱՋՆՈՒԹՅՈՒՆ",
-  "tonight": "Այս երեկո"
+  "tonight": "Այս երեկո",
+  "todaysMatches": "Այսօրվա խաղերը",
+  "topPlayersToday": "Այսօրվա լավագույն խաղացողները",
+  "more": "Ավելին",
+  "sponsoredInsight": "Հովանավորվող բովանդակություն"
 }

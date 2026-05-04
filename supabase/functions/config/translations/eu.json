@@ -10,5 +10,9 @@
   "redactedToken": "[ezabatuta]",
   "launcherAsk": "GALDETU",
   "launcherWorldCup": "MUNDUKO TXAPELKETA",
-  "tonight": "Gaur gauean"
+  "tonight": "Gaur gauean",
+  "todaysMatches": "Gaurko partidak",
+  "topPlayersToday": "Gaurko jokalari onenak",
+  "more": "Gehiago",
+  "sponsoredInsight": "Babesleen edukia"
 }

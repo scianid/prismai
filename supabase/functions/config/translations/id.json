@@ -10,5 +10,9 @@
   "redactedToken": "[dihapus]",
   "launcherAsk": "TANYA",
   "launcherWorldCup": "PIALA DUNIA",
-  "tonight": "Malam ini"
+  "tonight": "Malam ini",
+  "todaysMatches": "Pertandingan hari ini",
+  "topPlayersToday": "Pemain terbaik hari ini",
+  "more": "Lainnya",
+  "sponsoredInsight": "Konten bersponsor"
 }

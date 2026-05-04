@@ -10,5 +10,9 @@
   "redactedToken": "[삭제됨]",
   "launcherAsk": "질문하기",
   "launcherWorldCup": "월드컵",
-  "tonight": "오늘 밤"
+  "tonight": "오늘 밤",
+  "todaysMatches": "오늘의 경기",
+  "topPlayersToday": "오늘의 톱 선수",
+  "more": "더 보기",
+  "sponsoredInsight": "스폰서 콘텐츠"
 }

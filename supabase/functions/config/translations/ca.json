@@ -10,5 +10,9 @@
   "redactedToken": "[eliminat]",
   "launcherAsk": "PREGUNTA",
   "launcherWorldCup": "MUNDIAL",
-  "tonight": "Aquesta nit"
+  "tonight": "Aquesta nit",
+  "todaysMatches": "Partits d'avui",
+  "topPlayersToday": "Millors jugadors d'avui",
+  "more": "Més",
+  "sponsoredInsight": "Contingut patrocinat"
 }

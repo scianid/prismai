@@ -10,5 +10,9 @@
   "redactedToken": "[poistettu]",
   "launcherAsk": "KYSY",
   "launcherWorldCup": "MM-KISAT",
-  "tonight": "Tänä iltana"
+  "tonight": "Tänä iltana",
+  "todaysMatches": "Tämän päivän ottelut",
+  "topPlayersToday": "Päivän parhaat pelaajat",
+  "more": "Lisää",
+  "sponsoredInsight": "Sponsoroitu sisältö"
 }
