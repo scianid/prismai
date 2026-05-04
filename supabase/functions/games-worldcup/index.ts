@@ -26,9 +26,13 @@ interface SDGame {
   DateTimeUTC?: string;
   HomeTeamId: number;
   HomeTeamName: string;
+  HomeTeamKey?: string;
+  HomeTeamCountryCode?: string;
   HomeTeamScore: number | null;
   AwayTeamId: number;
   AwayTeamName: string;
+  AwayTeamKey?: string;
+  AwayTeamCountryCode?: string;
   AwayTeamScore: number | null;
   Group?: string | null;
   Round?: string | null;
@@ -302,8 +306,18 @@ function summarizeMatch(g: SDGame, goals: SDGoal[], names: Map<number, string>) 
     minute: g.Clock ?? g.Minute ?? null,
     group: g.Group ?? null,
     round: g.Round ?? null,
-    home: { team_id: g.HomeTeamId, name: g.HomeTeamName, score: g.HomeTeamScore },
-    away: { team_id: g.AwayTeamId, name: g.AwayTeamName, score: g.AwayTeamScore },
+    home: {
+      team_id: g.HomeTeamId,
+      name: g.HomeTeamName,
+      code: g.HomeTeamCountryCode ?? g.HomeTeamKey ?? null,
+      score: g.HomeTeamScore,
+    },
+    away: {
+      team_id: g.AwayTeamId,
+      name: g.AwayTeamName,
+      code: g.AwayTeamCountryCode ?? g.AwayTeamKey ?? null,
+      score: g.AwayTeamScore,
+    },
     goals: goals
       .slice()
       .sort((a, b) => (a.GameMinute ?? 0) - (b.GameMinute ?? 0))
