@@ -65,16 +65,37 @@ function apiKey(): string {
   return k;
 }
 
+class NotFoundError extends Error {}
+
 async function sdFetch<T>(feed: string, op: string): Promise<T> {
   const url = `${SPORTSDATA_BASE}/${feed}/json/${op}`;
   const res = await fetch(url, {
     headers: { "Ocp-Apim-Subscription-Key": apiKey() },
   });
+  if (res.status === 404) {
+    // SportsData returns 404 for valid endpoints with no data for the given
+    // date / id (e.g. days with zero scheduled fixtures). We surface this as
+    // a typed error so the caller can treat it as "empty" instead of failing.
+    throw new NotFoundError(`SportsData.io ${feed}/${op} 404`);
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`SportsData.io ${feed}/${op} ${res.status}: ${body.slice(0, 200)}`);
   }
   return res.json() as Promise<T>;
+}
+
+// SportsData.io v4 Soccer GamesByDate expects YYYY-MMM-DD (e.g. 2026-MAY-05),
+// not the ISO YYYY-MM-DD that other v4 endpoints accept. The mcp-sportsdata
+// helper documents this ambiguity but currently passes ISO through; the WC
+// season hadn't started when that was written so it was untested in practice.
+const SD_MONTHS = [
+  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+];
+function toSdDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${y}-${SD_MONTHS[parseInt(m, 10) - 1]}-${d}`;
 }
 
 // Player name resolution. Memberships rarely change mid-tournament, so we
@@ -198,8 +219,15 @@ export async function gamesHandler(req: Request): Promise<Response> {
       return tooManyRequestsResp(rateLimit.retryAfterSeconds);
     }
 
-    const games = await sdFetch<SDGame[]>("scores", `GamesByDate/${date}`);
-    const wcGames = (games ?? []).filter(
+    let games: SDGame[] = [];
+    try {
+      games = await sdFetch<SDGame[]>("scores", `GamesByDate/${toSdDate(date)}`);
+    } catch (e) {
+      // SD returns 404 on dates with no fixtures rather than an empty array.
+      // Treat that as "no matches" so the widget can render a clean state.
+      if (!(e instanceof NotFoundError)) throw e;
+    }
+    const wcGames = games.filter(
       (g) => !g.CompetitionId || g.CompetitionId === COMPETITION_ID,
     );
 
@@ -210,6 +238,8 @@ export async function gamesHandler(req: Request): Promise<Response> {
         shouldFetchGoals(g)
           ? sdFetch<SDBoxScore>("stats", `BoxScore/${g.GameId}`)
             .then((box) => box.Goals ?? [])
+            // 404 here means the box score isn't published yet; just show
+            // the match without goals rather than failing the whole batch.
             .catch(() => [] as SDGoal[])
           : Promise.resolve([] as SDGoal[])
       ),
