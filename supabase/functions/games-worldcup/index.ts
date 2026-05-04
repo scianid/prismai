@@ -52,9 +52,7 @@ interface SDBoxScore {
 interface SDMember {
   PlayerId: number;
   TeamId: number;
-  FirstName?: string;
-  LastName?: string;
-  CommonName?: string;
+  PlayerName?: string;
   Active?: boolean;
 }
 
@@ -163,9 +161,13 @@ async function getSchedule(): Promise<SDGame[]> {
   if (scheduleInflight) return scheduleInflight;
   scheduleInflight = (async () => {
     const season = await getSeason();
+    // `Schedule/{comp}/{season}` returns 7 *rounds* with games nested inside
+    // `round.Games`. `SchedulesBasic/{comp}/{season}` is the flat-games
+    // endpoint we actually want — returns all 104 WC matches as a single
+    // array. Probed against the live API to confirm.
     const games = await sdFetch<SDGame[]>(
       "scores",
-      `Schedule/${COMPETITION_ID}/${season}`,
+      `SchedulesBasic/${COMPETITION_ID}/${season}`,
     );
     scheduleCache = games ?? [];
     scheduleFetchedAt = Date.now();
@@ -207,7 +209,7 @@ async function getPlayerNames(): Promise<Map<number, string>> {
     });
     const map = new Map<number, string>();
     for (const m of members ?? []) {
-      const name = m.CommonName ?? `${m.FirstName ?? ""} ${m.LastName ?? ""}`.trim();
+      const name = (m.PlayerName ?? "").trim();
       if (name) map.set(m.PlayerId, name);
     }
     playersByIdCache = map;
