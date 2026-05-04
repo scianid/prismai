@@ -58,6 +58,17 @@ interface SDMember {
   Active?: boolean;
 }
 
+interface SDSeason {
+  Year?: number | string;
+  Season?: number | string;
+  Description?: string;
+}
+
+interface SDCompetitionDetails {
+  Seasons?: SDSeason[];
+  Competition?: { Seasons?: SDSeason[] };
+}
+
 function apiKey(): string {
   // @ts-ignore: Deno globals are unavailable to the editor TS server
   const k = Deno.env.get("SPORTSDATA_API_KEY");
@@ -65,19 +76,11 @@ function apiKey(): string {
   return k;
 }
 
-class NotFoundError extends Error {}
-
 async function sdFetch<T>(feed: string, op: string): Promise<T> {
   const url = `${SPORTSDATA_BASE}/${feed}/json/${op}`;
   const res = await fetch(url, {
     headers: { "Ocp-Apim-Subscription-Key": apiKey() },
   });
-  if (res.status === 404) {
-    // SportsData returns 404 for valid endpoints with no data for the given
-    // date / id (e.g. days with zero scheduled fixtures). We surface this as
-    // a typed error so the caller can treat it as "empty" instead of failing.
-    throw new NotFoundError(`SportsData.io ${feed}/${op} 404`);
-  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`SportsData.io ${feed}/${op} ${res.status}: ${body.slice(0, 200)}`);
@@ -85,32 +88,99 @@ async function sdFetch<T>(feed: string, op: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// SportsData.io v4 Soccer GamesByDate expects YYYY-MMM-DD (e.g. 2026-MAY-05),
-// not the ISO YYYY-MM-DD that other v4 endpoints accept. The mcp-sportsdata
-// helper documents this ambiguity but currently passes ISO through; the WC
-// season hadn't started when that was written so it was untested in practice.
-const SD_MONTHS = [
-  "JAN",
-  "FEB",
-  "MAR",
-  "APR",
-  "MAY",
-  "JUN",
-  "JUL",
-  "AUG",
-  "SEP",
-  "OCT",
-  "NOV",
-  "DEC",
-];
-function toSdDate(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  return `${y}-${SD_MONTHS[parseInt(m, 10) - 1]}-${d}`;
+// SportsData v4 Soccer endpoints are mostly per-competition+season (Schedule,
+// Standings, Memberships). The bare `GamesByDate/{date}` path returns 404 in
+// practice — the MCP shipped before live data flowed and that endpoint never
+// got exercised. So instead we pull the full Schedule once per request,
+// filter client-side by date, and cache the upstream response in-isolate.
+
+const SEASON_OVERRIDE = // @ts-ignore: Deno globals are unavailable to the editor TS server
+  Deno.env.get("SPORTSDATA_SEASON_OVERRIDE") || "";
+const FALLBACK_SEASON = SEASON_OVERRIDE || "2026";
+
+const SEASON_TTL_MS = 24 * 60 * 60 * 1000;
+let cachedSeason: string | null = null;
+let seasonFetchedAt = 0;
+let seasonInflight: Promise<string> | null = null;
+
+// Resolves the SportsData season identifier for the active CompetitionId.
+// Mirrors the MCP's `getSeason()` logic: prefer SPORTSDATA_SEASON_OVERRIDE,
+// then CompetitionDetails, then "2026" as a last resort.
+async function getSeason(): Promise<string> {
+  if (SEASON_OVERRIDE) return SEASON_OVERRIDE;
+  const fresh = cachedSeason && Date.now() - seasonFetchedAt < SEASON_TTL_MS;
+  if (fresh) return cachedSeason!;
+  if (seasonInflight) return seasonInflight;
+  seasonInflight = (async () => {
+    try {
+      const details = await sdFetch<SDCompetitionDetails>(
+        "scores",
+        `CompetitionDetails/${COMPETITION_ID}`,
+      );
+      const seasons = details.Seasons ?? details.Competition?.Seasons ?? [];
+      // Prefer a season tagged 2026 (WC year). For other competitions fall
+      // back to the most recent listed season — SD usually orders these
+      // descending, but we don't trust the order and pick the max instead.
+      const target = seasons.find((s) =>
+        String(s.Year) === "2026" || String(s.Season) === "2026" ||
+        /2026/.test(String(s.Description ?? ""))
+      ) ??
+        seasons.reduce<SDSeason | undefined>((best, s) => {
+          const cur = parseInt(String(s.Season ?? s.Year ?? 0), 10);
+          const top = best ? parseInt(String(best.Season ?? best.Year ?? 0), 10) : 0;
+          return cur > top ? s : best;
+        }, undefined);
+      const resolved = target?.Season != null ? String(target.Season) : FALLBACK_SEASON;
+      cachedSeason = resolved;
+      seasonFetchedAt = Date.now();
+      return resolved;
+    } catch (e) {
+      console.warn(
+        `[games-worldcup] getSeason failed; falling back to ${FALLBACK_SEASON}`,
+        e && (e as Error).message,
+      );
+      return FALLBACK_SEASON;
+    }
+  })();
+  try {
+    return await seasonInflight;
+  } finally {
+    seasonInflight = null;
+  }
 }
 
-// Player name resolution. Memberships rarely change mid-tournament, so we
-// keep the lookup table in module scope; it survives across requests on a
-// warm isolate. A 24h soft TTL forces a refresh after squad updates.
+// Schedule cache. The full season schedule is large but stable — it changes
+// at most a few times per day (postponements, time updates). 5-minute TTL is
+// the right balance between freshness and not hammering the upstream.
+const SCHEDULE_TTL_MS = 5 * 60 * 1000;
+let scheduleCache: SDGame[] | null = null;
+let scheduleFetchedAt = 0;
+let scheduleInflight: Promise<SDGame[]> | null = null;
+
+async function getSchedule(): Promise<SDGame[]> {
+  const fresh = scheduleCache && Date.now() - scheduleFetchedAt < SCHEDULE_TTL_MS;
+  if (fresh) return scheduleCache!;
+  if (scheduleInflight) return scheduleInflight;
+  scheduleInflight = (async () => {
+    const season = await getSeason();
+    const games = await sdFetch<SDGame[]>(
+      "scores",
+      `Schedule/${COMPETITION_ID}/${season}`,
+    );
+    scheduleCache = games ?? [];
+    scheduleFetchedAt = Date.now();
+    return scheduleCache;
+  })();
+  try {
+    return await scheduleInflight;
+  } finally {
+    scheduleInflight = null;
+  }
+}
+
+// Player name resolution. Memberships in v4 soccer is per-competition+season;
+// the bare `Memberships` path returns an empty array. 24h TTL handles squad
+// changes between matchdays.
 const MEMBERSHIPS_TTL_MS = 24 * 60 * 60 * 1000;
 let playersByIdCache: Map<number, string> | null = null;
 let playersFetchedAt = 0;
@@ -121,7 +191,17 @@ async function getPlayerNames(): Promise<Map<number, string>> {
   if (fresh) return playersByIdCache!;
   if (playersInflight) return playersInflight;
   playersInflight = (async () => {
-    const members = await sdFetch<SDMember[]>("scores", "Memberships");
+    const season = await getSeason();
+    const members = await sdFetch<SDMember[]>(
+      "scores",
+      `Memberships/${COMPETITION_ID}/${season}`,
+    ).catch((err) => {
+      console.warn(
+        `[games-worldcup] Memberships failed`,
+        err && err.message ? err.message : err,
+      );
+      return [] as SDMember[];
+    });
     const map = new Map<number, string>();
     for (const m of members ?? []) {
       const name = m.CommonName ?? `${m.FirstName ?? ""} ${m.LastName ?? ""}`.trim();
@@ -164,32 +244,24 @@ function shouldFetchGoals(g: SDGame): boolean {
 // Fetches a single day from SportsData and shapes it into the response slice
 // the widget consumes. Returns `{ date, matches: [] }` on a 404 so a missing
 // day inside a multi-day range doesn't fail the whole request.
+// Filters the cached schedule down to a single day, then fans out BoxScore
+// fetches for any in-progress / final matches to attach goals.
 async function fetchDay(
   date: string,
+  schedule: SDGame[],
   names: Map<number, string>,
 ): Promise<{ date: string; matches: ReturnType<typeof summarizeMatch>[] }> {
   const t0 = Date.now();
-  let games: SDGame[] = [];
-  let notFound = false;
-  try {
-    games = await sdFetch<SDGame[]>("scores", `GamesByDate/${toSdDate(date)}`);
-  } catch (e) {
-    if (e instanceof NotFoundError) {
-      notFound = true;
-    } else {
-      console.error(`[games-worldcup] fetchDay ${date}: GamesByDate error`, e);
-      throw e;
-    }
-  }
-  const wcGames = games.filter(
-    (g) => !g.CompetitionId || g.CompetitionId === COMPETITION_ID,
-  );
-  const skippedOtherCompetitions = games.length - wcGames.length;
-  const liveOrFinal = wcGames.filter(shouldFetchGoals);
+  // Prefer Day if present (date-only, matches our `date` directly), fall
+  // back to DateTime/DateTimeUTC. SD Schedule entries usually have all three.
+  const dayGames = schedule.filter((g) => {
+    const ds = (g.Day ?? g.DateTimeUTC ?? g.DateTime ?? "").slice(0, 10);
+    return ds === date;
+  });
 
   let boxScoreErrors = 0;
   const goalFetches = await Promise.all(
-    wcGames.map((g) =>
+    dayGames.map((g) =>
       shouldFetchGoals(g)
         ? sdFetch<SDBoxScore>("stats", `BoxScore/${g.GameId}`)
           .then((box) => box.Goals ?? [])
@@ -205,14 +277,14 @@ async function fetchDay(
     ),
   );
   const totalGoals = goalFetches.reduce((n, gs) => n + gs.length, 0);
-  const matches = wcGames.map((g, i) => summarizeMatch(g, goalFetches[i], names));
+  const liveOrFinal = dayGames.filter(shouldFetchGoals).length;
+  const matches = dayGames.map((g, i) => summarizeMatch(g, goalFetches[i], names));
   console.log(
     `[games-worldcup] fetchDay ${date}: ` +
-      `raw=${games.length} wc=${wcGames.length} ` +
-      `skipped=${skippedOtherCompetitions} ` +
-      `boxScoresAttempted=${liveOrFinal.length} ` +
+      `matchedFromSchedule=${dayGames.length} ` +
+      `boxScoresAttempted=${liveOrFinal} ` +
       `boxScoreErrors=${boxScoreErrors} goals=${totalGoals} ` +
-      `notFound=${notFound} ms=${Date.now() - t0}`,
+      `ms=${Date.now() - t0}`,
   );
   return { date, matches };
 }
@@ -313,18 +385,27 @@ export async function gamesHandler(req: Request): Promise<Response> {
       return tooManyRequestsResp(rateLimit.retryAfterSeconds);
     }
 
-    // Memberships covers the whole tournament squad, so one lookup feeds
-    // every day's BoxScore goal-name resolution. Pre-warm before fanning out
-    // per-day fetches so the player map is ready by the time goals arrive.
-    const tNames = Date.now();
-    const names = await getPlayerNames().catch(() => new Map<number, string>());
+    // One Schedule call per request (cached for 5 minutes in-isolate) is the
+    // data source — `GamesByDate/{date}` returns 404 in v4 soccer, so we
+    // pull the season schedule and filter by date client-side.
+    // Memberships is fetched in parallel; both share the same season resolver.
+    const tFetch = Date.now();
+    const [schedule, names] = await Promise.all([
+      getSchedule().catch((err) => {
+        console.error("[games-worldcup] getSchedule failed", err);
+        return [] as SDGame[];
+      }),
+      getPlayerNames().catch(() => new Map<number, string>()),
+    ]);
     console.log(
-      `[games-worldcup] memberships players=${names.size} ms=${Date.now() - tNames}`,
+      `[games-worldcup] schedule games=${schedule.length} ` +
+        `players=${names.size} ms=${Date.now() - tFetch}`,
     );
 
-    // Fetch all requested days in parallel. Each day is independent — a 404
-    // on one date doesn't affect the others.
-    const days = await Promise.all(dateRange.map((d) => fetchDay(d, names)));
+    // Fan out per-day filtering + BoxScore fetches in parallel.
+    const days = await Promise.all(
+      dateRange.map((d) => fetchDay(d, schedule, names)),
+    );
     const totalMatches = days.reduce((n, d) => n + d.matches.length, 0);
     console.log(
       `[games-worldcup] response projectId=${projectId} ` +
