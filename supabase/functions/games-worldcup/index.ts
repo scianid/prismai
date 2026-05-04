@@ -206,12 +206,12 @@ export async function gamesHandler(req: Request): Promise<Response> {
     // Fan out BoxScore fetches for matches that have any goals to report.
     // Cap concurrency by relying on the natural day cap (~8 games max).
     const goalFetches = await Promise.all(
-      wcGames.map(async (g) =>
+      wcGames.map((g) =>
         shouldFetchGoals(g)
           ? sdFetch<SDBoxScore>("stats", `BoxScore/${g.GameId}`)
             .then((box) => box.Goals ?? [])
             .catch(() => [] as SDGoal[])
-          : ([] as SDGoal[])
+          : Promise.resolve([] as SDGoal[])
       ),
     );
 
