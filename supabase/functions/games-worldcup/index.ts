@@ -191,13 +191,16 @@ async function getPlayerNames(): Promise<Map<number, string>> {
   if (fresh) return playersByIdCache!;
   if (playersInflight) return playersInflight;
   playersInflight = (async () => {
-    const season = await getSeason();
+    // `ActiveMemberships/{competition}` is the working v4 soccer path —
+    // bare `Memberships` returns 404, and the per-season variants don't
+    // exist either. Probed empirically against the WC competition (id=21)
+    // and confirmed to return the full squad pool (~1300 players).
     const members = await sdFetch<SDMember[]>(
       "scores",
-      `Memberships/${COMPETITION_ID}/${season}`,
+      `ActiveMemberships/${COMPETITION_ID}`,
     ).catch((err) => {
       console.warn(
-        `[games-worldcup] Memberships failed`,
+        `[games-worldcup] ActiveMemberships failed`,
         err && err.message ? err.message : err,
       );
       return [] as SDMember[];
