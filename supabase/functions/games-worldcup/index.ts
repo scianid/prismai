@@ -146,12 +146,48 @@ function isValidIsoDate(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
 }
 
+function addDaysIso(iso: string, n: number): string {
+  return new Date(new Date(iso + "T00:00:00Z").getTime() + n * 86_400_000)
+    .toISOString().slice(0, 10);
+}
+
+const MAX_RANGE_DAYS = 7;
+
 // Goals are only worth fetching for matches that have actually started. A
 // Scheduled match has nothing to report; an InProgress match is what callers
 // are polling for; a Final match shows the full goal list.
 function shouldFetchGoals(g: SDGame): boolean {
   return g.Status === "InProgress" || g.Status === "Final" ||
     g.Status === "F/SO" || g.Status === "F/OT";
+}
+
+// Fetches a single day from SportsData and shapes it into the response slice
+// the widget consumes. Returns `{ date, matches: [] }` on a 404 so a missing
+// day inside a multi-day range doesn't fail the whole request.
+async function fetchDay(
+  date: string,
+  names: Map<number, string>,
+): Promise<{ date: string; matches: ReturnType<typeof summarizeMatch>[] }> {
+  let games: SDGame[] = [];
+  try {
+    games = await sdFetch<SDGame[]>("scores", `GamesByDate/${toSdDate(date)}`);
+  } catch (e) {
+    if (!(e instanceof NotFoundError)) throw e;
+  }
+  const wcGames = games.filter(
+    (g) => !g.CompetitionId || g.CompetitionId === COMPETITION_ID,
+  );
+  const goalFetches = await Promise.all(
+    wcGames.map((g) =>
+      shouldFetchGoals(g)
+        ? sdFetch<SDBoxScore>("stats", `BoxScore/${g.GameId}`)
+          .then((box) => box.Goals ?? [])
+          .catch(() => [] as SDGoal[])
+        : Promise.resolve([] as SDGoal[])
+    ),
+  );
+  const matches = wcGames.map((g, i) => summarizeMatch(g, goalFetches[i], names));
+  return { date, matches };
 }
 
 function summarizeMatch(g: SDGame, goals: SDGoal[], names: Map<number, string>) {
@@ -195,11 +231,22 @@ export async function gamesHandler(req: Request): Promise<Response> {
 
     const dateParam = url.searchParams.get("date");
     const today = todayIsoUtc();
-    const date = dateParam ?? today;
+    const startDate = dateParam ?? today;
 
-    if (!isValidIsoDate(date)) {
+    if (!isValidIsoDate(startDate)) {
       return errorResp("Invalid 'date' (expected YYYY-MM-DD)", 400);
     }
+
+    const daysParam = url.searchParams.get("days");
+    const dayCount = daysParam ? parseInt(daysParam, 10) : 1;
+    if (!Number.isFinite(dayCount) || dayCount < 1 || dayCount > MAX_RANGE_DAYS) {
+      return errorResp(
+        `Invalid 'days' (1..${MAX_RANGE_DAYS})`,
+        400,
+      );
+    }
+    const dateRange = Array.from({ length: dayCount }, (_, i) => addDaysIso(startDate, i));
+    const endDate = dateRange[dateRange.length - 1];
 
     // Origin allowlist: same pattern as /config. Origin is stripped by the
     // CDN, so we fall back to Referer. Requests without either are treated
@@ -229,52 +276,29 @@ export async function gamesHandler(req: Request): Promise<Response> {
       return tooManyRequestsResp(rateLimit.retryAfterSeconds);
     }
 
-    let games: SDGame[] = [];
-    try {
-      games = await sdFetch<SDGame[]>("scores", `GamesByDate/${toSdDate(date)}`);
-    } catch (e) {
-      // SD returns 404 on dates with no fixtures rather than an empty array.
-      // Treat that as "no matches" so the widget can render a clean state.
-      if (!(e instanceof NotFoundError)) throw e;
-    }
-    const wcGames = games.filter(
-      (g) => !g.CompetitionId || g.CompetitionId === COMPETITION_ID,
-    );
+    // Memberships covers the whole tournament squad, so one lookup feeds
+    // every day's BoxScore goal-name resolution. Pre-warm before fanning out
+    // per-day fetches so the player map is ready by the time goals arrive.
+    const names = await getPlayerNames().catch(() => new Map<number, string>());
 
-    // Fan out BoxScore fetches for matches that have any goals to report.
-    // Cap concurrency by relying on the natural day cap (~8 games max).
-    const goalFetches = await Promise.all(
-      wcGames.map((g) =>
-        shouldFetchGoals(g)
-          ? sdFetch<SDBoxScore>("stats", `BoxScore/${g.GameId}`)
-            .then((box) => box.Goals ?? [])
-            // 404 here means the box score isn't published yet; just show
-            // the match without goals rather than failing the whole batch.
-            .catch(() => [] as SDGoal[])
-          : Promise.resolve([] as SDGoal[])
-      ),
-    );
+    // Fetch all requested days in parallel. Each day is independent — a 404
+    // on one date doesn't affect the others.
+    const days = await Promise.all(dateRange.map((d) => fetchDay(d, names)));
 
-    const names = wcGames.some((_, i) => goalFetches[i].length > 0)
-      ? await getPlayerNames().catch(() => new Map<number, string>())
-      : new Map<number, string>();
-
-    const matches = wcGames.map((g, i) => summarizeMatch(g, goalFetches[i], names));
-
-    // Live data: very short CDN window so polling clients see fresh scores
-    // but a burst of clients hitting at the same second collapses to one
-    // upstream call. Past dates are immutable — cache aggressively.
-    const isPast = date < today;
-    const sMaxAge = isPast ? 3600 : 15;
-    const maxAge = isPast ? 300 : 5;
+    // Cache headers: if any day in the range is "today or future", treat the
+    // whole response as live (15s s-maxage). Pure-past ranges are immutable
+    // and can be cached aggressively.
+    const allPast = dateRange.every((d) => d < today);
+    const sMaxAge = allPast ? 3600 : 15;
+    const maxAge = allPast ? 300 : 5;
 
     return new Response(
       JSON.stringify({
-        date,
+        start_date: startDate,
+        end_date: endDate,
         competition_id: COMPETITION_ID,
         fetched_at: new Date().toISOString(),
-        matches,
-        count: matches.length,
+        days,
       }),
       {
         status: 200,
