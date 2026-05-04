@@ -7,5 +7,8 @@
   "askAi": "ASK AI",
   "inputDeterrent": "Don't share sensitive personal info or info about others.",
   "redactionNotice": "We removed something that looked like personal info.",
-  "redactedToken": "[redacted]"
+  "redactedToken": "[redacted]",
+  "launcherAsk": "ASK",
+  "launcherWorldCup": "WORLD CUP",
+  "tonight": "Tonight"
 }

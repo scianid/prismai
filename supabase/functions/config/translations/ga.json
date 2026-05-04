@@ -7,5 +7,8 @@
   "askAi": "FIAFRAIGH DEN AI",
   "inputDeterrent": "Ná roinn faisnéis phearsanta íogair ná faisnéis faoi dhaoine eile.",
   "redactionNotice": "Bhain muid amach rud a bhí cosúil le faisnéis phearsanta.",
-  "redactedToken": "[bainte]"
+  "redactedToken": "[bainte]",
+  "launcherAsk": "FIAFRAIGH",
+  "launcherWorldCup": "CORN AN DOMHAIN",
+  "tonight": "Anocht"
 }

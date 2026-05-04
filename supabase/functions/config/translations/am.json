@@ -7,5 +7,8 @@
   "askAi": "AI ጠይቅ",
   "inputDeterrent": "ስሜታዊ ግላዊ መረጃ ወይም ስለ ሌሎች መረጃ አታጋራ።",
   "redactionNotice": "ግላዊ መረጃ የመሰለ ነገር አስወግደናል።",
-  "redactedToken": "[ተደብቋል]"
+  "redactedToken": "[ተደብቋል]",
+  "launcherAsk": "ጠይቅ",
+  "launcherWorldCup": "የዓለም ዋንጫ",
+  "tonight": "ዛሬ ማታ"
 }

@@ -7,5 +7,8 @@
   "askAi": "WEYDII AI",
   "inputDeterrent": "Ha la wadaagin macluumaad shakhsi ah oo xasaasi ah ama macluumaad ku saabsan dadka kale.",
   "redactionNotice": "Waxaan ka saarnay wax u eg macluumaad shakhsi ah.",
-  "redactedToken": "[la saaray]"
+  "redactedToken": "[la saaray]",
+  "launcherAsk": "WEYDII",
+  "launcherWorldCup": "KOOBKA ADUUNKA",
+  "tonight": "Caawa"
 }

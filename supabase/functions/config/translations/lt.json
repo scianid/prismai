@@ -7,5 +7,8 @@
   "askAi": "KLAUSK AI",
   "inputDeterrent": "Nesidalykite jautria asmenine informacija ar informacija apie kitus.",
   "redactionNotice": "Pašalinome tai, kas atrodė kaip asmeninė informacija.",
-  "redactedToken": "[pašalinta]"
+  "redactedToken": "[pašalinta]",
+  "launcherAsk": "KLAUSK",
+  "launcherWorldCup": "PASAULIO TAURĖ",
+  "tonight": "Šįvakar"
 }

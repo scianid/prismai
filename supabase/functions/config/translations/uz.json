@@ -7,5 +7,8 @@
   "askAi": "AI'DAN SO'RA",
   "inputDeterrent": "Maxfiy shaxsiy ma'lumotlar yoki boshqalar haqidagi ma'lumotlarni baham ko'rmang.",
   "redactionNotice": "Shaxsiy ma'lumotga o'xshagan narsani olib tashladik.",
-  "redactedToken": "[oʻchirildi]"
+  "redactedToken": "[oʻchirildi]",
+  "launcherAsk": "SO'RA",
+  "launcherWorldCup": "JAHON CHEMPIONATI",
+  "tonight": "Bugun kechqurun"
 }

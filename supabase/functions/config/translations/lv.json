@@ -7,5 +7,8 @@
   "askAi": "JAUTĀ AI",
   "inputDeterrent": "Nedalieties ar sensitīvu personisko informāciju vai informāciju par citiem.",
   "redactionNotice": "Mēs noņēmām kaut ko, kas izskatījās pēc personiskās informācijas.",
-  "redactedToken": "[noņemts]"
+  "redactedToken": "[noņemts]",
+  "launcherAsk": "JAUTĀ",
+  "launcherWorldCup": "PASAULES KAUSS",
+  "tonight": "Šovakar"
 }

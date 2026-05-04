@@ -7,5 +7,8 @@
   "askAi": "KI FRAGEN",
   "inputDeterrent": "Teile keine sensiblen persönlichen Daten oder Informationen über andere.",
   "redactionNotice": "Wir haben etwas entfernt, das wie persönliche Daten aussah.",
-  "redactedToken": "[entfernt]"
+  "redactedToken": "[entfernt]",
+  "launcherAsk": "FRAGEN",
+  "launcherWorldCup": "WELTMEISTERSCHAFT",
+  "tonight": "Heute Abend"
 }

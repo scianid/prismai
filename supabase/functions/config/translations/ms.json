@@ -7,5 +7,8 @@
   "askAi": "TANYA AI",
   "inputDeterrent": "Jangan kongsi maklumat peribadi sensitif atau maklumat tentang orang lain.",
   "redactionNotice": "Kami telah membuang sesuatu yang kelihatan seperti maklumat peribadi.",
-  "redactedToken": "[dibuang]"
+  "redactedToken": "[dibuang]",
+  "launcherAsk": "TANYA",
+  "launcherWorldCup": "PIALA DUNIA",
+  "tonight": "Malam ini"
 }

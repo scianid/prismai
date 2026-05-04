@@ -7,5 +7,8 @@
   "askAi": "ПИТАЈ AI",
   "inputDeterrent": "Не делите осетљиве личне податке ни податке о другима.",
   "redactionNotice": "Уклонили смо нешто што је изгледало као лични подаци.",
-  "redactedToken": "[уклоњено]"
+  "redactedToken": "[уклоњено]",
+  "launcherAsk": "ПИТАЈ",
+  "launcherWorldCup": "СВЕТСКО ПРВЕНСТВО",
+  "tonight": "Вечерас"
 }

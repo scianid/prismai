@@ -7,5 +7,8 @@
   "askAi": "KÜSI AI-LT",
   "inputDeterrent": "Ärge jagage tundlikku isikuteavet ega teavet teiste kohta.",
   "redactionNotice": "Eemaldasime midagi, mis nägi välja nagu isikuandmed.",
-  "redactedToken": "[eemaldatud]"
+  "redactedToken": "[eemaldatud]",
+  "launcherAsk": "KÜSI",
+  "launcherWorldCup": "MM",
+  "tonight": "Täna õhtul"
 }

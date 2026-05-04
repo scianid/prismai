@@ -7,5 +7,8 @@
   "askAi": "VRA AI",
   "inputDeterrent": "Moenie sensitiewe persoonlike inligting of inligting oor ander mense deel nie.",
   "redactionNotice": "Ons het iets verwyder wat soos persoonlike inligting gelyk het.",
-  "redactedToken": "[verwyder]"
+  "redactedToken": "[verwyder]",
+  "launcherAsk": "VRA",
+  "launcherWorldCup": "WÊRELDBEKER",
+  "tonight": "Vanaand"
 }

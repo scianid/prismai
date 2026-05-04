@@ -7,5 +7,8 @@
   "askAi": "PYET AI",
   "inputDeterrent": "Mos ndani informacione personale të ndjeshme apo informacione për të tjerët.",
   "redactionNotice": "Hoqëm diçka që dukej si informacion personal.",
-  "redactedToken": "[hequr]"
+  "redactedToken": "[hequr]",
+  "launcherAsk": "PYET",
+  "launcherWorldCup": "KUPA E BOTËS",
+  "tonight": "Sonte"
 }

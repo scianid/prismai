@@ -7,5 +7,8 @@
   "askAi": "CHIEDI AI",
   "inputDeterrent": "Non condividere informazioni personali sensibili o informazioni su altre persone.",
   "redactionNotice": "Abbiamo rimosso qualcosa che sembrava un'informazione personale.",
-  "redactedToken": "[rimosso]"
+  "redactedToken": "[rimosso]",
+  "launcherAsk": "CHIEDI",
+  "launcherWorldCup": "MONDIALI",
+  "tonight": "Stasera"
 }

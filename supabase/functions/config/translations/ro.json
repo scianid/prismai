@@ -7,5 +7,8 @@
   "askAi": "ÎNTREABĂ AI",
   "inputDeterrent": "Nu partaja informații personale sensibile sau informații despre alții.",
   "redactionNotice": "Am eliminat ceva ce părea informație personală.",
-  "redactedToken": "[eliminat]"
+  "redactedToken": "[eliminat]",
+  "launcherAsk": "ÎNTREABĂ",
+  "launcherWorldCup": "CUPA MONDIALĂ",
+  "tonight": "Diseară"
 }

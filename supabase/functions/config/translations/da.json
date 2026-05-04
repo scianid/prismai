@@ -7,5 +7,8 @@
   "askAi": "SPØRG AI",
   "inputDeterrent": "Del ikke følsomme personlige oplysninger eller oplysninger om andre.",
   "redactionNotice": "Vi har fjernet noget, der lignede personlige oplysninger.",
-  "redactedToken": "[fjernet]"
+  "redactedToken": "[fjernet]",
+  "launcherAsk": "SPØRG",
+  "launcherWorldCup": "VM",
+  "tonight": "I aften"
 }

@@ -7,5 +7,8 @@
   "askAi": "DEMANDER À L'IA",
   "inputDeterrent": "Ne partagez pas d'informations personnelles sensibles ni d'informations sur autrui.",
   "redactionNotice": "Nous avons supprimé quelque chose qui ressemblait à des informations personnelles.",
-  "redactedToken": "[masqué]"
+  "redactedToken": "[masqué]",
+  "launcherAsk": "DEMANDER",
+  "launcherWorldCup": "COUPE DU MONDE",
+  "tonight": "Ce soir"
 }

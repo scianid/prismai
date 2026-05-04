@@ -7,5 +7,8 @@
   "askAi": "اسأل AI",
   "inputDeterrent": "لا تشارك معلومات شخصية حساسة أو معلومات عن الآخرين.",
   "redactionNotice": "أزلنا شيئًا بدا كأنه معلومات شخصية.",
-  "redactedToken": "[محذوف]"
+  "redactedToken": "[محذوف]",
+  "launcherAsk": "اسأل",
+  "launcherWorldCup": "كأس العالم",
+  "tonight": "الليلة"
 }

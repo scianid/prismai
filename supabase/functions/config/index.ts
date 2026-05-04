@@ -159,6 +159,7 @@ export async function configHandler(
       // translation bundle. Rows where it is NULL (unknown language
       // at analyze time) resolve to the English default inside
       // resolveTranslations — that is the intended UX, not a fallback.
+      // Bundle includes launcherAsk / launcherWorldCup for the sports widget.
       translations: resolveTranslations(project.language_code),
       // Merge project_config fields (e.g., ad tag ID, ad size overrides)
       ...(projectConfig && {

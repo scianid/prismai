@@ -7,5 +7,8 @@
   "askAi": "OPÝTAJ SA AI",
   "inputDeterrent": "Nezdieľajte citlivé osobné údaje ani informácie o iných.",
   "redactionNotice": "Odstránili sme niečo, čo vyzeralo ako osobné údaje.",
-  "redactedToken": "[odstránené]"
+  "redactedToken": "[odstránené]",
+  "launcherAsk": "OPÝTAJ SA",
+  "launcherWorldCup": "MAJSTROVSTVÁ SVETA",
+  "tonight": "Dnes večer"
 }

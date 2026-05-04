@@ -7,5 +7,8 @@
   "askAi": "از AI بپرس",
   "inputDeterrent": "اطلاعات شخصی حساس یا اطلاعات دیگران را به اشتراک نگذارید.",
   "redactionNotice": "چیزی را که شبیه اطلاعات شخصی بود حذف کردیم.",
-  "redactedToken": "[حذف شده]"
+  "redactedToken": "[حذف شده]",
+  "launcherAsk": "بپرس",
+  "launcherWorldCup": "جام جهانی",
+  "tonight": "امشب"
 }

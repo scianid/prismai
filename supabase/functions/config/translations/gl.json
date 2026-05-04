@@ -7,5 +7,8 @@
   "askAi": "PREGUNTA Á IA",
   "inputDeterrent": "Non compartas información persoal sensible nin información sobre outras persoas.",
   "redactionNotice": "Eliminamos algo que parecía información persoal.",
-  "redactedToken": "[eliminado]"
+  "redactedToken": "[eliminado]",
+  "launcherAsk": "PREGUNTA",
+  "launcherWorldCup": "MUNDIAL",
+  "tonight": "Esta noite"
 }

@@ -7,5 +7,8 @@
   "askAi": "له AI نه وپوښتئ",
   "inputDeterrent": "حساس شخصي معلومات یا د نورو په اړه معلومات مه شریکوئ.",
   "redactionNotice": "موږ هغه څه لرې کړل چې لکه شخصي معلومات یې ښکاره کاوه.",
-  "redactedToken": "[لرې شو]"
+  "redactedToken": "[لرې شو]",
+  "launcherAsk": "وپوښتئ",
+  "launcherWorldCup": "د نړۍ جام",
+  "tonight": "نن شپه"
 }

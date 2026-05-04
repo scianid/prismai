@@ -7,5 +7,8 @@
   "askAi": "AI سے پوچھیں",
   "inputDeterrent": "حساس ذاتی معلومات یا دوسروں کے بارے میں معلومات کا تبادلہ نہ کریں۔",
   "redactionNotice": "ہم نے کچھ ایسا ہٹا دیا جو ذاتی معلومات لگ رہا تھا۔",
-  "redactedToken": "[حذف شدہ]"
+  "redactedToken": "[حذف شدہ]",
+  "launcherAsk": "پوچھیں",
+  "launcherWorldCup": "ورلڈ کپ",
+  "tonight": "آج رات"
 }

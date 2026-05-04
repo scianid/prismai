@@ -7,5 +7,8 @@
   "askAi": "AI-аас асуу",
   "inputDeterrent": "Эмзэг хувийн мэдээлэл болон бусдын талаарх мэдээллийг бүү хуваалц.",
   "redactionNotice": "Бид хувийн мэдээлэл шиг харагдсан зүйлийг хассан.",
-  "redactedToken": "[устгасан]"
+  "redactedToken": "[устгасан]",
+  "launcherAsk": "АСУУХ",
+  "launcherWorldCup": "ДЭЛХИЙН АВАРГА",
+  "tonight": "Өнөө орой"
 }

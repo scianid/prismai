@@ -7,5 +7,8 @@
   "askAi": "AI ගෙන් අහන්න",
   "inputDeterrent": "සංවේදී පෞද්ගලික තොරතුරු හෝ අන් අයගේ තොරතුරු බෙදා නොගන්න.",
   "redactionNotice": "පෞද්ගලික තොරතුරු සේ පෙනෙන දෙයක් අපි ඉවත් කර තිබේ.",
-  "redactedToken": "[ඉවත් කළා]"
+  "redactedToken": "[ඉවත් කළා]",
+  "launcherAsk": "අසන්න",
+  "launcherWorldCup": "ලෝක කුසලානය",
+  "tonight": "අද රෑ"
 }
