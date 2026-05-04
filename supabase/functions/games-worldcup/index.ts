@@ -90,8 +90,18 @@ async function sdFetch<T>(feed: string, op: string): Promise<T> {
 // helper documents this ambiguity but currently passes ISO through; the WC
 // season hadn't started when that was written so it was untested in practice.
 const SD_MONTHS = [
-  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
 ];
 function toSdDate(iso: string): string {
   const [y, m, d] = iso.split("-");
