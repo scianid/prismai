@@ -1326,6 +1326,14 @@
             // Attach event listeners
             this.attachEventListeners();
 
+            // anchoredOpen: skip the collapsed launcher state and open immediately,
+            // but don't auto-focus the input — that would fire onTextAreaFocus and
+            // pull suggestions, which this mode explicitly wants to defer until the
+            // user actively clicks into the input.
+            if (this.config.displayMode === 'anchoredOpen') {
+                this.expand({ skipAutoFocus: true, trigger: 'init' });
+            }
+
             // Setup visibility tracking
             this.setupVisibilityTracking();
 
@@ -1357,9 +1365,14 @@
                 this.state.serverConfig = serverConfig;
                 this.log('config', 'Server config loaded:', this.state.serverConfig);
 
-                // Apply display settings from server config (override data attributes)
+                // Apply display settings from server config (override data attributes).
+                // `anchored_open` is normalized to camelCase `anchoredOpen` — it's an
+                // anchored variant that starts in the expanded state and defers
+                // suggestions until the input is focused.
                 if (serverConfig.display_mode) {
-                    this.config.displayMode = serverConfig.display_mode;
+                    this.config.displayMode = serverConfig.display_mode === 'anchored_open'
+                        ? 'anchoredOpen'
+                        : serverConfig.display_mode;
                     this.log('config', 'Display mode from config:', serverConfig.display_mode);
                 }
                 if (serverConfig.display_position) {
@@ -1455,7 +1468,9 @@
                 }
 
                 if (overrideDisplayMode) {
-                    this.config.displayMode = overrideDisplayMode;
+                    this.config.displayMode = overrideDisplayMode === 'anchored_open'
+                        ? 'anchoredOpen'
+                        : overrideDisplayMode;
                     this.log('config', 'Display mode overridden by URL param:', overrideDisplayMode);
                 }
                 if (overrideDisplayPosition) {
@@ -2580,7 +2595,7 @@
             this.trackEvent('consent_decision', { accepted });
         }
 
-        expand() {
+        expand({ skipAutoFocus = false, trigger = 'click' } = {}) {
             this.state.isExpanded = true;
             this.elements.container.setAttribute('data-state', 'expanded');
             this.maybeShowConsent();
@@ -2619,7 +2634,7 @@
                 }, 150);
             }
 
-            this.trackEvent('widget_expanded', { trigger: 'click' });
+            this.trackEvent('widget_expanded', { trigger });
 
             // Play video ad on first open when ?diveeVideoAd=true. One-shot per
             // page load — the videoAdPlayed flag is set before the async work
@@ -2633,10 +2648,13 @@
                 // input, which hits the state.suggestions.length > 0 branch in
                 // onTextAreaFocus).
                 this.prefetchSuggestions().catch(() => { /* swallowed, logged inside */ });
-            } else {
+            } else if (!skipAutoFocus) {
                 // Normal flow: focus the input after the open animation. We
                 // skip this while a video ad is playing to avoid popping the
                 // mobile keyboard and opening the shimmer popup on top of the ad.
+                // skipAutoFocus is set when the widget is auto-expanded on init
+                // (e.g. anchoredOpen mode) — focusing would trigger suggestions
+                // immediately, but the mode's whole point is to defer them.
                 setTimeout(() => {
                     this.elements.expandedView.querySelector('.divee-input').focus();
                 }, 300);
