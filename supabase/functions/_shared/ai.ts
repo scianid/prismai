@@ -296,6 +296,9 @@ function transformResponsesApiStream(
     async start(controller) {
       const reader = responsesStream.getReader();
       let buffer = "";
+      const seenTypes = new Map<string, number>();
+      let textDeltaCount = 0;
+      let sawCompleted = false;
       try {
         while (true) {
           const { value, done } = await reader.read();
@@ -312,13 +315,17 @@ function transformResponsesApiStream(
             const data = dataLine.trim().replace(/^data:\s*/, "");
             try {
               const json = JSON.parse(data);
-              if (json.type === "response.output_text.delta") {
+              const type = json?.type ?? "<no-type>";
+              seenTypes.set(type, (seenTypes.get(type) ?? 0) + 1);
+              if (type === "response.output_text.delta") {
                 const delta = json.delta || "";
+                textDeltaCount++;
                 const chunk = JSON.stringify({
                   choices: [{ delta: { content: delta }, index: 0 }],
                 });
                 controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
-              } else if (json.type === "response.completed") {
+              } else if (type === "response.completed") {
+                sawCompleted = true;
                 const u = json.response?.usage;
                 if (u) {
                   const usageChunk = JSON.stringify({
@@ -331,13 +338,34 @@ function transformResponsesApiStream(
                   });
                   controller.enqueue(encoder.encode(`data: ${usageChunk}\n\n`));
                 }
+              } else if (
+                type === "response.failed" ||
+                type === "response.incomplete" ||
+                type === "response.error" ||
+                type === "error"
+              ) {
+                console.error("ai: responses stream error event", {
+                  type,
+                  payload: JSON.stringify(json).slice(0, 1000),
+                });
               }
-            } catch { /* ignore parse errors */ }
+            } catch (parseErr) {
+              console.warn("ai: responses stream parse error", {
+                error: String(parseErr),
+                sample: data.slice(0, 200),
+              });
+            }
           }
         }
+        console.info("ai: responses stream summary", {
+          textDeltaCount,
+          sawCompleted,
+          eventCounts: Object.fromEntries(seenTypes),
+        });
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       } catch (err) {
+        console.error("ai: responses stream aborted", { error: String(err) });
         controller.error(err);
       }
     },
