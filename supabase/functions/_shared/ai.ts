@@ -576,7 +576,12 @@ export async function streamWorldcupAnswer(
   const tone = customization?.tone;
   const guardrails = customization?.guardrails;
   const customInstructions = customization?.custom_instructions;
-  let systemContent = WORLDCUP_SYSTEM_PROMPT;
+  // Stamp the current date/time so the model can answer relative-time
+  // questions like "what's the next game?" without guessing. UTC is the only
+  // clock the edge runtime can trust — humans handle timezone framing in their
+  // question.
+  const nowIso = new Date().toISOString();
+  let systemContent = `${WORLDCUP_SYSTEM_PROMPT}\n\nCurrent date and time (UTC): ${nowIso}.`;
   if (tone) systemContent += `\n\nRespond in a ${tone} tone.`;
   if (guardrails && guardrails.length > 0) {
     systemContent += `\n\nGuidelines you must follow:\n${
