@@ -608,6 +608,7 @@ export async function streamWorldcupAnswer(
           vector_store_ids: [vectorStoreId],
           max_num_results: 5,
         },
+        /*
         {
           type: "mcp",
           server_label: "divee-worldcup",
@@ -616,7 +617,7 @@ export async function streamWorldcupAnswer(
           // every tool call and must be resent with every Responses request.
           headers: { Authorization: `Bearer ${mcpBearer}` },
           require_approval: "never",
-        },
+        },*/
       ],
       stream: true,
       store: false,
