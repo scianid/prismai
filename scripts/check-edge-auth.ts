@@ -29,9 +29,9 @@ interface AuthHelper {
 /** A function passes if it imports any one of these. */
 const AUTH_HELPERS: AuthHelper[] = [
   {
-    name: "isAllowedOrigin (from _shared/origin.ts)",
+    name: "isAllowedOrigin or isAllowedOriginStrict (from _shared/origin.ts)",
     pattern:
-      /import\s*\{[^}]*\bisAllowedOrigin\b[^}]*\}\s*from\s*["'][^"']*_shared\/origin(\.ts)?["']/,
+      /import\s*\{[^}]*\bisAllowedOrigin(?:Strict)?\b[^}]*\}\s*from\s*["'][^"']*_shared\/origin(\.ts)?["']/,
   },
 ];
 
