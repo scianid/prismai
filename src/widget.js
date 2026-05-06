@@ -2815,6 +2815,16 @@
             const title = (this.contentCache.title || '').slice(0, MAX_TITLE);
             const content = (this.contentCache.content || '').slice(0, MAX_CONTENT);
 
+            const articleUrl = this.config.widgetMode === 'knowledgebase'
+                ? 'knowledgebase'
+                : this.contentCache.url;
+
+            // Try the CDN-cached GET first. Hits are served by Fastly without
+            // invoking the edge function; misses return 404 (short negative
+            // TTL) and we fall through to the POST that ingests + generates.
+            const cached = await this.fetchCachedSuggestions(articleUrl);
+            if (cached) return cached;
+
             // Send cached content to server for suggestions
             const payload = {
                 widget_mode: this.config.widgetMode || 'article',
@@ -2852,6 +2862,24 @@
             }
 
             return [];
+        }
+
+        async fetchCachedSuggestions(articleUrl) {
+            try {
+                const qs = `projectId=${encodeURIComponent(this.config.projectId)}` +
+                    `&url=${encodeURIComponent(articleUrl)}`;
+                const response = await fetch(`${this.config.cachedBaseUrl}/suggestions?${qs}`);
+                if (response.status === 404 || !response.ok) return null;
+                const data = await response.json();
+                if (Array.isArray(data?.suggestions) && data.suggestions.length > 0) {
+                    return data.suggestions;
+                }
+                return null;
+            } catch (error) {
+                // Cache lookup failures are non-fatal — caller falls back to POST.
+                console.warn('[Divee] Cached suggestions lookup failed, falling back to POST', error);
+                return null;
+            }
         }
 
         sendQuestion() {
