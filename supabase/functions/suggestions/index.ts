@@ -387,7 +387,7 @@ async function handleGetSuggestions(
     const cachedSuggestions = article ? deps.extractCachedSuggestions(article) : undefined;
 
     if (cachedSuggestions) {
-      return successRespWithCache({ suggestions: cachedSuggestions }, 60, 3600, surrogateKey);
+      return successRespWithCache({ suggestions: cachedSuggestions }, 1800, 3600, surrogateKey);
     }
 
     return notFoundRespWithShortCache({ suggestions: [] }, surrogateKey);

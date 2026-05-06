@@ -528,7 +528,7 @@ Deno.test("suggestions/GET: cache HIT returns 200 with CDN headers and project+u
   assertEquals(rateLimitCalled, false);
   assertEquals(
     res.headers.get("Cache-Control"),
-    "public, max-age=60, s-maxage=3600",
+    "public, max-age=1800, s-maxage=3600",
   );
   const surrogateKey = res.headers.get("Surrogate-Key") ?? "";
   // Two space-separated keys: project-wide + per-(project,url-hash).
@@ -603,8 +603,7 @@ Deno.test("suggestions/GET: missing url defaults to 'knowledgebase' (KB-mode hit
 
 Deno.test("suggestions/GET: origin not in allowed_urls returns 403", async () => {
   const deps = makeDeps({
-    getProjectById: () =>
-      Promise.resolve(fakeProject({ allowed_urls: ["other.example.com"] })),
+    getProjectById: () => Promise.resolve(fakeProject({ allowed_urls: ["other.example.com"] })),
   });
   const res = await suggestionsHandler(
     getReq(
