@@ -16,6 +16,7 @@ import {
   getBaseHost,
   getRequestOriginUrl,
   isAllowedOrigin,
+  isAllowedOriginStrict,
   normalizeHost,
 } from "../_shared/origin.ts";
 
@@ -125,6 +126,31 @@ Deno.test("isAllowedOrigin: junk entries in allowlist are harmless", () => {
   );
   assertEquals(
     isAllowedOrigin(REQUEST_ORIGIN, ["not a url"]),
+    false,
+  );
+});
+
+// ── isAllowedOriginStrict: rejects missing Origin/Referer ────────────────
+// Used by /chat and /chat-worldcup, which are POST-only and never CDN
+// cache-warmed. A real browser POST always sends Origin or Referer; the
+// absence of both is a strong signal of a non-browser client.
+
+Deno.test("isAllowedOriginStrict: rejects null/undefined/empty request origin", () => {
+  assertEquals(isAllowedOriginStrict(null, ["publisher.example.com"]), false);
+  assertEquals(isAllowedOriginStrict(undefined, ["publisher.example.com"]), false);
+  assertEquals(isAllowedOriginStrict("", ["publisher.example.com"]), false);
+});
+
+Deno.test("isAllowedOriginStrict: accepts allowed origin (matches lenient behavior)", () => {
+  assertEquals(
+    isAllowedOriginStrict(REQUEST_ORIGIN, ["publisher.example.com"]),
+    true,
+  );
+});
+
+Deno.test("isAllowedOriginStrict: rejects unrelated host (matches lenient behavior)", () => {
+  assertEquals(
+    isAllowedOriginStrict(REQUEST_ORIGIN, ["other.example.com"]),
     false,
   );
 });

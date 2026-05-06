@@ -50,3 +50,15 @@ export function isAllowedOrigin(
   return !!requestHost && allowedHosts.length > 0 &&
     allowedHosts.includes(requestHost);
 }
+
+// Strict variant for endpoints that are never CDN cache-warmed (e.g. POST
+// /chat). A real browser POST always sends Origin or Referer, so the absence
+// of both is a strong signal of a non-browser client (curl/python/etc.) and
+// must be rejected rather than passed through.
+export function isAllowedOriginStrict(
+  rawUrl: string | null | undefined,
+  allowedUrls: string[] | null | undefined,
+): boolean {
+  if (!rawUrl) return false;
+  return isAllowedOrigin(rawUrl, allowedUrls);
+}
