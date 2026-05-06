@@ -489,6 +489,146 @@ Deno.test("suggestions/kb: RAG lookup failure degrades gracefully to empty sugge
   assertEquals(aiCalled, false);
 });
 
+// ── GET branch (CDN-cacheable cache-hit lookup) ──────────────────────────
+//
+// The GET path mirrors the cache-hit logic of POST but emits CDN cache
+// headers and returns 404 (with short negative TTL) on miss. The widget
+// tries this first; on null/404 it falls through to the existing POST path.
+
+function getReq(qs: string, origin: string | null = ALLOWED_ORIGIN): Request {
+  const headers: Record<string, string> = {};
+  if (origin) headers["origin"] = origin;
+  return new Request(
+    `https://widget.divee.ai/functions/v1/suggestions?${qs}`,
+    { method: "GET", headers },
+  );
+}
+
+Deno.test("suggestions/GET: cache HIT returns 200 with CDN headers and project+url surrogate keys", async () => {
+  let aiCalled = false;
+  let rateLimitCalled = false;
+  const deps = makeDeps({
+    generateSuggestions: () => {
+      aiCalled = true;
+      return Promise.resolve(fakeAiResult());
+    },
+    checkRateLimit: () => {
+      rateLimitCalled = true;
+      return Promise.resolve({ limited: false });
+    },
+  });
+  const res = await suggestionsHandler(
+    getReq(
+      `projectId=${encodeURIComponent(PROJECT_ID)}&url=${encodeURIComponent(ARTICLE_URL)}`,
+    ),
+    deps,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(aiCalled, false);
+  assertEquals(rateLimitCalled, false);
+  assertEquals(
+    res.headers.get("Cache-Control"),
+    "public, max-age=60, s-maxage=3600",
+  );
+  const surrogateKey = res.headers.get("Surrogate-Key") ?? "";
+  // Two space-separated keys: project-wide + per-(project,url-hash).
+  const tokens = surrogateKey.split(" ");
+  assertEquals(tokens.length, 2);
+  assertEquals(tokens[0], `suggestions-${PROJECT_ID}`);
+  assertEquals(tokens[1].startsWith(`suggestions-${PROJECT_ID}-`), true);
+  // Hash is 16 hex chars: full key is `suggestions-${projectId}-${16hex}`.
+  assertEquals(tokens[1].length, `suggestions-${PROJECT_ID}-`.length + 16);
+  const body = await res.json();
+  assertEquals(body.suggestions, fakeSuggestions());
+});
+
+Deno.test("suggestions/GET: cache MISS (no article) returns 404 with short negative TTL", async () => {
+  const deps = makeDeps({
+    getArticleById: () => Promise.resolve(null),
+  });
+  const res = await suggestionsHandler(
+    getReq(
+      `projectId=${encodeURIComponent(PROJECT_ID)}&url=${encodeURIComponent(ARTICLE_URL)}`,
+    ),
+    deps,
+  );
+  assertEquals(res.status, 404);
+  assertEquals(
+    res.headers.get("Cache-Control"),
+    "public, max-age=0, s-maxage=10",
+  );
+  // Same surrogate keys as the hit response so a future purge clears both
+  // states atomically.
+  const surrogateKey = res.headers.get("Surrogate-Key") ?? "";
+  assertEquals(surrogateKey.split(" ").length, 2);
+});
+
+Deno.test("suggestions/GET: cache MISS (article exists, no cached suggestions) returns 404", async () => {
+  const deps = makeDeps({
+    getArticleById: () => Promise.resolve(fakeArticle({ cache: null })),
+    extractCachedSuggestions: () => undefined,
+  });
+  const res = await suggestionsHandler(
+    getReq(
+      `projectId=${encodeURIComponent(PROJECT_ID)}&url=${encodeURIComponent(ARTICLE_URL)}`,
+    ),
+    deps,
+  );
+  assertEquals(res.status, 404);
+});
+
+Deno.test("suggestions/GET: missing projectId returns 400", async () => {
+  const res = await suggestionsHandler(
+    getReq(`url=${encodeURIComponent(ARTICLE_URL)}`),
+    makeDeps(),
+  );
+  assertEquals(res.status, 400);
+});
+
+Deno.test("suggestions/GET: missing url defaults to 'knowledgebase' (KB-mode hit path)", async () => {
+  let lookedUpUrl: string | null = null;
+  const deps = makeDeps({
+    getArticleById: (url: string) => {
+      lookedUpUrl = url;
+      return Promise.resolve(fakeArticle({ cache: { suggestions: fakeSuggestions() } }));
+    },
+  });
+  const res = await suggestionsHandler(
+    getReq(`projectId=${encodeURIComponent(PROJECT_ID)}`),
+    deps,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(lookedUpUrl, "knowledgebase");
+});
+
+Deno.test("suggestions/GET: origin not in allowed_urls returns 403", async () => {
+  const deps = makeDeps({
+    getProjectById: () =>
+      Promise.resolve(fakeProject({ allowed_urls: ["other.example.com"] })),
+  });
+  const res = await suggestionsHandler(
+    getReq(
+      `projectId=${encodeURIComponent(PROJECT_ID)}&url=${encodeURIComponent(ARTICLE_URL)}`,
+    ),
+    deps,
+  );
+  assertEquals(res.status, 403);
+});
+
+Deno.test("suggestions/GET: missing Origin/Referer is allowed (lenient — CDN cache-warming)", async () => {
+  // The whole point of the GET branch is to be CDN-cacheable. The CDN
+  // strips Origin on forwarded GETs and warms the cache without a Referer;
+  // both must pass. This contrasts with POST which uses isAllowedOriginStrict.
+  const res = await suggestionsHandler(
+    getReq(
+      `projectId=${encodeURIComponent(PROJECT_ID)}&url=${encodeURIComponent(ARTICLE_URL)}`,
+      null,
+    ),
+    makeDeps(),
+  );
+  assertEquals(res.status, 200);
+});
+
 // ── Teardown ──────────────────────────────────────────────────────────────
 Deno.test("suggestions: teardown (restore env)", () => {
   restoreEnv();

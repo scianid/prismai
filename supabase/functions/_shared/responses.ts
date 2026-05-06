@@ -136,3 +136,27 @@ export function successRespWithCache(
     },
   );
 }
+
+// Negative cache for "not yet ingested" lookups. Short s-maxage so the CDN
+// absorbs retry storms (many visitors hitting the same fresh article in the
+// seconds before the first POST/ingest completes) without pinning a 404 for
+// long. Same Surrogate-Key as the matching success path so a future purge
+// invalidates both states atomically.
+export function notFoundRespWithShortCache(
+  body: object = {},
+  surrogateKey = "",
+) {
+  return new Response(
+    JSON.stringify(body),
+    {
+      status: 404,
+      headers: {
+        ...corsHeadersForCache,
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=0, s-maxage=10",
+        "Surrogate-Control": "max-age=10",
+        ...(surrogateKey ? { "Surrogate-Key": surrogateKey } : {}),
+      },
+    },
+  );
+}

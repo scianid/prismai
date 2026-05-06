@@ -26,16 +26,30 @@ function loadWidget(config = {}) {
   });
 }
 
+// fetchSuggestions tries the CDN-cached GET first, then falls back to the
+// POST that ingests + generates. These tests target the POST payload, so we
+// stub the cached GET as a 404 (cache miss) and the POST as the success.
 function mockSuggestionsResponse(suggestions = []) {
+  fetch.mockResolvedValueOnce({
+    ok: false,
+    status: 404,
+    json: async () => ({ suggestions: [] }),
+  });
   fetch.mockResolvedValueOnce({
     ok: true,
     json: async () => ({ suggestions }),
   });
 }
 
+function postCall() {
+  // The POST is the second fetch call (after the cached GET miss). Use the
+  // last call rather than [1] so this also works for tests that don't go
+  // through mockSuggestionsResponse and only mock one call.
+  return fetch.mock.calls[fetch.mock.calls.length - 1];
+}
+
 function lastFetchBody() {
-  const call = fetch.mock.calls[fetch.mock.calls.length - 1];
-  return JSON.parse(call[1].body);
+  return JSON.parse(postCall()[1].body);
 }
 
 describe('fetchSuggestions — payload caps', () => {
@@ -127,6 +141,8 @@ describe('fetchSuggestions — payload caps', () => {
   });
 
   test('returns [] and does not throw when fetch rejects', async () => {
+    // Two rejections: the cached GET, then the POST fallback.
+    fetch.mockRejectedValueOnce(new Error('cdn down'));
     fetch.mockRejectedValueOnce(new Error('network down'));
     const result = await widget.fetchSuggestions();
     expect(result).toEqual([]);

@@ -1,9 +1,15 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
-import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
+import { getRequestOriginUrl, isAllowedOrigin, isAllowedOriginStrict } from "../_shared/origin.ts";
 import { generateSuggestions } from "../_shared/ai.ts";
 import { logEvent } from "../_shared/analytics.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { enforceContentLength, errorResp, successResp } from "../_shared/responses.ts";
+import {
+  enforceContentLength,
+  errorResp,
+  notFoundRespWithShortCache,
+  successResp,
+  successRespWithCache,
+} from "../_shared/responses.ts";
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import {
   extractCachedSuggestions,
@@ -79,6 +85,15 @@ export async function suggestionsHandler(
       acrHeaders: req.headers.get("access-control-request-headers"),
     });
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // GET = CDN-cacheable cache-hit lookup. Keyed by (projectId, url) in the
+  // query string, lenient origin (CDN cache-warming + CDN-stripped Origin),
+  // returns cached suggestions on hit or short-TTL 404 on miss. The widget
+  // tries this first; on null/404 it falls back to the existing POST that
+  // ingests the article and generates suggestions via AI.
+  if (req.method === "GET") {
+    return await handleGetSuggestions(req, deps);
   }
 
   // SECURITY_AUDIT_TODO item 3: cap body size BEFORE parsing. Same 64KB
@@ -334,6 +349,65 @@ export async function suggestionsHandler(
     captureException(error, { handler: "suggestions" });
     return errorResp(error.message, 500);
   }
+}
+
+// ─── GET branch: CDN-cacheable cache-hit lookup ──────────────────────────
+// Mirrors the cache-hit path of the POST handler (no body, no AI call, no
+// rate-limit on a cache hit) but emits CDN cache headers so subsequent
+// requests for the same (projectId, url) are served from Fastly without
+// invoking the function at all. Misses return a short-TTL 404 so the CDN
+// absorbs retry storms while the first POST/ingest runs.
+async function handleGetSuggestions(
+  req: Request,
+  deps: SuggestionsDeps,
+): Promise<Response> {
+  try {
+    const url = new URL(req.url);
+    const projectId = url.searchParams.get("projectId");
+    const articleUrl = url.searchParams.get("url") || "knowledgebase";
+
+    if (!projectId) {
+      return errorResp("suggestions: missing projectId", 400, { suggestions: [] });
+    }
+
+    const surrogateKey =
+      `suggestions-${projectId} suggestions-${projectId}-${await urlSurrogateHash(articleUrl)}`;
+
+    const supabase = await deps.supabaseClient();
+    const project = await deps.getProjectById(projectId, supabase);
+
+    // Lenient origin — same as /config. The CDN strips Origin on forwarded
+    // GETs and warms the cache without a Referer; both paths must pass.
+    const requestUrl = getRequestOriginUrl(req);
+    if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
+      return errorResp("suggestions: origin not allowed", 403, { suggestions: [] });
+    }
+
+    const article = await deps.getArticleById(articleUrl, projectId, supabase);
+    const cachedSuggestions = article ? deps.extractCachedSuggestions(article) : undefined;
+
+    if (cachedSuggestions) {
+      return successRespWithCache({ suggestions: cachedSuggestions }, 60, 3600, surrogateKey);
+    }
+
+    return notFoundRespWithShortCache({ suggestions: [] }, surrogateKey);
+  } catch (error: any) {
+    console.error("suggestions: GET unhandled error", error);
+    captureException(error, { handler: "suggestions", tags: { phase: "get" } });
+    return errorResp(error.message, 500);
+  }
+}
+
+// Fastly Surrogate-Key tokens must be ASCII-printable and reasonably short.
+// Article URLs can be arbitrarily long with non-ASCII chars, so we hash to
+// 16 hex chars (64 bits — collision-resistant enough for purge granularity).
+async function urlSurrogateHash(s: string): Promise<string> {
+  const buf = new TextEncoder().encode(s);
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest))
+    .slice(0, 8)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // @ts-ignore: Deno globals and JSR imports are unavailable to the editor TS server
