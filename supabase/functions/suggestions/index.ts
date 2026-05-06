@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
-import { getRequestOriginUrl, isAllowedOrigin } from "../_shared/origin.ts";
+import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
 import { generateSuggestions } from "../_shared/ai.ts";
 import { logEvent } from "../_shared/analytics.ts";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -147,7 +147,7 @@ export async function suggestionsHandler(
       projectId,
     });
 
-    if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
+    if (!isAllowedOriginStrict(requestUrl, project?.allowed_urls)) {
       console.warn("suggestions: origin not allowed", {
         attempted: requestUrl,
         allowed: project?.allowed_urls,
