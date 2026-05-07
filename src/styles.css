@@ -733,10 +733,7 @@
 
 
 .divee-powered-by-collapsed {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  padding: 0 24px 6px 24px;
+  padding: 0 12px 6px 12px;
   text-align: left;
   direction: ltr;
   min-height: 18px;
@@ -744,6 +741,7 @@
 
 .divee-powered-by-collapsed .divee-powered-by {
   margin-left: 0 !important;
+  padding-left: 0 !important;
 }
 
 .divee-header {
@@ -1868,8 +1866,7 @@
 }
 
 .divee-tag-pills-collapsed {
-  margin-top: 4px;
-  margin-bottom: 0;
+  margin: 4px 12px 0 12px;
 }
 
 .divee-tag-pills-expanded {
@@ -2905,6 +2902,88 @@
 }
 
 /* ============================================================
+   Pre-mount skeleton (LCP / CLS placeholder)
+   ============================================================
+   Rendered inside #divee-widget-placeholder before the widget
+   script finishes loading config / extracting article. Removed
+   by insertWidget() the moment the real widget mounts. */
+.divee-skeleton {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.divee-skeleton-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 24px 6px 24px;
+  min-height: 30px;
+}
+
+.divee-skeleton-line,
+.divee-skeleton-pill,
+.divee-skeleton-chip {
+  background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+  background-size: 200% 100%;
+  animation: divee-shimmer 1.5s ease-in-out infinite;
+}
+
+.divee-skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+}
+
+.divee-skeleton-line--small {
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.divee-skeleton-line--medium {
+  height: 22px;
+  flex: 1 1 auto;
+  max-width: 50%;
+  border-radius: 999px;
+}
+
+.divee-skeleton-pill {
+  margin: 0 12px 16px 12px;
+  height: 56px;
+  border-radius: 40px;
+}
+
+.divee-skeleton-tags {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.divee-skeleton-chip {
+  height: 26px;
+  border-radius: 999px;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.divee-skeleton-chip:nth-child(2) {
+  width: 130px;
+}
+
+.divee-skeleton-chip:nth-child(3) {
+  width: 110px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .divee-skeleton-line,
+  .divee-skeleton-pill,
+  .divee-skeleton-chip {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
    Closed-state suggestion chip carousel
    ============================================================
    Sits inside .divee-powered-by-collapsed. A horizontal track of
@@ -2916,10 +2995,7 @@
 }
 
 .divee-collapsed-bubble {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: 100%;
-  margin-inline-start: auto;
+  margin: 0 12px 8px 12px;
   height: 30px;
   position: relative;
   overflow: hidden;
@@ -2940,8 +3016,9 @@
 .divee-collapsed-bubble-chip {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   flex-shrink: 0;
-  padding: 6px 14px;
+  padding: 4px 4px 4px 14px;
   background: #f3f4f6;
   border: 1px solid #e5e7eb;
   border-radius: 999px;
@@ -2963,6 +3040,30 @@
 .divee-collapsed-bubble-chip:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--divee-color-secondary) 60%, transparent);
   outline-offset: 2px;
+}
+
+.divee-collapsed-bubble-chip-text {
+  line-height: 1;
+}
+
+.divee-collapsed-bubble-chip-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #6b7280;
+  color: white;
+  font-size: 11px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.divee-collapsed-bubble-chip:hover .divee-collapsed-bubble-chip-send {
+  transform: translateX(1px);
+  background: #4b5563;
 }
 
 @keyframes divee-collapsed-bubble-enter {

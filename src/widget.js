@@ -1461,6 +1461,12 @@
             } catch (_) { /* ignore */ }
         }
 
+        _removeSkeletons() {
+            try {
+                document.querySelectorAll('.divee-skeleton').forEach(el => el.remove());
+            } catch (_) { /* ignore */ }
+        }
+
         async loadServerConfig() {
             try {
                 const serverConfig = await this.fetchServerConfig(this.config.projectId);
@@ -2033,7 +2039,7 @@
                         <div class="divee-site-favicon-collapsed">
                             <img class="divee-site-favicon-collapsed-image" src="${config.icon_url}" alt="" aria-hidden="true" />
                         </div>
-                        
+
                         <input type="text" class="divee-search-input-collapsed" placeholder="" readonly />
                         <span class="divee-send-icon-collapsed" aria-hidden="true">&#10148;</span>
                     </div>
@@ -2213,6 +2219,12 @@
             });
             this.log('dom', 'Display mode:', this.config.displayMode);
             this.log('dom', 'Config containerSelector (from server):', this.config.containerSelector);
+
+            // The skeleton placeholder paints immediately for LCP. Remove it
+            // now that the real widget is about to mount, regardless of where
+            // the widget itself ends up (floating/sidebar still want the
+            // page-level skeleton gone).
+            this._removeSkeletons();
 
             // For floating and sidebar modes, always append to body
             if (this.config.displayMode === 'floating' || this.config.displayMode === 'sidebar') {
@@ -2937,9 +2949,13 @@
             const chip = document.createElement('button');
             chip.type = 'button';
             chip.className = 'divee-collapsed-bubble-chip';
-            chip.textContent = text;
             if (id) chip.dataset.questionId = id;
             chip.dataset.questionText = text;
+            chip.innerHTML = `
+                <span class="divee-collapsed-bubble-chip-text"></span>
+                <span class="divee-collapsed-bubble-chip-send" aria-hidden="true">&#10148;</span>
+            `;
+            chip.querySelector('.divee-collapsed-bubble-chip-text').textContent = text;
             chip.addEventListener('click', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -2977,21 +2993,15 @@
             }
 
             // Create and attach the bubble lazily, only now that we have
-            // something to show. Prefer to attach inside .divee-powered-by-collapsed
-            // so the button shares a row with the "powered by" text. Fall back
-            // to before the input pill when there's no powered-by row (white_label).
+            // something to show. The carousel sits at the top of the collapsed
+            // view, above the input pill, and spans the full width.
             const view = collapsedViewEl || this.elements.collapsedView;
             if (!view) return;
             if (!this.elements.collapsedBubble || !view.contains(this.elements.collapsedBubble)) {
                 const bubble = this.createCollapsedSuggestionBubble();
-                const poweredBy = view.querySelector('.divee-powered-by-collapsed');
-                if (poweredBy) {
-                    poweredBy.appendChild(bubble);
-                } else {
-                    const searchContainer = view.querySelector('.divee-search-container-collapsed');
-                    if (!searchContainer) return;
-                    view.insertBefore(bubble, searchContainer);
-                }
+                const searchContainer = view.querySelector('.divee-search-container-collapsed');
+                if (!searchContainer) return;
+                view.insertBefore(bubble, searchContainer);
                 this.elements.collapsedBubble = bubble;
             }
 
@@ -4228,7 +4238,9 @@
     }
 
     // Inject a placeholder div right after each script tag so the publisher
-    // can target it via containerSelector: '#divee-widget-placeholder'
+    // can target it via containerSelector: '#divee-widget-placeholder'.
+    // The placeholder also holds a skeleton that paints immediately for LCP /
+    // CLS — it's removed by insertWidget when the real widget mounts.
     function injectPlaceholders() {
         const scripts = document.querySelectorAll('script[data-project-id]');
         scripts.forEach((script) => {
@@ -4237,9 +4249,33 @@
                 placeholder.id = 'divee-widget-placeholder';
                 placeholder.style.width = '100%';
                 placeholder.style.display = 'flex';
+                placeholder.appendChild(buildSkeleton());
                 script.parentNode.insertBefore(placeholder, script.nextSibling);
+            } else if (script.nextElementSibling.id === 'divee-widget-placeholder' &&
+                       !script.nextElementSibling.querySelector('.divee-skeleton')) {
+                // Existing placeholder without skeleton — fill it.
+                script.nextElementSibling.appendChild(buildSkeleton());
             }
         });
+    }
+
+    function buildSkeleton() {
+        const skel = document.createElement('div');
+        skel.className = 'divee-skeleton';
+        skel.setAttribute('aria-hidden', 'true');
+        skel.innerHTML = `
+            <div class="divee-skeleton-top">
+                <div class="divee-skeleton-line divee-skeleton-line--small"></div>
+                <div class="divee-skeleton-line divee-skeleton-line--medium"></div>
+            </div>
+            <div class="divee-skeleton-pill"></div>
+            <div class="divee-skeleton-tags">
+                <div class="divee-skeleton-chip"></div>
+                <div class="divee-skeleton-chip"></div>
+                <div class="divee-skeleton-chip"></div>
+            </div>
+        `;
+        return skel;
     }
 
     // Auto-initialize from script tag

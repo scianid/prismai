@@ -159,7 +159,7 @@ describe('collapsed-state suggestion bubble', () => {
         expect(widget.elements.collapsedView.querySelector('.divee-collapsed-bubble')).toBeNull();
     });
 
-    test('renders bubble carousel inside powered-by row, with one chip per suggestion', async () => {
+    test('renders bubble carousel above the input pill, with one chip per suggestion', async () => {
         const widget = makeAnchoredWidget();
         widget.state.suggestions = ['First?', 'Second?', 'Third?'];
 
@@ -168,16 +168,20 @@ describe('collapsed-state suggestion bubble', () => {
         const bubble = widget.elements.collapsedBubble;
         expect(bubble).toBeTruthy();
         expect(bubble.classList.contains('divee-collapsed-bubble')).toBe(true);
-        const poweredBy = widget.elements.collapsedView.querySelector('.divee-powered-by-collapsed');
-        expect(poweredBy.contains(bubble)).toBe(true);
+
+        const collapsed = widget.elements.collapsedView;
+        const search = collapsed.querySelector('.divee-search-container-collapsed');
+        const children = Array.from(collapsed.children);
+        expect(children.indexOf(bubble)).toBeLessThan(children.indexOf(search));
 
         const track = bubble.querySelector('.divee-collapsed-bubble-track');
         expect(track).toBeTruthy();
         const chips = track.querySelectorAll('.divee-collapsed-bubble-chip');
         expect(chips.length).toBe(3);
-        expect(chips[0].textContent).toBe('First?');
-        expect(chips[1].textContent).toBe('Second?');
-        expect(chips[2].textContent).toBe('Third?');
+        expect(chips[0].dataset.questionText).toBe('First?');
+        expect(chips[1].dataset.questionText).toBe('Second?');
+        expect(chips[2].dataset.questionText).toBe('Third?');
+        expect(chips[0].querySelector('.divee-collapsed-bubble-chip-text').textContent).toBe('First?');
     });
 
     test('shouldRenderCollapsedBubble returns false in cubic/sidebar/floating/knowledgebase/suppression', () => {
@@ -207,7 +211,8 @@ describe('collapsed-state suggestion bubble', () => {
         await widget.primeCollapsedBubble();
 
         const firstChip = widget.elements.collapsedBubble.querySelector('.divee-collapsed-bubble-chip');
-        expect(firstChip.textContent).toBe('What is X?');
+        expect(firstChip.dataset.questionText).toBe('What is X?');
+        expect(firstChip.querySelector('.divee-collapsed-bubble-chip-text').textContent).toBe('What is X?');
     });
 
     test('advanceCollapsedBubble recycles the first chip to the end after the slide', async () => {
@@ -229,9 +234,9 @@ describe('collapsed-state suggestion bubble', () => {
         jest.advanceTimersByTime(520);
 
         const chips = track.querySelectorAll('.divee-collapsed-bubble-chip');
-        expect(chips[0].textContent).toBe('B?');
-        expect(chips[1].textContent).toBe('C?');
-        expect(chips[2].textContent).toBe('A?');
+        expect(chips[0].dataset.questionText).toBe('B?');
+        expect(chips[1].dataset.questionText).toBe('C?');
+        expect(chips[2].dataset.questionText).toBe('A?');
     });
 
     test('paused cycle does not recycle chips', async () => {
@@ -245,7 +250,7 @@ describe('collapsed-state suggestion bubble', () => {
         widget.advanceCollapsedBubble();
 
         const firstChip = track.querySelector('.divee-collapsed-bubble-chip');
-        expect(firstChip.textContent).toBe('A?');
+        expect(firstChip.dataset.questionText).toBe('A?');
     });
 
     test('mouseenter pauses, mouseleave resumes', async () => {

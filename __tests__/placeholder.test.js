@@ -35,7 +35,7 @@ describe('Placeholder injection', () => {
     expect(script.nextElementSibling).toBe(placeholder);
   });
 
-  test('placeholder is empty', () => {
+  test('placeholder contains a skeleton (LCP / CLS placeholder)', () => {
     const script = document.createElement('script');
     script.setAttribute('data-project-id', 'test-123');
     document.body.appendChild(script);
@@ -43,7 +43,9 @@ describe('Placeholder injection', () => {
     eval(widgetJs);
 
     const placeholder = document.getElementById('divee-widget-placeholder');
-    expect(placeholder.innerHTML).toBe('');
+    const skeleton = placeholder.querySelector('.divee-skeleton');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton.getAttribute('aria-hidden')).toBe('true');
   });
 
   test('does not inject duplicate placeholder on re-eval', () => {
