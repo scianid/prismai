@@ -505,22 +505,37 @@
 
             return new Promise((resolve) => {
                 let done = false;
+                const start = Date.now();
                 const finish = (found) => {
                     if (done) return;
                     done = true;
                     try { obs.disconnect(); } catch (_) { /* ignore */ }
                     clearTimeout(t);
+                    clearInterval(poll);
+                    const elapsed = Date.now() - start;
                     if (found) {
-                        this.log && this.log('content', 'Article selector appeared after wait');
+                        this.log && this.log('content', `Article selector appeared after ${elapsed}ms`);
                     } else {
                         this.log && this.log('content', `Article selectors did not appear within ${timeoutMs}ms — proceeding anyway`);
                     }
                     resolve(found);
                 };
+                // Observe both child additions and class-attribute changes,
+                // since SPAs sometimes mount the element first and add the
+                // class later.
                 const obs = new MutationObserver(() => {
                     if (matchesAny()) finish(true);
                 });
-                obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
+                obs.observe(document.documentElement || document.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['class', 'id']
+                });
+                // Poll as a backup — observers can miss rapid add/remove churn.
+                const poll = setInterval(() => {
+                    if (matchesAny()) finish(true);
+                }, 250);
                 const t = setTimeout(() => finish(false), timeoutMs);
             });
         }
@@ -1324,7 +1339,7 @@
                 // Some sites (e.g. ynet) hydrate the article body asynchronously
                 // after `load`, so wait briefly for the configured selector(s)
                 // to appear before extracting.
-                await this._waitForArticleSelectors(3000);
+                await this._waitForArticleSelectors(10000);
                 const articleFound = this.extractArticleContent();
 
                 // Don't render widget if article element not found or content is empty.
