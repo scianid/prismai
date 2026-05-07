@@ -1300,8 +1300,18 @@
 
                 if (!this.articleContent || this.articleContent.trim().length < 10) {
                     const contentLength = this.articleContent?.length || 0;
+                    const debug = (typeof window !== 'undefined' && window.diveeContentDebug) || null;
                     this.log('init', 'Widget disabled: article content is empty or too short to load', {
-                        contentLength
+                        contentLength,
+                        articleSelectorUsed: this.articleSelectorUsed,
+                        configuredArticleClass: this.config.articleClass,
+                        contentDebug: debug
+                    });
+                    console.warn('[Divee] Article extraction yielded too few chars:', {
+                        contentLength,
+                        articleSelectorUsed: this.articleSelectorUsed,
+                        configuredArticleClass: this.config.articleClass,
+                        contentDebug: debug
                     });
                     if (!isRoot) {
                         this.reportNonRender('empty_article', { contentLength });

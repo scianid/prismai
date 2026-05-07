@@ -110,6 +110,7 @@ function getContent(articleClass) {
 
   const readability = getReadabilityContent();
   const container = pickContainer();
+  const usedReadability = !!(readability && readability.content);
   const rawHtml = readability?.content || container.innerHTML;
   // Strip <svg> and <img> before parsing — text extraction doesn't need them,
   // and malformed SVG attributes (e.g. height="auto") trigger noisy browser parse errors on innerHTML assignment.
@@ -119,10 +120,14 @@ function getContent(articleClass) {
   const root = document.createElement("div");
   root.innerHTML = htmlSource;
 
+  const initialPCount = root.querySelectorAll("p").length;
   let nodes = Array.from(root.querySelectorAll("p"))
     .filter(el => (el.textContent || "").trim().length > 0);
+  const nonEmptyPCount = nodes.length;
 
+  let fallbackUsed = false;
   if (nodes.length < 3) {
+    fallbackUsed = true;
     nodes = Array.from(root.querySelectorAll("span, div"))
       .filter(el => (el.textContent || "").trim().length > 30)
       .filter(el => !el.querySelector("p"));
@@ -147,6 +152,33 @@ function getContent(articleClass) {
   }
 
   const content = paragraphs.join("\n\n");
+
+  // Expose diagnostics for debugging short/empty article extraction.
+  // Inspect via `window.diveeContentDebug` in the browser console.
+  try {
+    const debug = {
+      selectorTried: articleClass || null,
+      containerMatched: container ? {
+        tag: container.tagName,
+        id: container.id || null,
+        class: typeof container.className === "string" ? container.className : null,
+      } : null,
+      usedReadability,
+      rawHtmlLength: rawHtml ? rawHtml.length : 0,
+      pTagsInContainer: initialPCount,
+      pTagsNonEmpty: nonEmptyPCount,
+      fallbackToSpanDiv: fallbackUsed,
+      candidateNodes: nodes.length,
+      filterStats: stats,
+      keptParagraphs: paragraphs.length,
+      contentLength: content.length,
+    };
+    if (typeof window !== "undefined") window.diveeContentDebug = debug;
+    if (content.length === 0 && typeof console !== "undefined") {
+      console.warn("[Divee][content] extracted 0 chars — diagnostics:", debug);
+    }
+  } catch { /* ignore — diagnostics must never throw */ }
+
   return content;
 }
 
