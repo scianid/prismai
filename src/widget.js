@@ -4280,19 +4280,20 @@
 
     // Auto-initialize from script tag
     function autoInit() {
-        // Bail out if running inside a subframe. Publisher pages have many
-        // ad/recommendation iframes (Taboola, Outbrain, GPT, etc.), and if the
-        // SDK is loaded in any of them — typically via a browser extension
-        // injecting into all frames — the widget would try (and fail) to
-        // extract the host article from each subframe's document.
-        try {
-            if (window.self !== window.top) {
-                console.debug('[Divee] Running inside a subframe — skipping initialization. Load the SDK only in the top window.');
+        // Bail out if running inside a cross-origin subframe. Publisher pages
+        // have many ad/recommendation iframes (Taboola, Outbrain, GPT, etc.),
+        // and if the SDK is loaded in any of them — typically via a browser
+        // extension injecting into all frames — the widget would try (and fail)
+        // to extract the host article from each subframe's document. Same-origin
+        // subframes are allowed to proceed since they can reach the parent.
+        if (window.self !== window.top) {
+            try {
+                // Touching a cross-origin top throws a SecurityError.
+                void window.top.document;
+            } catch (_) {
+                console.debug('[Divee] Running inside a cross-origin subframe — skipping initialization. Load the SDK only in the top window.');
                 return;
             }
-        } catch (_) { /* cross-origin top access throws; treat as subframe */
-            console.debug('[Divee] Cannot access top window (cross-origin frame) — skipping initialization.');
-            return;
         }
 
         const scripts = document.querySelectorAll('script[data-project-id]');
