@@ -127,3 +127,205 @@ describe('onTextAreaFocus() cached-suggestions path (video-ad prefetch regressio
         expect(buttons.length).toBe(0);
     });
 });
+
+describe('collapsed-state suggestion bubble', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        try { sessionStorage.clear(); } catch (_) { /* noop */ }
+        jest.useRealTimers();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        try { sessionStorage.clear(); } catch (_) { /* noop */ }
+    });
+
+    function makeAnchoredWidget(opts = {}) {
+        const widget = makeWidget();
+        // makeWidget defaulted to anchored. Mutate displayMode if a test needs another mode.
+        if (opts.displayMode) widget.config.displayMode = opts.displayMode;
+        if (opts.widgetMode) widget.config.widgetMode = opts.widgetMode;
+        // Stub prefetch so primeCollapsedBubble doesn't try real network.
+        widget.prefetchSuggestions = jest.fn(async () => {
+            // suggestions already on state if test pre-set them.
+        });
+        return widget;
+    }
+
+    test('does not render bubble until suggestions arrive', () => {
+        const widget = makeAnchoredWidget();
+        // No suggestions yet → no bubble in the DOM.
+        expect(widget.elements.collapsedBubble).toBeFalsy();
+        expect(widget.elements.collapsedView.querySelector('.divee-collapsed-bubble')).toBeNull();
+    });
+
+    test('renders bubble carousel inside powered-by row, with one chip per suggestion', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = ['First?', 'Second?', 'Third?'];
+
+        await widget.primeCollapsedBubble();
+
+        const bubble = widget.elements.collapsedBubble;
+        expect(bubble).toBeTruthy();
+        expect(bubble.classList.contains('divee-collapsed-bubble')).toBe(true);
+        const poweredBy = widget.elements.collapsedView.querySelector('.divee-powered-by-collapsed');
+        expect(poweredBy.contains(bubble)).toBe(true);
+
+        const track = bubble.querySelector('.divee-collapsed-bubble-track');
+        expect(track).toBeTruthy();
+        const chips = track.querySelectorAll('.divee-collapsed-bubble-chip');
+        expect(chips.length).toBe(3);
+        expect(chips[0].textContent).toBe('First?');
+        expect(chips[1].textContent).toBe('Second?');
+        expect(chips[2].textContent).toBe('Third?');
+    });
+
+    test('shouldRenderCollapsedBubble returns false in cubic/sidebar/floating/knowledgebase/suppression', () => {
+        const widget = makeAnchoredWidget();
+        widget.config.displayMode = 'cubic';
+        expect(widget.shouldRenderCollapsedBubble()).toBe(false);
+        widget.config.displayMode = 'sidebar';
+        expect(widget.shouldRenderCollapsedBubble()).toBe(false);
+        widget.config.displayMode = 'floating';
+        expect(widget.shouldRenderCollapsedBubble()).toBe(false);
+        widget.config.displayMode = 'anchored';
+        widget.config.widgetMode = 'knowledgebase';
+        expect(widget.shouldRenderCollapsedBubble()).toBe(false);
+        widget.config.widgetMode = 'article';
+        widget.state.suggestionsSuppressed = true;
+        expect(widget.shouldRenderCollapsedBubble()).toBe(false);
+        widget.state.suggestionsSuppressed = false;
+        expect(widget.shouldRenderCollapsedBubble()).toBe(true);
+        widget.config.displayMode = 'anchored+floating';
+        expect(widget.shouldRenderCollapsedBubble()).toBe(true);
+    });
+
+    test('primeCollapsedBubble renders first suggestion text', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = ['What is X?', 'How does Y work?'];
+
+        await widget.primeCollapsedBubble();
+
+        const firstChip = widget.elements.collapsedBubble.querySelector('.divee-collapsed-bubble-chip');
+        expect(firstChip.textContent).toBe('What is X?');
+    });
+
+    test('advanceCollapsedBubble recycles the first chip to the end after the slide', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = [
+            { id: 'q1', question: 'A?' },
+            { id: 'q2', question: 'B?' },
+            { id: 'q3', question: 'C?' }
+        ];
+        await widget.primeCollapsedBubble();
+        const track = widget.elements.collapsedBubble.querySelector('.divee-collapsed-bubble-track');
+
+        // jsdom returns offsetWidth: 0 by default; stub a sensible width on chips.
+        Array.from(track.children).forEach(c => Object.defineProperty(c, 'offsetWidth', { configurable: true, value: 120 }));
+
+        jest.useFakeTimers();
+        widget.advanceCollapsedBubble();
+        // After the 520ms recycle window, the first chip moves to the end.
+        jest.advanceTimersByTime(520);
+
+        const chips = track.querySelectorAll('.divee-collapsed-bubble-chip');
+        expect(chips[0].textContent).toBe('B?');
+        expect(chips[1].textContent).toBe('C?');
+        expect(chips[2].textContent).toBe('A?');
+    });
+
+    test('paused cycle does not recycle chips', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = ['A?', 'B?'];
+        await widget.primeCollapsedBubble();
+        const track = widget.elements.collapsedBubble.querySelector('.divee-collapsed-bubble-track');
+        Array.from(track.children).forEach(c => Object.defineProperty(c, 'offsetWidth', { configurable: true, value: 120 }));
+
+        widget.state.collapsedBubbleCycle.paused = true;
+        widget.advanceCollapsedBubble();
+
+        const firstChip = track.querySelector('.divee-collapsed-bubble-chip');
+        expect(firstChip.textContent).toBe('A?');
+    });
+
+    test('mouseenter pauses, mouseleave resumes', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = ['A?', 'B?'];
+        await widget.primeCollapsedBubble();
+
+        widget.elements.collapsedBubble.dispatchEvent(new Event('mouseenter'));
+        expect(widget.state.collapsedBubbleCycle.paused).toBe(true);
+
+        widget.elements.collapsedBubble.dispatchEvent(new Event('mouseleave'));
+        expect(widget.state.collapsedBubbleCycle.paused).toBe(false);
+    });
+
+    test('clicking a chip invokes askQuestion with suggestion-closed source after expand', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = [
+            { id: 'q1', question: 'First?' },
+            { id: 'q2', question: 'Second?' }
+        ];
+        await widget.primeCollapsedBubble();
+        widget.expand = jest.fn();
+
+        jest.useFakeTimers();
+        const chips = widget.elements.collapsedBubble.querySelectorAll('.divee-collapsed-bubble-chip');
+        chips[1].click();
+
+        expect(widget.expand).toHaveBeenCalledWith({ skipAutoFocus: true, trigger: 'collapsed_bubble' });
+        expect(widget.askQuestion).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(200);
+
+        expect(widget.askQuestion).toHaveBeenCalledWith('Second?', 'suggestion-closed', 'q2');
+    });
+
+    test('clicking a chip does not also fire the parent collapsedView click (no double expand)', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = ['A?'];
+        await widget.primeCollapsedBubble();
+        widget.expand = jest.fn();
+
+        const chip = widget.elements.collapsedBubble.querySelector('.divee-collapsed-bubble-chip');
+        chip.click();
+
+        expect(widget.expand).toHaveBeenCalledTimes(1);
+    });
+
+    test('empty suggestions removes the bubble', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = [];
+
+        await widget.primeCollapsedBubble();
+
+        expect(widget.elements.collapsedBubble).toBeNull();
+        expect(document.querySelector('.divee-collapsed-bubble')).toBeNull();
+    });
+
+    test('suppressSuggestions removes the bubble', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = ['A?'];
+        await widget.primeCollapsedBubble();
+        expect(widget.elements.collapsedBubble).toBeTruthy();
+
+        widget.suppressSuggestions();
+
+        expect(widget.elements.collapsedBubble).toBeNull();
+        expect(document.querySelector('.divee-collapsed-bubble')).toBeNull();
+        expect(widget.state.suggestionsSuppressed).toBe(true);
+    });
+
+    test('stopCollapsedBubbleCycle clears the interval and swap timeout', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = ['A?', 'B?'];
+        await widget.primeCollapsedBubble();
+        const cycle = widget.state.collapsedBubbleCycle;
+        expect(cycle.intervalId).not.toBeNull();
+
+        widget.stopCollapsedBubbleCycle();
+
+        expect(cycle.intervalId).toBeNull();
+        expect(cycle.swapTimeoutId).toBeNull();
+    });
+});

@@ -204,7 +204,14 @@
                     determined: false          // true once CMP responded, banner used, or no-banner fallback resolved
                 },
                 videoAdPlayed: false,          // one-shot guard: the ?diveeVideoAd video plays at most once per page load
-                videoAdInstance: null          // { adsManager, adsLoader, adDisplayContainer } while the ad is alive
+                videoAdInstance: null,         // { adsManager, adsLoader, adDisplayContainer } while the ad is alive
+                collapsedBubbleCycle: {        // Closed-state suggestion teaser bubble
+                    intervalId: null,
+                    swapTimeoutId: null,
+                    index: 0,
+                    paused: false,
+                    items: []
+                }
             };
 
             // In-memory fallback store when consent is denied/unanswered
@@ -776,6 +783,7 @@
                 this.safeSessionSet(key, 'true');
             } catch (_) { /* storage blocked (Safari ITP, sandboxed iframe, etc.) */ }
             this.state.suggestionsSuppressed = true;
+            this.removeCollapsedBubble();
         }
 
         log(category, ...args) {
@@ -1326,44 +1334,84 @@
                 return;
             }
 
-            // In knowledgebase mode, article content is not required
+            // === Render widget immediately now that we have config ===
+            // Article extraction and suggestions are deferred to a background
+            // pass so the closed pill paints as soon as possible. The widget
+            // is removed later if the article gate fails (article not found
+            // or content too short) — see _afterRenderInit().
+            this.createWidget();
+            this.attachEventListeners();
+
+            // anchoredOpen: skip the collapsed launcher state and open immediately,
+            // but don't auto-focus the input — that would fire onTextAreaFocus and
+            // pull suggestions, which this mode explicitly wants to defer until the
+            // user actively clicks into the input.
+            if (this.config.displayMode === 'anchoredOpen') {
+                this.expand({ skipAutoFocus: true, trigger: 'init' });
+            }
+
+            // Setup tracking + analytics + attention animation
+            this.setupVisibilityTracking();
+            this.setupPageUnloadFlush();
+            this.initSessionTracking();
+            this.setupAttentionAnimation();
+
+            this.trackEvent('widget_loaded', {
+                project_id: this.config.projectId,
+                article_id: this.config.articleId,
+                position: this.config.position
+            });
+
+            // Fire the tag pills request immediately (only needs the page URL,
+            // not extracted article content) so tags appear as soon as possible.
+            if (this.config.widgetMode !== 'knowledgebase') {
+                this.fetchAndRenderArticleTags();
+            }
+
+            // === Background: article extraction, impression, suggestion prime ===
+            // Fire-and-forget so widget paint isn't blocked.
+            this._afterRenderInit().catch((err) => this.reportError(err, 'after_render_init'));
+        }
+
+        async _afterRenderInit() {
+            // Fire the CDN-cached suggestions GET in parallel with article
+            // extraction — it only needs the page URL, not extracted content.
+            // If the cache hits, the bubble can populate before extraction
+            // even finishes.
+            if (this.shouldRenderCollapsedBubble()) {
+                this._tryEarlyCachedSuggestions();
+            }
+
+            // In knowledgebase mode, article content is not required.
             if (this.config.widgetMode === 'knowledgebase') {
                 this.log('init', 'Knowledgebase mode: skipping article extraction');
-                // Extract page context if available (e.g. from hidden divee-page-content-context div)
                 this.extractArticleContent();
                 this.contentCache.articleFound = true;
-                // Use page URL as the article URL and page title as the title
                 this.contentCache.url = this.contentCache.url || window.location.href;
                 this.contentCache.title = this.contentCache.title || document.title || 'Knowledgebase';
                 this.contentCache.content = this.contentCache.content || '';
                 this.contentCache.extracted = true;
             } else {
-                // Article mode: extract article content (original behavior).
-                // Some sites (e.g. ynet) hydrate the article body asynchronously
-                // after `load`, so wait briefly for the configured selector(s)
-                // to appear before extracting.
+                // Article mode: wait for article selectors (some sites hydrate
+                // the body asynchronously) then extract content.
                 await this._waitForArticleSelectors(10000);
                 const articleFound = this.extractArticleContent();
 
-                // Don't render widget if article element not found or content is empty.
-                // Skip telemetry for root/home URLs — these are expected to be
-                // landing pages without an article, not a publisher misconfiguration.
                 let path = '/';
                 try { path = location.pathname || '/'; } catch (_) { /* ignore */ }
                 const isRoot = this._isRootPath(path);
 
                 if (!articleFound) {
-                    this.log('init', 'Widget disabled: article element not found');
-                    if (!isRoot) {
-                        this.reportNonRender('article_not_found');
-                    }
+                    this.log('init', 'Widget gated post-render: article element not found');
+                    this._removeRenderedWidget();
+                    if (!isRoot) this.reportNonRender('article_not_found');
                     return;
                 }
 
                 if (!this.articleContent || this.articleContent.trim().length < 10) {
                     const contentLength = this.articleContent?.length || 0;
                     const debug = (typeof window !== 'undefined' && window.diveeContentDebug) || null;
-                    this.log('init', 'Widget disabled: article content is empty or too short to load', {
+                    this.log('init', 'Widget gated post-render: article content too short', {
                         contentLength,
                         articleSelectorUsed: this.articleSelectorUsed,
                         configuredArticleClass: this.config.articleClass,
@@ -1375,6 +1423,7 @@
                         configuredArticleClass: this.config.articleClass,
                         contentDebug: debug
                     });
+                    this._removeRenderedWidget();
                     if (!isRoot) {
                         this.reportNonRender('empty_article', { contentLength });
                         this.reportError(
@@ -1392,42 +1441,24 @@
                 referrer: document.referrer
             });
 
-            // Create widget DOM
-            this.createWidget();
-
-            // Attach event listeners
-            this.attachEventListeners();
-
-            // anchoredOpen: skip the collapsed launcher state and open immediately,
-            // but don't auto-focus the input — that would fire onTextAreaFocus and
-            // pull suggestions, which this mode explicitly wants to defer until the
-            // user actively clicks into the input.
-            if (this.config.displayMode === 'anchoredOpen') {
-                this.expand({ skipAutoFocus: true, trigger: 'init' });
+            // Prime the closed-state suggestion teaser bubble. The bubble is
+            // inserted lazily inside primeCollapsedBubble once suggestions arrive.
+            if (this.shouldRenderCollapsedBubble()) {
+                this.primeCollapsedBubble();
             }
+        }
 
-            // Setup visibility tracking
-            this.setupVisibilityTracking();
-
-            // Setup analytics batch flush on page unload
-            this.setupPageUnloadFlush();
-
-            // Setup session tracking (heartbeats + active time)
-            this.initSessionTracking();
-
-            // Setup attention animation (off by default)
-            this.setupAttentionAnimation();
-
-            // Track analytics
-            this.trackEvent('widget_loaded', {
-                project_id: this.config.projectId,
-                article_id: this.config.articleId,
-                position: this.config.position
-            });
-
-            if (this.config.widgetMode !== 'knowledgebase') {
-                this.fetchAndRenderArticleTags();
-            }
+        _removeRenderedWidget() {
+            try {
+                this.stopCollapsedBubbleCycle();
+            } catch (_) { /* ignore */ }
+            const c = this.elements.container;
+            if (c && c.parentNode) c.parentNode.removeChild(c);
+            // Also clean up the floating Ask AI button if anchored+floating injected one.
+            try {
+                const fab = document.querySelector('.divee-floating-ask-ai');
+                if (fab && fab.parentNode) fab.parentNode.removeChild(fab);
+            } catch (_) { /* ignore */ }
         }
 
         async loadServerConfig() {
@@ -2010,7 +2041,9 @@
                 `;
             }
 
-            // Add typewriter effect
+            // Add typewriter effect. The closed-state suggestion bubble is
+            // primed separately, after createWidget completes and the widget
+            // is in the DOM — see init().
             setTimeout(() => {
                 const input = view.querySelector('.divee-search-input-collapsed');
                 if (input && config.input_text_placeholders) {
@@ -2545,6 +2578,8 @@
 
             const searchBar = this.elements.collapsedView?.querySelector('.divee-search-container-collapsed');
             if (!searchBar) return;
+            // Guard against environments without IntersectionObserver (jsdom, very old browsers).
+            if (typeof IntersectionObserver === 'undefined') return;
 
             let started = false;
             let intervalId = null;
@@ -2688,6 +2723,8 @@
         expand({ skipAutoFocus = false, trigger = 'click' } = {}) {
             this.state.isExpanded = true;
             this.elements.container.setAttribute('data-state', 'expanded');
+            // Stop the closed-state suggestion cycle so a swap doesn't fire mid-fade.
+            this.stopCollapsedBubbleCycle();
             this.maybeShowConsent();
 
             if (this.config.displayMode === 'sidebar') {
@@ -2783,6 +2820,10 @@
 
                     setTimeout(() => {
                         this.elements.collapsedView.style.opacity = '1';
+                        // Restart the closed-state suggestion bubble cycle.
+                        if (this.elements.collapsedBubble) {
+                            this.primeCollapsedBubble();
+                        }
                     }, 50);
                 }, 200);
             }
@@ -2797,6 +2838,43 @@
         // the shimmer popup. Used while a video ad is playing so that when
         // the ad ends, the input-focus hits the cached-suggestions branch in
         // onTextAreaFocus and renders instantly.
+        // Early CDN-cached fetch — runs in parallel with article extraction.
+        // Only the page URL is needed for the cache key; if it hits, suggestions
+        // populate before content extraction finishes and the bubble can render
+        // immediately. On miss, the regular fetchSuggestions path runs later
+        // with extracted content and falls back to POST.
+        async _tryEarlyCachedSuggestions() {
+            if (this.config.widgetMode === 'knowledgebase') return;
+            if (this.state.suggestions.length > 0) return;
+            if (this.state.suggestionsSuppressed) return;
+            const url = (typeof window !== 'undefined' && window.location && window.location.href) || '';
+            if (!url) return;
+            try {
+                const cached = await this.fetchCachedSuggestions(url);
+                // Re-check after the await — another path may have populated state
+                // in the meantime, or the user may have suppressed/expanded.
+                if (!cached || cached.length === 0) return;
+                if (this.state.suggestions.length > 0) return;
+                if (this.state.suggestionsSuppressed) return;
+
+                this.state.suggestions = cached;
+                this.trackEvent('suggestions_fetched', {
+                    article_id: this.config.articleId,
+                    suggestions_count: cached.length,
+                    load_time: 0,
+                    prefetched: true,
+                    early_cached: true
+                });
+
+                // Render the bubble immediately if still applicable.
+                if (!this.state.isExpanded && this.shouldRenderCollapsedBubble()) {
+                    this.primeCollapsedBubble();
+                }
+            } catch (_) {
+                // Non-fatal — fall through to the normal post-extraction path.
+            }
+        }
+
         async prefetchSuggestions() {
             if (this.config.widgetMode === 'knowledgebase') return;
             if (this.state.suggestions.length > 0) return;
@@ -2813,6 +2891,201 @@
             } catch (err) {
                 this.log('videoAd', 'Prefetch suggestions failed:', err);
             }
+        }
+
+        // ============================================================
+        // Closed-state suggestion teaser bubble
+        // ============================================================
+        // Shown above the collapsed input pill in anchored / anchored+floating
+        // modes. Cycles through up to 5 fetched suggestions, ~4s each. Click
+        // expands the widget and asks the suggestion immediately.
+
+        shouldRenderCollapsedBubble() {
+            const m = this.config.displayMode;
+            if (m === 'floating' || m === 'sidebar' || m === 'cubic') return false;
+            if (this.config.widgetMode === 'knowledgebase') return false;
+            if (this.state.suggestionsSuppressed) return false;
+            return true;
+        }
+
+        createCollapsedSuggestionBubble() {
+            // Container: clipped + faded on the trailing edge. Track inside
+            // holds each suggestion as its own clickable chip pill. Marquee
+            // shifts the track to recycle chips one at a time.
+            const bubble = document.createElement('div');
+            bubble.className = 'divee-collapsed-bubble';
+            bubble.setAttribute('role', 'group');
+            bubble.setAttribute('aria-label', 'Suggested questions');
+
+            const track = document.createElement('div');
+            track.className = 'divee-collapsed-bubble-track';
+            bubble.appendChild(track);
+
+            const pause = () => { this.state.collapsedBubbleCycle.paused = true; };
+            const resume = () => { this.state.collapsedBubbleCycle.paused = false; };
+            bubble.addEventListener('mouseenter', pause);
+            bubble.addEventListener('mouseleave', resume);
+            bubble.addEventListener('focusin', pause);
+            bubble.addEventListener('focusout', resume);
+
+            return bubble;
+        }
+
+        _createCollapsedSuggestionChip(item) {
+            const text = typeof item === 'string' ? item : item.question;
+            const id = typeof item === 'string' ? null : item.id;
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'divee-collapsed-bubble-chip';
+            chip.textContent = text;
+            if (id) chip.dataset.questionId = id;
+            chip.dataset.questionText = text;
+            chip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.expand({ skipAutoFocus: true, trigger: 'collapsed_bubble' });
+                setTimeout(() => {
+                    this.askQuestion(text, 'suggestion-closed', id);
+                }, 200);
+            });
+            return chip;
+        }
+
+        async primeCollapsedBubble({ collapsedViewEl } = {}) {
+            // Re-check gates in case suppression was toggled in another tab.
+            this.checkSuggestionsSuppression();
+            if (!this.shouldRenderCollapsedBubble()) {
+                this.removeCollapsedBubble();
+                return;
+            }
+
+            await this.prefetchSuggestions();
+
+            // Re-check after the await — the widget may have expanded, the user
+            // may have suppressed suggestions mid-flight, or display mode may
+            // have changed. Bail out cleanly if so.
+            if (this.state.isExpanded) return;
+            if (!this.shouldRenderCollapsedBubble()) {
+                this.removeCollapsedBubble();
+                return;
+            }
+
+            const items = (this.state.suggestions || []).slice(0, 5);
+            if (items.length === 0) {
+                this.removeCollapsedBubble();
+                return;
+            }
+
+            // Create and attach the bubble lazily, only now that we have
+            // something to show. Prefer to attach inside .divee-powered-by-collapsed
+            // so the button shares a row with the "powered by" text. Fall back
+            // to before the input pill when there's no powered-by row (white_label).
+            const view = collapsedViewEl || this.elements.collapsedView;
+            if (!view) return;
+            if (!this.elements.collapsedBubble || !view.contains(this.elements.collapsedBubble)) {
+                const bubble = this.createCollapsedSuggestionBubble();
+                const poweredBy = view.querySelector('.divee-powered-by-collapsed');
+                if (poweredBy) {
+                    poweredBy.appendChild(bubble);
+                } else {
+                    const searchContainer = view.querySelector('.divee-search-container-collapsed');
+                    if (!searchContainer) return;
+                    view.insertBefore(bubble, searchContainer);
+                }
+                this.elements.collapsedBubble = bubble;
+            }
+
+            this.startCollapsedBubbleCycle(items);
+        }
+
+        startCollapsedBubbleCycle(items) {
+            const bubble = this.elements.collapsedBubble;
+            if (!bubble) return;
+            const track = bubble.querySelector('.divee-collapsed-bubble-track');
+            if (!track) return;
+
+            const cycle = this.state.collapsedBubbleCycle;
+            if (cycle.intervalId) clearInterval(cycle.intervalId);
+            if (cycle.swapTimeoutId) clearTimeout(cycle.swapTimeoutId);
+
+            // (Re)populate the track with one chip per suggestion.
+            track.innerHTML = '';
+            track.style.transition = 'none';
+            track.style.transform = 'translateX(0)';
+            items.forEach(item => track.appendChild(this._createCollapsedSuggestionChip(item)));
+
+            cycle.items = items;
+            cycle.index = 0;
+            cycle.paused = false;
+
+            if (items.length > 1) {
+                cycle.intervalId = setInterval(() => this.advanceCollapsedBubble(), 3500);
+            }
+
+            if (!this._handleBubbleVisibility) {
+                this._handleBubbleVisibility = () => { /* advance() checks document.hidden each tick */ };
+                document.addEventListener('visibilitychange', this._handleBubbleVisibility);
+            }
+        }
+
+        advanceCollapsedBubble() {
+            const bubble = this.elements.collapsedBubble;
+            const cycle = this.state.collapsedBubbleCycle;
+            if (!bubble) return;
+            if (cycle.paused) return;
+            if (typeof document !== 'undefined' && document.hidden) return;
+
+            const track = bubble.querySelector('.divee-collapsed-bubble-track');
+            if (!track || track.children.length < 2) return;
+
+            const firstChip = track.children[0];
+            const styles = window.getComputedStyle(track);
+            const gap = parseFloat(styles.columnGap || styles.gap || '0') || 0;
+            const shift = firstChip.offsetWidth + gap;
+            if (!shift) return;
+
+            // Slide the track left by the width of the first chip.
+            track.style.transition = 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)';
+            track.style.transform = `translateX(-${shift}px)`;
+
+            if (cycle.swapTimeoutId) clearTimeout(cycle.swapTimeoutId);
+            cycle.swapTimeoutId = setTimeout(() => {
+                // After the slide, recycle the first chip to the end and
+                // reset the track instantly so the next slide starts at 0.
+                track.style.transition = 'none';
+                track.appendChild(firstChip);
+                track.style.transform = 'translateX(0)';
+                // Force reflow so the next transition takes effect.
+                void track.offsetWidth;
+                cycle.swapTimeoutId = null;
+            }, 520);
+        }
+
+        stopCollapsedBubbleCycle() {
+            const cycle = this.state.collapsedBubbleCycle;
+            if (cycle.intervalId) {
+                clearInterval(cycle.intervalId);
+                cycle.intervalId = null;
+            }
+            if (cycle.swapTimeoutId) {
+                clearTimeout(cycle.swapTimeoutId);
+                cycle.swapTimeoutId = null;
+            }
+            if (this._handleBubbleVisibility) {
+                document.removeEventListener('visibilitychange', this._handleBubbleVisibility);
+                this._handleBubbleVisibility = null;
+            }
+        }
+
+        removeCollapsedBubble() {
+            this.stopCollapsedBubbleCycle();
+            const bubble = this.elements.collapsedBubble;
+            if (bubble && bubble.parentNode) {
+                bubble.parentNode.removeChild(bubble);
+            }
+            this.elements.collapsedBubble = null;
+            this.state.collapsedBubbleCycle.items = [];
+            this.state.collapsedBubbleCycle.index = 0;
         }
 
         renderSuggestionsList(suggestions) {
@@ -3000,9 +3273,10 @@
 
         async askQuestion(question, type, questionId, redactionHits) {
             // Track question event for session tracking
-            this.trackEvent(type === 'suggestion' ? 'suggestion_question_asked' : 'custom_question_asked', {
-                question_type: type
-            });
+            const isSuggestion = type === 'suggestion' || type === 'suggestion-closed';
+            const eventPayload = { question_type: type };
+            if (type === 'suggestion-closed') eventPayload.source = 'closed_bubble';
+            this.trackEvent(isSuggestion ? 'suggestion_question_asked' : 'custom_question_asked', eventPayload);
 
             // Close suggestions overlay so user can see the chat
             const suggestionsContainer = this.elements.expandedView.querySelector('.divee-suggestions-input');
@@ -3270,8 +3544,10 @@
         // ============================================
 
         getArticleUniqueId() {
-            // article unique_id = url (without query params) + projectId (matches articleDao.ts convention)
-            let url = this.contentCache.url;
+            // article unique_id = url (without query params) + projectId (matches articleDao.ts convention).
+            // Fall back to window.location.href when contentCache.url isn't populated yet
+            // (e.g. when tags are fetched before extractArticleContent runs).
+            let url = this.contentCache.url || (typeof window !== 'undefined' ? window.location.href : '');
             const projectId = this.config.projectId;
             if (!url || !projectId) return null;
             try { url = url.split('?')[0].split('#')[0]; } catch (e) {}
@@ -3853,6 +4129,8 @@
             if (!this.elements.container || this.state.widgetVisibleTracked) {
                 return;
             }
+            // Guard against environments without IntersectionObserver (jsdom, very old browsers).
+            if (typeof IntersectionObserver === 'undefined') return;
 
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {

@@ -80,9 +80,11 @@ describe('Article Tags Feature', () => {
             expect(id).toBe('https://example.com/article.htmltest-project-123');
         });
 
-        test('should return null if url is missing', () => {
+        test('falls back to window.location.href when contentCache.url is missing', () => {
             widget.contentCache.url = null;
-            expect(widget.getArticleUniqueId()).toBeNull();
+            // jsdom default location is http://localhost/
+            const id = widget.getArticleUniqueId();
+            expect(id).toBe(`${window.location.href.split('?')[0].split('#')[0]}${widget.config.projectId}`);
         });
 
         test('should return null if projectId is missing', () => {
@@ -182,8 +184,10 @@ describe('Article Tags Feature', () => {
             expect(widget.state.articleTags).toHaveLength(5);
         });
 
-        test('should not call API if articleId is null', async () => {
+        test('should not call API if projectId is missing', async () => {
+            // articleId is built from url + projectId; with no projectId there's nothing to query.
             widget.contentCache.url = null;
+            widget.config.projectId = null;
             fetch.mockClear();
 
             await widget.fetchAndRenderArticleTags();

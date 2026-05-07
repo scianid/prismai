@@ -601,7 +601,6 @@
     0 6px 16px rgba(0, 0, 0, 0.07),
     0 16px 32px rgba(0, 0, 0, 0.05);
   --divee-gradient-angle: 135deg;
-  animation: divee-gradient-rotate 6s linear infinite;
 }
 
 @property --divee-gradient-angle {
@@ -734,9 +733,17 @@
 
 
 .divee-powered-by-collapsed {
+  display: flex;
+  align-items: center;
+  gap: 28px;
   padding: 0 24px 6px 24px;
   text-align: left;
   direction: ltr;
+  min-height: 18px;
+}
+
+.divee-powered-by-collapsed .divee-powered-by {
+  margin-left: 0 !important;
 }
 
 .divee-header {
@@ -2895,4 +2902,88 @@
 
 .divee-video-ad-skip:hover {
   background: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* ============================================================
+   Closed-state suggestion chip carousel
+   ============================================================
+   Sits inside .divee-powered-by-collapsed. A horizontal track of
+   chip pills shifts left every few seconds, recycling the first
+   chip to the end. The container masks the trailing edge with a
+   fade so overflow looks intentional. */
+.divee-collapsed {
+  position: relative;
+}
+
+.divee-collapsed-bubble {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  margin-inline-start: auto;
+  height: 30px;
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, black calc(100% - 36px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 36px), transparent 100%);
+  animation: divee-collapsed-bubble-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.divee-collapsed-bubble-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  width: max-content;
+  will-change: transform;
+}
+
+.divee-collapsed-bubble-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 6px 14px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.divee-collapsed-bubble-chip:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+.divee-collapsed-bubble-chip:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--divee-color-secondary) 60%, transparent);
+  outline-offset: 2px;
+}
+
+@keyframes divee-collapsed-bubble-enter {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* RTL: fade flips to the leading edge. The powered-by-collapsed
+   forces direction: ltr on its children, so the marquee itself
+   reads left-to-right even on RTL widgets — only the mask flips. */
+.divee-widget[dir="rtl"] .divee-collapsed-bubble {
+  mask-image: linear-gradient(to left, black calc(100% - 36px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to left, black calc(100% - 36px), transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .divee-collapsed-bubble {
+    animation: none !important;
+  }
+
+  .divee-collapsed-bubble-track {
+    transition: none !important;
+  }
 }

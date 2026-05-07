@@ -207,7 +207,9 @@ describe('DiveeWidget Core', () => {
     test('initial consent is undetermined when nothing stored and no CMP', () => {
       const widget = loadWidget();
       expect(widget.state.consent.storage).toBe(false);
-      expect(widget.state.consent.ads).toBe(false);
+      // No publisher CMP → ads default to true (personalized, npa=0). The
+      // Divee banner only governs storage/analytics, not ads consent.
+      expect(widget.state.consent.ads).toBe(true);
       expect(widget.state.consent.determined).toBe(false);
       expect(widget.state.consent.source).toBeNull();
     });
