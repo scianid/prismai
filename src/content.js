@@ -38,11 +38,12 @@ function getContent(articleClass) {
     const hasSmall = !!el.querySelector("small");
     const style = (el.getAttribute("style") || "").toLowerCase();
     const cls = (el.className || "").toLowerCase();
+    const matchesToken = (str, k) => new RegExp(`\\b${k}\\b`).test(str);
     return (
       ((hasEm || hasSmall) && text.length < 150) ||
-      cls.includes("caption") ||
-      cls.includes("credit") ||
-      cls.includes("source") ||
+      matchesToken(cls, "caption") ||
+      matchesToken(cls, "credit") ||
+      matchesToken(cls, "source") ||
       (style.includes("font-size") && style.includes("small"))
     );
   };
