@@ -3964,6 +3964,22 @@
     // Auto-initialize from script tag
     function autoInit() {
         console.debug('[Divee] Initializing...');
+
+        // Bail out if running inside a subframe. Publisher pages have many
+        // ad/recommendation iframes (Taboola, Outbrain, GPT, etc.), and if the
+        // SDK is loaded in any of them — typically via a browser extension
+        // injecting into all frames — the widget would try (and fail) to
+        // extract the host article from each subframe's document.
+        try {
+            if (window.self !== window.top) {
+                console.debug('[Divee] Running inside a subframe — skipping initialization. Load the SDK only in the top window.');
+                return;
+            }
+        } catch (_) { /* cross-origin top access throws; treat as subframe */
+            console.debug('[Divee] Cannot access top window (cross-origin frame) — skipping initialization.');
+            return;
+        }
+
         const scripts = document.querySelectorAll('script[data-project-id]');
 
         if (scripts.length === 0) {
