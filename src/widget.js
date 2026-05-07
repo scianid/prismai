@@ -8,9 +8,6 @@
 
 (function () {
     'use strict';
-
-    console.debug('[Divee] Script loaded......');
-
     // Singleton guard — prevent duplicate initialization if the script is injected more than once
     if (window.__diveeWidgetLoaded) return;
 
@@ -3969,8 +3966,6 @@
 
     // Auto-initialize from script tag
     function autoInit() {
-        console.debug('[Divee] Initializing...');
-
         // Bail out if running inside a subframe. Publisher pages have many
         // ad/recommendation iframes (Taboola, Outbrain, GPT, etc.), and if the
         // SDK is loaded in any of them — typically via a browser extension
