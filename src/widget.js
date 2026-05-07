@@ -223,6 +223,11 @@
             this._cmpAttached = this.probeCMP();
 
             if (!this._cmpAttached) {
+                // No publisher CMP — there is no signal to wait for, so default
+                // to personalized ads (npa=0). The Divee banner only governs
+                // storage/analytics; it never asks about ads.
+                this.state.consent.ads = true;
+
                 try {
                     if (localStorage.getItem('divee_consent') === 'granted') {
                         // Legacy banner accept implied tracking, so analytics is restored too.
@@ -1282,10 +1287,11 @@
                 });
                 googletag.pubads().setTargeting('content_type', 'article');
                 googletag.pubads().setTargeting('display_mode', self.config.displayMode || 'anchored');
-                // Default to non-personalized ads. Flip to personalized only if
-                // ads consent is positively confirmed (CMP grants TCF Purposes
-                // 1+3+4). applyCMPConsent will switch this live if the CMP
-                // signal arrives later.
+                // NPA tracks state.consent.ads: personalized when no CMP is
+                // present, or when the CMP grants TCF Purposes 1+3+4; NPA
+                // while a CMP is attached but hasn't responded, or has
+                // denied any of those purposes. applyCMPConsent flips this
+                // live if the CMP signal arrives after GPT is initialized.
                 googletag.pubads().setRequestNonPersonalizedAds(self.state.consent.ads ? 0 : 1);
                 googletag.enableServices();
                 
