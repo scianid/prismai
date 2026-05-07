@@ -485,6 +485,46 @@
             diveeReportNonRender(reason, this.config && this.config.projectId, opts);
         }
 
+        // Wait until at least one configured article selector matches the DOM,
+        // or the timeout elapses. SPAs (ynet, Next.js sites, etc.) often inject
+        // the article body asynchronously after `load`. Uses MutationObserver
+        // for low-latency detection and falls back to the timeout.
+        _waitForArticleSelectors(timeoutMs) {
+            const selectors = [
+                this.config.articleClass,
+                ...(Array.isArray(this.config.articleClassFallbacks) ? this.config.articleClassFallbacks : [])
+            ].filter(s => typeof s === 'string' && s.trim());
+
+            if (!selectors.length) return Promise.resolve(false);
+
+            const matchesAny = () => selectors.some(sel => {
+                try { return !!document.querySelector(sel); } catch { return false; }
+            });
+
+            if (matchesAny()) return Promise.resolve(true);
+
+            return new Promise((resolve) => {
+                let done = false;
+                const finish = (found) => {
+                    if (done) return;
+                    done = true;
+                    try { obs.disconnect(); } catch (_) { /* ignore */ }
+                    clearTimeout(t);
+                    if (found) {
+                        this.log && this.log('content', 'Article selector appeared after wait');
+                    } else {
+                        this.log && this.log('content', `Article selectors did not appear within ${timeoutMs}ms — proceeding anyway`);
+                    }
+                    resolve(found);
+                };
+                const obs = new MutationObserver(() => {
+                    if (matchesAny()) finish(true);
+                });
+                obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
+                const t = setTimeout(() => finish(false), timeoutMs);
+            });
+        }
+
         // Walk an ordered list of CSS selectors and return the first whose
         // element exists AND yields content >= 10 chars (via getContent if
         // available, otherwise textContent). Returns null when none match.
@@ -1280,7 +1320,11 @@
                 this.contentCache.content = this.contentCache.content || '';
                 this.contentCache.extracted = true;
             } else {
-                // Article mode: extract article content (original behavior)
+                // Article mode: extract article content (original behavior).
+                // Some sites (e.g. ynet) hydrate the article body asynchronously
+                // after `load`, so wait briefly for the configured selector(s)
+                // to appear before extracting.
+                await this._waitForArticleSelectors(3000);
                 const articleFound = this.extractArticleContent();
 
                 // Don't render widget if article element not found or content is empty.
