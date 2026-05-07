@@ -1708,6 +1708,24 @@
             // Extract content using functions from content.js
             let articleFound = false;
             try {
+                // Diagnostic snapshot at extraction time — helps explain
+                // mismatches like "selector visible in console but not to widget".
+                try {
+                    const ctx = {
+                        location: window.location.href,
+                        title: document.title,
+                        readyState: document.readyState,
+                        isTopWindow: window.self === window.top,
+                        bodyHtmlLen: document.body ? document.body.innerHTML.length : 0,
+                        configuredArticleClass: this.config.articleClass,
+                        articleSelectorMatchesNow: !!(this.config.articleClass && document.querySelector(this.config.articleClass)),
+                        documentElement: document.documentElement ? document.documentElement.tagName : null,
+                        iframes: document.querySelectorAll('iframe').length,
+                    };
+                    this.log('content', 'Extraction runtime context:', ctx);
+                    if (typeof window !== 'undefined') window.diveeExtractionContext = ctx;
+                } catch (_) { /* never block extraction */ }
+
                 // Use getContentTitle() if available
                 if (typeof getContentTitle === 'function') {
                     this.articleTitle = getContentTitle();
