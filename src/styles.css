@@ -2995,8 +2995,8 @@
 }
 
 .divee-collapsed-bubble {
-  margin: 0 12px 8px 12px;
-  height: 30px;
+  margin: 0 4px 6px 4px;
+  padding: 6px 8px;
   position: relative;
   overflow: hidden;
   mask-image: linear-gradient(to right, black calc(100% - 36px), transparent 100%);
@@ -3020,7 +3020,7 @@
   flex-shrink: 0;
   padding: 4px 4px 4px 14px;
   background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  border: 0;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
@@ -3029,12 +3029,17 @@
   cursor: pointer;
   white-space: nowrap;
   line-height: 1;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 3px 8px rgba(0, 0, 0, 0.07);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .divee-collapsed-bubble-chip:hover {
   background: #e5e7eb;
-  border-color: #d1d5db;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.07),
+    0 5px 12px rgba(0, 0, 0, 0.09);
 }
 
 .divee-collapsed-bubble-chip:focus-visible {
