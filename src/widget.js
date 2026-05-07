@@ -3914,11 +3914,11 @@
         });
     }
 
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', autoInit);
-    } else {
+    // Initialize after the page has fully loaded (all assets, styles, late DOM)
+    if (document.readyState === 'complete') {
         autoInit();
+    } else {
+        window.addEventListener('load', autoInit);
     }
 
     // Expose for manual initialization
