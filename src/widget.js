@@ -1949,7 +1949,12 @@
                 `;
             }
 
-            // For cubic mode: wrap widget views in a column, ad becomes a sibling column
+            // The widget UI container goes into a shadow root; the ad
+            // container stays in light DOM as a sibling so Google Publisher
+            // Tag (which finds slots via document.getElementById) keeps
+            // working. Both layouts (cubic vs default) preserve the same
+            // visual order — ad after the widget views — but the ad is
+            // appended to the light-DOM mount in insertWidget(), not here.
             if (this.config.displayMode === 'cubic') {
                 const widgetCol = document.createElement('div');
                 widgetCol.className = 'divee-cubic-widget-col';
@@ -1958,11 +1963,9 @@
                 container.appendChild(widgetCol);
                 adContainer.classList.add('divee-cubic-ad-col');
                 adContainer.style.display = 'flex';
-                container.appendChild(adContainer);
             } else {
                 container.appendChild(collapsedView);
                 container.appendChild(expandedView);
-                container.appendChild(adContainer);
             }
 
             // Store references
@@ -2246,7 +2249,7 @@
             // For floating and sidebar modes, always append to body
             if (this.config.displayMode === 'floating' || this.config.displayMode === 'sidebar') {
                 this.log('dom', this.config.displayMode + ' mode: appending to body');
-                document.body.appendChild(container);
+                this._mountShadow(document.body, container, 'append');
                 this.displayAdsIfNeeded();
                 return;
             }
@@ -2294,21 +2297,11 @@
             // Insert widget based on anchored position
             if (targetElement) {
                 this.log('dom', 'Inserting widget to target element, position:', this.config.anchoredPosition);
-                if (this.config.anchoredPosition === 'top') {
-                    this.log('dom', 'Using prepend() for top position');
-                    targetElement.prepend(container);
-                } else {
-                    this.log('dom', 'Using appendChild() for bottom position');
-                    targetElement.appendChild(container);
-                }
+                this._mountShadow(targetElement, container, this.config.anchoredPosition === 'top' ? 'prepend' : 'append');
             } else {
                 // Final fallback: append to body if nothing found
                 this.log('dom', 'No suitable container found, appending to body as fallback');
-                if (this.config.anchoredPosition === 'top') {
-                    document.body.prepend(container);
-                } else {
-                    document.body.appendChild(container);
-                }
+                this._mountShadow(document.body, container, this.config.anchoredPosition === 'top' ? 'prepend' : 'append');
             }
 
             // For anchored+floating hybrid: also inject the floating Ask AI button into the body.
@@ -2317,6 +2310,109 @@
             }
 
             this.displayAdsIfNeeded();
+        }
+
+        // Mount the widget container into a shadow root attached to a host
+        // element placed at `position` ('append' | 'prepend') under
+        // `parent`. The ad container (this.elements.adContainer) stays in
+        // light DOM as a sibling of the shadow host so Google Publisher
+        // Tag can find its slot divs via document.getElementById.
+        _mountShadow(parent, container, position) {
+            const host = document.createElement('div');
+            host.setAttribute('data-divee-shadow-host', '');
+            // Carry forward the dir attribute so RTL still cascades into
+            // light-DOM portals that read it from this.elements.container.
+            const dir = container.getAttribute('dir');
+            if (dir) host.setAttribute('dir', dir);
+
+            const shadow = host.attachShadow({ mode: 'open' });
+
+            // :host hardening — beats publisher CSS that targets the host
+            // via universal/element selectors with !important. Inheritable
+            // properties seeded here propagate into the shadow tree.
+            const harden = document.createElement('style');
+            harden.textContent = `
+                :host {
+                    all: initial;
+                    display: block;
+                    /* isolation: isolate creates a new stacking context so
+                       the widget can't be visually overlaid by publisher
+                       z-index attacks. We deliberately don't use
+                       contain: paint — it would clip the widget's own
+                       drop-shadows past the host's content box. */
+                    isolation: isolate !important;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+                    color: #0f172a !important;
+                    font-size: 16px !important;
+                    font-weight: 400 !important;
+                    font-style: normal !important;
+                    line-height: 1.5 !important;
+                    letter-spacing: normal !important;
+                    word-spacing: normal !important;
+                    text-align: left !important;
+                    text-transform: none !important;
+                    text-decoration: none !important;
+                    text-shadow: none !important;
+                    direction: ltr !important;
+                    transform: none !important;
+                    filter: none !important;
+                    animation: none !important;
+                    border: 0 !important;
+                    outline: 0 !important;
+                    box-shadow: none !important;
+                }
+                :host([dir="rtl"]) { direction: rtl !important; }
+
+                /* Pin the brand custom properties on the host so anything
+                   between host and .divee-widget can't inherit a polluted
+                   value from the page's :root. */
+                :host {
+                    --divee-color-primary: #68E5FD;
+                    --divee-color-secondary: #A389E0;
+                }
+            `;
+            shadow.appendChild(harden);
+
+            // Inject the bundled widget CSS into the shadow root. The same
+            // CSS is also in document.head so light-DOM portals (tag popup,
+            // floating button, skeletons) keep their styling.
+            if (typeof window !== 'undefined' && window.__diveeCss) {
+                const widgetStyles = document.createElement('style');
+                widgetStyles.textContent = window.__diveeCss;
+                shadow.appendChild(widgetStyles);
+            }
+
+            shadow.appendChild(container);
+
+            // Wrap the shadow host and the light-DOM ad container in a
+            // single block-level wrapper so they always stack vertically
+            // (or, for cubic mode, side-by-side via flex). Without this,
+            // when the parent is a flex container — like the
+            // `#divee-widget-placeholder` div, which is display:flex for
+            // skeleton layout — the ad would render as a sibling flex
+            // item next to the widget instead of below it.
+            const adContainer = this.elements.adContainer;
+            const wrapper = document.createElement('div');
+            wrapper.setAttribute('data-divee-mount', '');
+            wrapper.style.width = '100%';
+            if (this.config.displayMode === 'cubic') {
+                wrapper.style.display = 'flex';
+                wrapper.style.flexDirection = 'row';
+            } else {
+                wrapper.style.display = 'block';
+            }
+            wrapper.appendChild(host);
+            if (adContainer) wrapper.appendChild(adContainer);
+
+            if (position === 'prepend') {
+                parent.prepend(wrapper);
+            } else {
+                parent.appendChild(wrapper);
+            }
+
+            this.elements.shadowHost = host;
+            this.elements.shadowRoot = shadow;
+            this.elements.lightDomMount = wrapper;
         }
 
         injectFloatingAskAiButton() {
@@ -2685,14 +2781,17 @@
                 this.updateCharacterCounter(e.target);
             });
 
-            // Close suggestions on click outside
+            // Close suggestions on click outside.
+            // Uses composedPath() so clicks inside the shadow root are seen
+            // here — e.target is retargeted to the shadow host once the
+            // event escapes the boundary, which would make .contains() lie.
             document.addEventListener('click', (e) => {
                 const suggestionsInput = this.elements.expandedView.querySelector('.divee-suggestions-input');
                 const inputContainer = this.elements.expandedView.querySelector('.divee-input-container');
 
                 if (suggestionsInput &&
                     suggestionsInput.classList.contains('is-open') &&
-                    !inputContainer.contains(e.target)) {
+                    !e.composedPath().includes(inputContainer)) {
                     suggestionsInput.classList.remove('is-open');
                 }
             });
@@ -3801,9 +3900,14 @@
             popup.style.left = leftPos + 'px';
             this._activeTagPopupElement = popup;
 
-            // Close popup on click outside
+            // Close popup on click outside.
+            // composedPath() is required because pillElement lives inside
+            // the widget's shadow root; e.target seen on document is the
+            // shadow host, so .contains() would always say "outside" and
+            // the popup would close on its own pill click.
             this._tagPopupOutsideClickHandler = (e) => {
-                if (!popup.contains(e.target) && !pillElement.contains(e.target)) {
+                const path = e.composedPath();
+                if (!path.includes(popup) && !path.includes(pillElement)) {
                     this.closeTagPopup();
                 }
             };

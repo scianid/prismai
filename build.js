@@ -15,8 +15,14 @@ async function build() {
     
     cssInjection = `
 (function() {
+  const css = ${JSON.stringify(minifiedCss.code)};
+  // Expose for the widget runtime to inject into its shadow root, and for
+  // any light-DOM portals (tag popup, floating Ask AI button, skeletons)
+  // that mount to body and need the same rules.
+  window.__diveeCss = css;
   const style = document.createElement('style');
-  style.textContent = ${JSON.stringify(minifiedCss.code)};
+  style.id = 'divee-widget-styles';
+  style.textContent = css;
   document.head.appendChild(style);
 })();
 `;

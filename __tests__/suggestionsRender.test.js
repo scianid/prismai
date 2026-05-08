@@ -43,7 +43,7 @@ describe('renderSuggestionsList()', () => {
     test('renders one button per suggestion (string shape)', () => {
         const widget = makeWidget();
         widget.renderSuggestionsList(['What is X?', 'How does Y work?']);
-        const buttons = document.querySelectorAll('.divee-suggestions-list .divee-suggestion');
+        const buttons = widget.elements.expandedView.querySelectorAll('.divee-suggestions-list .divee-suggestion');
         expect(buttons.length).toBe(2);
         expect(buttons[0].textContent).toBe('What is X?');
         expect(buttons[1].textContent).toBe('How does Y work?');
@@ -55,7 +55,7 @@ describe('renderSuggestionsList()', () => {
             { id: 'q1', question: 'Why do birds fly?' },
             { id: 'q2', question: 'How fast?' }
         ]);
-        const buttons = document.querySelectorAll('.divee-suggestions-list .divee-suggestion');
+        const buttons = widget.elements.expandedView.querySelectorAll('.divee-suggestions-list .divee-suggestion');
         expect(buttons.length).toBe(2);
         expect(buttons[0].textContent).toBe('Why do birds fly?');
         expect(buttons[0].getAttribute('data-id')).toBe('q1');
@@ -65,7 +65,7 @@ describe('renderSuggestionsList()', () => {
     test('clicking a rendered suggestion calls askQuestion with the question and id', () => {
         const widget = makeWidget();
         widget.renderSuggestionsList([{ id: 'q1', question: 'Why?' }]);
-        const button = document.querySelector('.divee-suggestions-list .divee-suggestion');
+        const button = widget.elements.expandedView.querySelector('.divee-suggestions-list .divee-suggestion');
         button.click();
         expect(widget.askQuestion).toHaveBeenCalledWith('Why?', 'suggestion', 'q1');
     });
@@ -74,7 +74,7 @@ describe('renderSuggestionsList()', () => {
         const widget = makeWidget();
         widget.renderSuggestionsList(['A', 'B']);
         widget.renderSuggestionsList(['C']);
-        const buttons = document.querySelectorAll('.divee-suggestions-list .divee-suggestion');
+        const buttons = widget.elements.expandedView.querySelectorAll('.divee-suggestions-list .divee-suggestion');
         expect(buttons.length).toBe(1);
         expect(buttons[0].textContent).toBe('C');
     });
@@ -120,7 +120,7 @@ describe('onTextAreaFocus() cached-suggestions path (video-ad prefetch regressio
         // Second focus while already open should not stack a second copy.
         await widget.onTextAreaFocus();
 
-        const buttons = document.querySelectorAll('.divee-suggestions-list .divee-suggestion');
+        const buttons = widget.elements.expandedView.querySelectorAll('.divee-suggestions-list .divee-suggestion');
         expect(buttons.length).toBe(1);
     });
 
@@ -131,7 +131,7 @@ describe('onTextAreaFocus() cached-suggestions path (video-ad prefetch regressio
 
         await widget.onTextAreaFocus();
 
-        const buttons = document.querySelectorAll('.divee-suggestions-list .divee-suggestion');
+        const buttons = widget.elements.expandedView.querySelectorAll('.divee-suggestions-list .divee-suggestion');
         expect(buttons.length).toBe(0);
     });
 });
@@ -318,7 +318,7 @@ describeBubble('collapsed-state suggestion bubble', () => {
 
         // Slot stays reserved to keep page layout stable. No chips populated.
         expect(widget.elements.collapsedBubble).toBeTruthy();
-        const bubble = document.querySelector('.divee-collapsed-bubble');
+        const bubble = widget.elements.collapsedView.querySelector('.divee-collapsed-bubble');
         expect(bubble).not.toBeNull();
         expect(bubble.querySelectorAll('.divee-collapsed-bubble-chip').length).toBe(0);
     });
@@ -332,7 +332,7 @@ describeBubble('collapsed-state suggestion bubble', () => {
         widget.suppressSuggestions();
 
         expect(widget.elements.collapsedBubble).toBeNull();
-        expect(document.querySelector('.divee-collapsed-bubble')).toBeNull();
+        expect(widget.elements.collapsedView.querySelector('.divee-collapsed-bubble')).toBeNull();
         expect(widget.state.suggestionsSuppressed).toBe(true);
     });
 

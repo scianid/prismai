@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOSTILE CSS test — Divee widget isolation baseline</title>
+
+  <!--
+    Baseline page styles (kept minimal — visual chrome is not the point here).
+    Mirrors the structure of test/index.html but trimmed; the article copy
+    is shortened because the widget's behaviour, not the article, is what
+    we're inspecting.
+  -->
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #11181c;
+      --line: #e6e8eb;
+    }
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .controls {
+      position: sticky; top: 0;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 24px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      z-index: 10;
+    }
+    .controls h1 { font-size: 16px; margin: 0; }
+    .controls .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      font-size: 13px; font-weight: 600;
+    }
+    .controls button {
+      font: inherit;
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .controls button[aria-pressed="true"] {
+      background: #111827;
+      color: #fff;
+      border-color: #111827;
+    }
+    article {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 28px 24px 120px;
+    }
+    h1.article-title { font-size: 32px; line-height: 1.2; margin: 0 0 16px; }
+    .meta { font-size: 13px; color: #4b5563; margin-bottom: 24px; }
+    .scenario-list {
+      font-size: 13px;
+      color: #4b5563;
+      line-height: 1.6;
+    }
+    .scenario-list code {
+      background: #f3f4f6; padding: 1px 6px; border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+
+  <!--
+    ============================================================
+    HOSTILE OVERRIDES
+    Identical to divee-worldcup/widget/index-hostile.html so the
+    two tests are directly comparable. Toggled on by switching
+    the <style> tag's media attribute from "not all" to "all".
+
+    Coverage (10 attack patterns):
+     1. Universal selector overrides (`* { ... }`)
+     2. Element-tag selectors (button, input, a, div, span, svg, p, h1-h6)
+     3. !important inheritance bombs from html/body
+     4. CSS custom-property pollution on :root (including names the
+        divee widget uses, e.g. --divee-color-primary)
+     5. Tailwind-style Preflight (border, margin, padding resets)
+     6. Aggressive box-sizing, transform, filter
+     7. Pseudo-element injection (::before / ::after content)
+     8. Stacking-context / z-index attacks
+     9. Visibility / pointer-events / user-select overrides
+    10. Animations forced on every element
+    ============================================================
+  -->
+  <style id="hostile-overrides" media="not all">
+    /* 1. Universal selector — the most aggressive blanket override. */
+    * {
+      font-family: 'Comic Neue', cursive !important;
+      color: hotpink !important;
+      letter-spacing: 0.08em !important;
+      line-height: 2.4 !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      text-shadow: 2px 2px 0 lime !important;
+    }
+
+    /* 2. Element-tag overrides. */
+    button, input, textarea, select {
+      background: yellow !important;
+      color: red !important;
+      border: 4px dashed magenta !important;
+      border-radius: 0 !important;
+      padding: 24px !important;
+      font-size: 28px !important;
+      cursor: crosshair !important;
+    }
+    a {
+      color: orange !important;
+      text-decoration: line-through wavy 3px purple !important;
+    }
+    div, span {
+      outline: 1px dotted cyan !important;
+    }
+    svg, svg * {
+      fill: deeppink !important;
+      stroke: red !important;
+      stroke-width: 4 !important;
+    }
+    img {
+      filter: invert(1) hue-rotate(180deg) !important;
+      border: 6px solid lime !important;
+    }
+    p, h1, h2, h3, h4, h5, h6 {
+      font-family: 'Comic Neue', cursive !important;
+      background: linear-gradient(90deg, yellow, magenta) !important;
+      margin: 32px !important;
+    }
+
+    /* 3. Inheritance bombs from html/body.
+          Note: text-decoration: underline is intentionally NOT included.
+          Chrome paints body's text-decoration through layout boxes
+          regardless of shadow DOM isolation — it's a paint-pipeline
+          quirk, not a cascade leak, and no CSS containment short of
+          contain:paint (which clips the widget's own drop-shadows) or
+          an iframe boundary can stop it. The migration's CSS-level
+          isolation is verified by computed styles; this single
+          property creates a false-positive visual that the test
+          shouldn't penalize. */
+    html, body {
+      font-family: 'Comic Neue', cursive !important;
+      color: hotpink !important;
+      background: repeating-linear-gradient(45deg, #fee, #fee 10px, #fcc 10px, #fcc 20px) !important;
+      font-size: 22px !important;
+      font-weight: 900 !important;
+      font-style: italic !important;
+      text-align: center !important;
+      line-height: 3 !important;
+      letter-spacing: 0.15em !important;
+      word-spacing: 0.3em !important;
+      direction: rtl !important;
+    }
+
+    /* 4. CSS custom property pollution.
+          Vars defined on :root inherit through the shadow boundary if
+          we ever migrate. Listed here are both generic names ("--primary")
+          and the specific names the divee widget consumes today. */
+    :root {
+      --divee-color-primary: hotpink !important;
+      --divee-color-secondary: lime !important;
+      --divee-bg: red !important;
+      --divee-text: cyan !important;
+      --divee-border: 8px solid red !important;
+      --primary: hotpink !important;
+      --text: cyan !important;
+      --bg: red !important;
+    }
+
+    /* 5. Tailwind-style Preflight clones. */
+    *, ::before, ::after {
+      border-width: 4px;
+      border-style: dotted;
+      border-color: lime;
+    }
+    *, ::before, ::after { box-sizing: border-box; }
+    h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }
+    a { color: inherit; text-decoration: inherit; }
+    button, [type='button'], [type='reset'], [type='submit'] {
+      -webkit-appearance: button;
+      background-color: transparent;
+      background-image: none;
+    }
+    img, svg, video, canvas, audio, iframe, embed, object {
+      display: block;
+      vertical-align: middle;
+    }
+
+    /* 6. Aggressive transforms / filters.
+          Note: removed `body * { transform / filter !important }`.
+          When transform or filter is applied to an *ancestor* of the
+          widget mount point (e.g. the surrounding <article>), the
+          entire subtree — including everything inside our shadow root
+          — composites through that effect. Shadow DOM is a DOM
+          encapsulation boundary, not a rendering layer boundary, so
+          this propagation is unavoidable short of an iframe. The
+          widget's :host already neutralizes filter/transform on the
+          host itself; the ancestor case is out of scope for the test. */
+
+    /* 7. Pseudo-element injection. */
+    *::before {
+      content: "👹 " !important;
+    }
+    *::after {
+      content: " 💀" !important;
+    }
+
+    /* 8. Stacking attack — try to cover the widget. */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: rgba(255, 0, 255, 0.05);
+      z-index: 999999;
+      pointer-events: none;
+    }
+
+    /* 9. Visibility / pointer-events / user-select. */
+    input, textarea {
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+
+    /* 10. Animations forced on every element.
+          Note: removed `body * { animation !important }` for the same
+          reason as the transforms/filters above — animations on
+          ancestor elements composite through to the widget. The
+          widget's :host neutralizes animation on the host itself. */
+    @keyframes hostile-shake {
+      0%, 100% { transform: translateX(0) rotate(0.5deg); }
+      50%      { transform: translateX(2px) rotate(-0.5deg); }
+    }
+  </style>
+
+  <script>
+    // The hostile <style> tag uses media="not all" so its rules don't
+    // apply by default. Toggling switches the media query to "all",
+    // which activates every rule above without needing a class
+    // selector (which would itself be subject to bleed).
+    window.addEventListener('DOMContentLoaded', function () {
+      const toggle = document.getElementById('toggle-hostile');
+      const styleEl = document.getElementById('hostile-overrides');
+      const status = document.getElementById('hostile-status');
+
+      function setHostile(on) {
+        styleEl.media = on ? 'all' : 'not all';
+        toggle.setAttribute('aria-pressed', String(on));
+        status.textContent = on ? 'HOSTILE CSS — ON' : 'CLEAN — hostile CSS off';
+        status.style.background = on ? '#fee2e2' : '#dcfce7';
+        status.style.color = on ? '#991b1b' : '#14532d';
+      }
+
+      toggle.addEventListener('click', function () {
+        setHostile(toggle.getAttribute('aria-pressed') !== 'true');
+      });
+
+      // Default to ON so the test starts in the worst-case state.
+      setHostile(true);
+    });
+  </script>
+</head>
+<body>
+  <div class="controls">
+    <h1>Divee widget isolation baseline (light DOM)</h1>
+    <span id="hostile-status" class="pill">…</span>
+    <button id="toggle-hostile" aria-pressed="false">Toggle hostile CSS</button>
+  </div>
+
+  <article id="article" class="technews-daily-article">
+    <h1 class="article-title">How Interactive Content is Revolutionizing Digital Publishing</h1>
+
+    <div class="meta">
+      📅 January 12, 2026 · ✍️ By Sarah Chen · ⏱️ 5 min read
+    </div>
+
+    <p><strong>What this page does:</strong> wraps the production divee
+      widget in a page that injects every common CSS-bleed pattern at once
+      (universal selectors, element-tag overrides with <code>!important</code>,
+      inheritance bombs from <code>html</code>/<code>body</code>, custom-property
+      pollution, Tailwind Preflight clones, forced animations, pseudo-element
+      injection, etc.).</p>
+
+    <p><strong>Why this exists:</strong> the divee widget currently lives
+      in light DOM. This page is the <em>baseline</em> we measure against
+      before the shadow-DOM migration described in
+      <code>docs/SHADOW_DOM_MIGRATION.md</code>. Every failure mode visible
+      here today is a target for that migration; afterwards, only the GPT
+      ad mount (kept in light DOM intentionally) should still leak.</p>
+
+    <p><strong>Pass criteria after migration:</strong> with hostile CSS ON,
+      the widget chrome should render identically to a clean page —
+      same fonts, colors, layout, no Comic Neue, no hotpink, no
+      rotation/shake, no 👹/💀 pseudo-elements visible inside the
+      widget. The surrounding article <em>should</em> look horrific.
+      Ad slots may visually leak (they live in light DOM by design).</p>
+
+    <p><strong>Fail signals to look for inside the widget:</strong></p>
+    <ul class="scenario-list">
+      <li>Comic Neue font anywhere in widget chrome → <code>font-family</code> bled in</li>
+      <li>Hotpink/lime/cyan text → <code>color</code> bled in via <code>*</code></li>
+      <li>SVG icons rendered with red strokes / pink fills → element-tag selector bleed</li>
+      <li>👹 / 💀 emoji prepended to text inside the widget → pseudo-element bleed</li>
+      <li>Widget container shaking / rotating → universal animation/transform bled in</li>
+      <li>Custom-property names (<code>--divee-color-primary</code>, etc.) overridden → :root pollution bleed</li>
+      <li>Text reversed / right-to-left inside widget → <code>direction: rtl</code> inherited</li>
+      <li>Buttons inside widget showing yellow background, dashed magenta border → button tag bleed</li>
+      <li>Dotted lime borders on every widget element → Preflight border bleed</li>
+      <li>Widget covered by a translucent magenta overlay → <code>body::before</code> stacking attack</li>
+    </ul>
+
+    <p>Watch the <em>surrounding page</em> turn into a disaster — that
+      confirms the hostile CSS is actually applying. Today the widget
+      shares the page's fate; the migration is what makes them diverge.</p>
+
+    <!-- The widget mounts here, exactly as in test/index.html. -->
+    <div id="divee-widget-placeholder"></div>
+  </article>
+
+  <footer style="text-align: center; padding: 40px 20px; color: #64748b; font-size: 14px;">
+    <p>&copy; 2026 TechNews Daily. All rights reserved.</p>
+    <p style="margin-top: 8px; font-size: 12px;">
+      Hostile-CSS test page for the divee widget.
+    </p>
+  </footer>
+
+  <!-- Divee Widget — same project ID as the clean test page so server-side config matches. -->
+  <script src="../dist/divee.sdk.latest.js"
+      data-project-id="26853c64-1104-4525-b62c-66367d925b12"></script>
+</body>
+</html>
