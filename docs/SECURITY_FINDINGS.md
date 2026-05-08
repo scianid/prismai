@@ -196,19 +196,21 @@ Both metadata.image_url / og_image fields now route through `stripUrlIdentifiers
 
 ---
 
-## 7. LOW — `escapeHtml` does not escape backtick
+## 7. LOW — `escapeHtml` does not escape backtick ✅ FIXED
 
-**Where**
+**Status:** Fixed 2026-05-08.
+
+**Where (was)**
 - `src/widget.js:818`
 
-**What**
-The current `escapeHtml` covers `& < > " '` but not `` ` `` (backtick).
+**What it was**
+The `escapeHtml` helper covered `& < > " '` but not `` ` `` (backtick).
 
-**Impact**
-Not exploitable in HTML attributes quoted with `"`. Would matter only if a backtick context ever appeared (template literals don't run in HTML).
+**Impact (was)**
+Not exploitable in HTML attributes quoted with `"`. Would have only mattered if a backtick context ever appeared. Defense-in-depth.
 
-**Fix (optional)**
-Add `` `` ` `` `` mapping to `&#x60;`.
+**Fix applied**
+Added a final `.replace(/`/g, '&#x60;')` to the chain. Now full coverage of the standard set.
 
 ---
 

@@ -1756,7 +1756,11 @@
 .divee-tag-pill {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  /* Asymmetric padding: extra room on the trailing side so the ellipsis
+     falls ~4 chars earlier and the pill has visible air after the
+     truncated text. Single explicit declaration so the value can't be
+     resurrected by the `padding` shorthand cascade. */
+  padding: 3px 22px 3px 10px;
   font-size: 11px !important;
   font-weight: 500 !important;
   line-height: 1.4 !important;
@@ -1833,9 +1837,17 @@
 @media (max-width: 400px) {
   .divee-tag-pill {
     font-size: 10px !important;
-    padding: 2px 8px;
+    /* keep the asymmetric trailing padding so the ellipsis lands early
+       and the pill keeps its breathing room on narrow viewports too */
+    padding: 2px 18px 2px 8px;
     max-width: 100px;
   }
+}
+
+/* RTL: flip the asymmetric padding so the air sits on the visual leading
+   side (= right in LTR is left in RTL after the flex-row reverses) */
+.divee-widget[dir="rtl"] .divee-tag-pill {
+  padding: 3px 10px 3px 22px;
 }
 
 /* Hide pills in floating collapsed mode */
@@ -3228,32 +3240,58 @@
   display: block;
 }
 
-/* Input row — single rounded surface containing textarea + send button */
+/* Input row — diagonal gradient outline (config colors) + inner-depth shadow.
+   The two-background trick: white fills the padding-box; the brand gradient
+   fills the border-box behind a transparent 2px border so the gradient
+   shows through as the outline. Inset shadows give the white surface a
+   recessed feel; outer shadows keep the elevation language consistent
+   with the chat bubbles. */
 .divee-input-row {
   flex: 1 1 100%;
   display: flex;
   align-items: flex-end;
   gap: 6px;
-  background: #fff;
-  border: 1px solid #C7D2E8;
+  border: 2px solid transparent;
   border-radius: 16px;
   padding: 6px;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box;
+  /* 3D-recessed look: hard top "lip" line, then a deep top-down shadow
+     that fades through three blurs, plus a soft bottom highlight to
+     suggest light bouncing off the lower wall, plus a faint inner
+     vignette so the recess feels concave rather than flat. */
   box-shadow:
+    inset 0 1px 0 rgba(15, 23, 42, 0.08),
+    inset 0 2px 3px rgba(15, 23, 42, 0.16),
+    inset 0 5px 10px rgba(15, 23, 42, 0.10),
+    inset 0 10px 20px rgba(15, 23, 42, 0.04),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -2px 6px rgba(255, 255, 255, 0.4),
+    inset 0 0 24px rgba(15, 23, 42, 0.02),
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 4px 8px rgba(15, 23, 42, 0.04),
     0 12px 24px rgba(15, 23, 42, 0.06),
     0 24px 48px rgba(15, 23, 42, 0.04);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: box-shadow 0.18s ease;
 }
 
 .divee-input-row:focus-within {
-  border-color: #93A5C9;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box;
   box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 4px 8px rgba(15, 23, 42, 0.05),
-    0 12px 24px rgba(15, 23, 42, 0.07),
-    0 24px 48px rgba(15, 23, 42, 0.05),
-    0 0 0 3px rgba(147, 165, 201, 0.2);
+    inset 0 1px 0 rgba(15, 23, 42, 0.10),
+    inset 0 2px 3px rgba(15, 23, 42, 0.18),
+    inset 0 5px 10px rgba(15, 23, 42, 0.12),
+    inset 0 10px 20px rgba(15, 23, 42, 0.05),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 6px rgba(255, 255, 255, 0.5),
+    inset 0 0 24px rgba(15, 23, 42, 0.03),
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 4px 8px rgba(15, 23, 42, 0.06),
+    0 12px 24px rgba(15, 23, 42, 0.08),
+    0 24px 48px rgba(15, 23, 42, 0.05);
 }
 
 /* Textarea: transparent inside the row, single-line height matches send button (42px) */
@@ -3276,11 +3314,13 @@
   box-shadow: none !important;
 }
 
-/* Send button — dark navy rounded square pinned to the right of the row */
+/* Send button — diagonal brand-gradient rounded square (matches the
+   input row's outline gradient, so the action sits in the same color
+   family as the surface it lives in). */
 .divee-widget .divee-send {
-  background: var(--divee-surface-dark) !important;
+  background: linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) !important;
   border-radius: 12px !important;
-  box-shadow: none !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.12) !important;
   width: 42px !important;
   height: 42px !important;
   min-width: 42px !important;
@@ -3290,11 +3330,14 @@
   margin: 0 !important;
   align-self: flex-end;
   flex-shrink: 0 !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
 }
 
 .divee-widget .divee-send:hover {
-  background: #1a2744 !important;
+  background: linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) !important;
+  filter: brightness(1.04);
   transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.10), 0 6px 14px rgba(15, 23, 42, 0.16) !important;
 }
 
 .divee-widget .divee-send-svg {
@@ -3726,12 +3769,24 @@
    ============================================ */
 
 /* Search container becomes the analog of the v2 input row */
+/* Closed-state input — same diagonal gradient outline + 3D inner-depth
+   shadow as the open-state .divee-input-row, so both states read as
+   one family. See `.divee-input-row` for the layer rationale. */
 .divee-widget .divee-search-container-collapsed {
-  background: #fff !important;
-  border: 1px solid #C7D2E8 !important;
+  border: 2px solid transparent !important;
   border-radius: 16px !important;
   padding: 13px 8px 13px 12px !important;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box !important;
   box-shadow:
+    inset 0 1px 0 rgba(15, 23, 42, 0.08),
+    inset 0 2px 3px rgba(15, 23, 42, 0.16),
+    inset 0 5px 10px rgba(15, 23, 42, 0.10),
+    inset 0 10px 20px rgba(15, 23, 42, 0.04),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -2px 6px rgba(255, 255, 255, 0.4),
+    inset 0 0 24px rgba(15, 23, 42, 0.02),
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 4px 8px rgba(15, 23, 42, 0.04),
     0 12px 24px rgba(15, 23, 42, 0.06),
@@ -3740,12 +3795,20 @@
 }
 
 .divee-widget .divee-search-container-collapsed:hover {
-  background: #fff !important;
-  border-color: #93A5C9 !important;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box !important;
   box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 4px 8px rgba(15, 23, 42, 0.05),
-    0 12px 24px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(15, 23, 42, 0.10),
+    inset 0 2px 3px rgba(15, 23, 42, 0.18),
+    inset 0 5px 10px rgba(15, 23, 42, 0.12),
+    inset 0 10px 20px rgba(15, 23, 42, 0.05),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 6px rgba(255, 255, 255, 0.5),
+    inset 0 0 24px rgba(15, 23, 42, 0.03),
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 4px 8px rgba(15, 23, 42, 0.06),
+    0 12px 24px rgba(15, 23, 42, 0.08),
     0 24px 48px rgba(15, 23, 42, 0.05) !important;
 }
 
@@ -3781,13 +3844,14 @@
    open-view 42 since the collapsed bar already has tight padding).
    Hosts the same paper-plane SVG used in the open view. */
 .divee-widget .divee-send-icon-collapsed {
-  background: var(--divee-surface-dark) !important;
+  background: linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) !important;
   border-radius: 12px !important;
   width: 36px;
   height: 36px;
   font-size: 0;
   color: #fff !important;
-  box-shadow: none !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.12) !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
 }
 
 .divee-widget .divee-send-icon-collapsed svg {
@@ -3798,8 +3862,9 @@
 }
 
 .divee-widget .divee-search-container-collapsed:hover .divee-send-icon-collapsed {
-  background: #1a2744 !important;
-  box-shadow: none !important;
+  background: linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) !important;
+  filter: brightness(1.04);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.10), 0 6px 14px rgba(15, 23, 42, 0.16) !important;
   transform: scale(1.05);
 }
 
