@@ -3068,51 +3068,43 @@
   color: #fff !important;
 }
 
-/* Messages — AI: avatar + main column */
+/* AI message: stacked column. Header row (avatar + name + time) sits on
+   top, the bubble takes the full message width below it, then reactions. */
 .divee-message-ai {
-  flex-direction: row !important;
-  align-items: flex-start !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
   gap: 6px !important;
   max-width: 100% !important;
   align-self: stretch !important;
 }
 
-.divee-message-main {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
-}
-
 .divee-message-ai .divee-sparkle-avatar {
-  width: 36px !important;
-  height: 36px !important;
+  width: 28px !important;
+  height: 28px !important;
   background:
     radial-gradient(circle at 30% 25%, #25365E 0%, var(--divee-surface-dark) 60%) !important;
   border-radius: 50% !important;
   flex-shrink: 0;
-  margin-top: 2px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 1px 2px rgba(15, 23, 42, 0.18),
-    0 4px 12px rgba(15, 23, 42, 0.16);
+    0 4px 10px rgba(15, 23, 42, 0.14);
 }
 
 .divee-message-ai .divee-sparkle-msg-icon {
-  width: 20px !important;
-  height: 20px !important;
+  width: 16px !important;
+  height: 16px !important;
   color: #F5C24A !important;
-  filter: drop-shadow(0 0 6px rgba(245, 194, 74, 0.45));
+  filter: drop-shadow(0 0 5px rgba(245, 194, 74, 0.45));
 }
 
-/* AI meta row: name + time */
+/* AI meta row: avatar + name + time, all on the same baseline */
 .divee-message-ai .divee-message-meta {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   font-size: 12px;
   line-height: 1;

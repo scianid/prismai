@@ -3592,21 +3592,19 @@
                 messageDiv.appendChild(contentDiv);
                 messageDiv.appendChild(tick);
             } else {
-                const avatar = document.createElement('div');
-                avatar.className = 'divee-sparkle-avatar';
-                avatar.setAttribute('aria-hidden', 'true');
-                avatar.innerHTML = `
-                    <svg class="divee-sparkle-msg-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M12 2c.4 3.4 1.5 5.6 3 7.1S18.6 11.6 22 12c-3.4.4-5.6 1.5-7.1 3S12.4 18.6 12 22c-.4-3.4-1.5-5.6-3-7.1S5.4 12.4 2 12c3.4-.4 5.6-1.5 7.1-3S11.6 5.4 12 2z"/>
-                    </svg>
+                // Avatar lives inline with name + time in the meta row so the
+                // bubble below can take the full message width.
+                const avatarMarkup = `
+                    <span class="divee-sparkle-avatar" aria-hidden="true">
+                        <svg class="divee-sparkle-msg-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 2c.4 3.4 1.5 5.6 3 7.1S18.6 11.6 22 12c-3.4.4-5.6 1.5-7.1 3S12.4 18.6 12 22c-.4-3.4-1.5-5.6-3-7.1S5.4 12.4 2 12c3.4-.4 5.6-1.5 7.1-3S11.6 5.4 12 2z"/>
+                        </svg>
+                    </span>
                 `;
-
-                const main = document.createElement('div');
-                main.className = 'divee-message-main';
 
                 const meta = document.createElement('div');
                 meta.className = 'divee-message-meta';
-                meta.innerHTML = `<span class="divee-message-name">${this.escapeHtml(config.client_name || '')}</span><span class="divee-message-time">${this.escapeHtml(timestamp)}</span>`;
+                meta.innerHTML = `${avatarMarkup}<span class="divee-message-name">${this.escapeHtml(config.client_name || '')}</span><span class="divee-message-time">${this.escapeHtml(timestamp)}</span>`;
 
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'divee-message-content';
@@ -3641,12 +3639,9 @@
                     </button>
                 `;
 
-                main.appendChild(meta);
-                main.appendChild(contentDiv);
-                main.appendChild(reactions);
-
-                messageDiv.appendChild(avatar);
-                messageDiv.appendChild(main);
+                messageDiv.appendChild(meta);
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(reactions);
             }
 
             messagesContainer.appendChild(messageDiv);
