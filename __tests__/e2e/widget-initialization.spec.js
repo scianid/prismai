@@ -36,9 +36,9 @@ test.describe('Widget Initialization', () => {
   });
 
   test('should show AI and site icons', async ({ page }) => {
-    const aiIcon = page.locator('.divee-icon-ai-collapsed').first();
-    const siteIcon = page.locator('.divee-icon-site-collapsed').first();
-    
+    const aiIcon = page.locator('.divee-ai-identity').first();
+    const siteIcon = page.locator('.divee-site-favicon-collapsed').first();
+
     await expect(aiIcon).toBeVisible();
     await expect(siteIcon).toBeVisible();
   });

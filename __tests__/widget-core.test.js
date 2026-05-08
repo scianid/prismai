@@ -694,7 +694,7 @@ describe('DiveeWidget Core', () => {
       expect(widget.state.messages.length).toBe(before);
     });
 
-    test('askQuestion emits a system notice when redactionHits is non-empty', async () => {
+    test('askQuestion emits a system notice when input contains PII', async () => {
       const widget = loadWidget();
       widget.elements.expandedView = document.createElement('div');
       widget.elements.expandedView.innerHTML = '<div class="divee-chat"><div class="divee-messages"></div></div>';
@@ -702,7 +702,8 @@ describe('DiveeWidget Core', () => {
       widget.streamResponse = jest.fn().mockResolvedValue();
       widget.trackEvent = jest.fn();
 
-      await widget.askQuestion('clean question', 'custom', null, ['email']);
+      // Real email triggers the email redaction pattern internally.
+      await widget.askQuestion('contact me at user@example.com please', 'custom', null);
 
       const system = widget.elements.expandedView.querySelector('.divee-message-system');
       expect(system).not.toBeNull();
@@ -710,14 +711,14 @@ describe('DiveeWidget Core', () => {
         .toBe('Removed something private.');
     });
 
-    test('askQuestion does NOT emit a system notice when redactionHits is empty', async () => {
+    test('askQuestion does NOT emit a system notice when input is clean', async () => {
       const widget = loadWidget();
       widget.elements.expandedView = document.createElement('div');
       widget.elements.expandedView.innerHTML = '<div class="divee-chat"><div class="divee-messages"></div></div>';
       widget.streamResponse = jest.fn().mockResolvedValue();
       widget.trackEvent = jest.fn();
 
-      await widget.askQuestion('clean question', 'custom', null, []);
+      await widget.askQuestion('clean question with no pii', 'custom', null);
 
       expect(widget.elements.expandedView.querySelector('.divee-message-system')).toBeNull();
     });

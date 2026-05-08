@@ -62,15 +62,17 @@ describe('White Label — collapsed view (default/anchored mode)', () => {
     const widget = makeWidget(baseConfig({ white_label: false }));
     const view = widget.createCollapsedView();
 
-    expect(view.innerHTML).toContain('powered by divee.ai');
+    // The pill bolds the brand via <strong>, so check the text content
+    // (which collapses tags) rather than raw HTML.
     expect(view.querySelector('.divee-powered-by')).not.toBeNull();
+    expect(view.querySelector('.divee-powered-by').textContent).toContain('powered by divee.ai');
   });
 
   test('white_label ON → "powered by divee.ai" is NOT in collapsed HTML', () => {
     const widget = makeWidget(baseConfig({ white_label: true }));
     const view = widget.createCollapsedView();
 
-    expect(view.innerHTML).not.toContain('powered by divee.ai');
+    expect(view.textContent).not.toContain('powered by divee.ai');
     expect(view.querySelector('.divee-powered-by')).toBeNull();
   });
 

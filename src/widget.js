@@ -815,7 +815,24 @@
         // L-4 fix: escape server-config strings before inserting into innerHTML.
         escapeHtml(str) {
             if (str == null) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;').replace(/`/g, '&#x60;');
+        }
+
+        // Returns the URL if it parses to an http/https/data:image origin, else
+        // empty string. Use anywhere a server-supplied URL is interpolated into
+        // an HTML attribute (e.g. <img src>) so a malicious config can't inject
+        // `" onerror="…"` or javascript: URLs.
+        safeImageUrl(rawUrl) {
+            if (!rawUrl) return '';
+            const s = String(rawUrl).trim();
+            if (/^data:image\//i.test(s)) return this.escapeHtml(s);
+            try {
+                const u = new URL(s, window.location.href);
+                if (u.protocol === 'http:' || u.protocol === 'https:') {
+                    return this.escapeHtml(u.href);
+                }
+            } catch (_) { /* fall through */ }
+            return '';
         }
 
         // Look up a translation from serverConfig.translations by key.
@@ -2010,16 +2027,20 @@
                             <span class="divee-ai-label">AI</span>
                         </div>
                         <div class="divee-site-favicon-collapsed">
-                            <img class="divee-site-favicon-collapsed-image" src="${config.icon_url}" alt="" aria-hidden="true" />
+                            <img class="divee-site-favicon-collapsed-image" src="${this.safeImageUrl(config.icon_url)}" alt="" aria-hidden="true" />
                         </div>
                     </div>
                     <div class="divee-cubic-invite">
-                        <p class="divee-cubic-headline">${cubicHeadline}</p>
-                        <p class="divee-cubic-subline">${cubicSubline}</p>
+                        <p class="divee-cubic-headline">${this.escapeHtml(cubicHeadline)}</p>
+                        <p class="divee-cubic-subline">${this.escapeHtml(cubicSubline)}</p>
                     </div>
                     <div class="divee-search-container-collapsed">
                         <input type="text" class="divee-search-input-collapsed" placeholder="" readonly />
-                        <span class="divee-send-icon-collapsed" aria-hidden="true">&#10148;</span>
+                        <span class="divee-send-icon-collapsed" aria-hidden="true">
+                            <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+                                <path d="M31.117 1.445c-.009-.018-.026-.029-.036-.046a1.05 1.05 0 0 0-.258-.338l-.001-.001a.94.94 0 0 0-.098-.057l-.007-.003c-.021-.015-.029-.043-.052-.057a.43.43 0 0 0-.099-.03 1.4 1.4 0 0 0-.448-.136l-.005 0a1 1 0 0 0-.123-.016l-.004 0c-.211.001-.409.055-.582.15l.006-.003c-.01.005-.022.002-.032.008l-27.999 16c-.379.219-.63.623-.63 1.085 0 .5.294.932.719 1.132l.008.003 9.273 4.28v6.585c0 .473.263.884.65 1.096l.007.003c.172.095.376.15.594.15.255 0 .492-.077.69-.208l-.005.003 6.027-3.955 8.764 4.045c.153.072.333.115.523.115.659 0 1.198-.509 1.246-1.156l0-.004 2-28.001c.002-.023-.013-.042-.013-.065.001-.016.001-.035.001-.054a1.3 1.3 0 0 0-.121-.533zM24.16 6.777l-12.511 14.3-6.922-3.195zM13.25 27.686v-3.117l2.788 1.287zM26.883 28.107l-7.663-3.537c-.026-.014-.038-.042-.065-.055l-5.115-2.373z"/>
+                            </svg>
+                        </span>
                     </div>
                     <div class="divee-cubic-footer">
                         <div class="divee-cubic-online">
@@ -2027,7 +2048,7 @@
                             <span class="divee-cubic-online-label">Online</span>
                         </div>
                         ${config.white_label ? '' : `<div class="divee-powered-by-collapsed">
-                            <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
+                            <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by <strong>divee.ai</strong></a>
                         </div>`}
                     </div>
                     <div class="divee-tag-pills divee-tag-pills-collapsed"></div>
@@ -2035,7 +2056,7 @@
             } else {
                 view.innerHTML = `
                     ${config.white_label ? '' : `<div class="divee-powered-by-collapsed">
-                        <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>
+                        <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by <strong>divee.ai</strong></a>
                     </div>`}
                     <div class="divee-search-container-collapsed">
                         <div class="divee-ai-identity" aria-label="AI">
@@ -2046,11 +2067,15 @@
                         </div>
 
                         <div class="divee-site-favicon-collapsed">
-                            <img class="divee-site-favicon-collapsed-image" src="${config.icon_url}" alt="" aria-hidden="true" />
+                            <img class="divee-site-favicon-collapsed-image" src="${this.safeImageUrl(config.icon_url)}" alt="" aria-hidden="true" />
                         </div>
 
                         <input type="text" class="divee-search-input-collapsed" placeholder="" readonly />
-                        <span class="divee-send-icon-collapsed" aria-hidden="true">&#10148;</span>
+                        <span class="divee-send-icon-collapsed" aria-hidden="true">
+                            <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+                                <path d="M31.117 1.445c-.009-.018-.026-.029-.036-.046a1.05 1.05 0 0 0-.258-.338l-.001-.001a.94.94 0 0 0-.098-.057l-.007-.003c-.021-.015-.029-.043-.052-.057a.43.43 0 0 0-.099-.03 1.4 1.4 0 0 0-.448-.136l-.005 0a1 1 0 0 0-.123-.016l-.004 0c-.211.001-.409.055-.582.15l.006-.003c-.01.005-.022.002-.032.008l-27.999 16c-.379.219-.63.623-.63 1.085 0 .5.294.932.719 1.132l.008.003 9.273 4.28v6.585c0 .473.263.884.65 1.096l.007.003c.172.095.376.15.594.15.255 0 .492-.077.69-.208l-.005.003 6.027-3.955 8.764 4.045c.153.072.333.115.523.115.659 0 1.198-.509 1.246-1.156l0-.004 2-28.001c.002-.023-.013-.042-.013-.065.001-.016.001-.035.001-.054a1.3 1.3 0 0 0-.121-.533zM24.16 6.777l-12.511 14.3-6.922-3.195zM13.25 27.686v-3.117l2.788 1.287zM26.883 28.107l-7.663-3.537c-.026-.014-.038-.042-.065-.055l-5.115-2.373z"/>
+                            </svg>
+                        </span>
                     </div>
                     <div class="divee-tag-pills divee-tag-pills-collapsed"></div>
                 `;
@@ -2155,20 +2180,19 @@
             view.innerHTML = `
                 <div class="divee-header">
                     <div class="divee-header-top">
-                        <div class="divee-header-ai-icon" aria-hidden="true">
-                            <svg class="divee-sparkle-header-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
-                            </svg>
-                        </div>
                         <div class="divee-site-favicon-header">
-                            <img class="divee-site-favicon-header-image" src="${config.icon_url}" alt="" aria-hidden="true" />
+                            <img class="divee-site-favicon-header-image" src="${this.safeImageUrl(config.icon_url)}" alt="" aria-hidden="true" />
                         </div>
                         <div class="divee-header-text">
                             <span class="divee-title">${this.escapeHtml(config.client_name)}</span>
-                            <span class="divee-online-badge">● Online</span>
+                            <span class="divee-online-badge"><span class="divee-online-dot" aria-hidden="true"></span>${this.escapeHtml(this.t('onlineLabel', 'Online'))}</span>
                         </div>
-                        ${config.white_label ? '' : '<a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by divee.ai</a>'}
-                        <button class="divee-close" aria-label="Close">✕</button>
+                        ${config.white_label ? '' : '<a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by <strong>divee.ai</strong></a>'}
+                        <button class="divee-close" aria-label="Close">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M18 18L12 12M12 12L6 6M12 12L18 6M12 12L6 18"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 <div class="divee-content">
@@ -2192,9 +2216,10 @@
                         <div class="divee-suggestions-input" style="display: none;">
                             <div class="divee-suggestions-list"></div>
                         </div>
+            <div class="divee-input-row">
             <textarea
                             class="divee-input"
-              placeholder="${placeholder}"
+              placeholder="${this.escapeHtml(placeholder)}"
               rows="1"
               maxlength="200"
               autocomplete="off"
@@ -2202,11 +2227,20 @@
               autocapitalize="sentences"
             ></textarea>
                         <button class="divee-send" aria-label="Send">
-              <span class="divee-send-svg" aria-hidden="true">&#10148;</span>
+              <svg class="divee-send-svg" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+                <path d="M31.117 1.445c-.009-.018-.026-.029-.036-.046a1.05 1.05 0 0 0-.258-.338l-.001-.001a.94.94 0 0 0-.098-.057l-.007-.003c-.021-.015-.029-.043-.052-.057a.43.43 0 0 0-.099-.03 1.4 1.4 0 0 0-.448-.136l-.005 0a1 1 0 0 0-.123-.016l-.004 0c-.211.001-.409.055-.582.15l.006-.003c-.01.005-.022.002-.032.008l-27.999 16c-.379.219-.63.623-.63 1.085 0 .5.294.932.719 1.132l.008.003 9.273 4.28v6.585c0 .473.263.884.65 1.096l.007.003c.172.095.376.15.594.15.255 0 .492-.077.69-.208l-.005.003 6.027-3.955 8.764 4.045c.153.072.333.115.523.115.659 0 1.198-.509 1.246-1.156l0-.004 2-28.001c.002-.023-.013-.042-.013-.065.001-.016.001-.035.001-.054a1.3 1.3 0 0 0-.121-.533zM24.16 6.777l-12.511 14.3-6.922-3.195zM13.25 27.686v-3.117l2.788 1.287zM26.883 28.107l-7.663-3.537c-.026-.014-.038-.042-.065-.055l-5.115-2.373z"/>
+              </svg>
             </button>
+            </div>
             <div class="divee-input-footer">
-                <div class="divee-warning">${this.escapeHtml(this.t('inputDeterrent', "Don't share sensitive personal info or info about others."))} ${this.escapeHtml(config.disclaimer_text || this.t('disclaimer', 'This is an AI driven tool, results might not always be accurate'))}</div>
-                <div class="divee-counter">0/200</div>
+                <span class="divee-privacy-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="11" width="16" height="10" rx="2"/>
+                        <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+                    </svg>
+                </span>
+                <span class="divee-privacy-text">${this.escapeHtml(this.t('inputDeterrent', "Don't share sensitive personal info or info about others."))} ${this.escapeHtml(config.disclaimer_text || this.t('disclaimer', 'This is an AI driven tool, results might not always be accurate'))}</span>
+                <span class="divee-counter">0/200</span>
             </div>
                         <div class="divee-tag-pills divee-tag-pills-expanded"></div>
           </div>
@@ -2800,6 +2834,30 @@
             const sendButton = this.elements.expandedView.querySelector('.divee-send');
             sendButton.addEventListener('click', () => this.sendQuestion());
 
+            // Reactions: copy is functional; thumbs are visual placeholders
+            // (toggle a `is-active` class on click so the user gets feedback).
+            this.elements.expandedView.addEventListener('click', (e) => {
+                const btn = e.target.closest && e.target.closest('.divee-reaction');
+                if (!btn) return;
+                e.stopPropagation();
+                const action = btn.dataset.action;
+                if (action === 'copy') {
+                    const messageDiv = btn.closest('.divee-message');
+                    if (!messageDiv) return;
+                    const raw = messageDiv.dataset.rawText;
+                    const text = (raw && raw.length > 0)
+                        ? raw
+                        : (messageDiv.querySelector('.divee-message-content')?.innerText || '');
+                    this.copyToClipboard(text, btn);
+                    return;
+                }
+                if (action === 'thumb-up' || action === 'thumb-down') {
+                    const wasActive = btn.classList.contains('is-active');
+                    btn.parentElement?.querySelectorAll('.divee-reaction[data-action^="thumb-"]').forEach(b => b.classList.remove('is-active'));
+                    if (!wasActive) btn.classList.add('is-active');
+                }
+            });
+
             // Enter key to send
             textarea.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -3306,9 +3364,13 @@
             const title = (this.contentCache.title || '').slice(0, MAX_TITLE);
             const content = (this.contentCache.content || '').slice(0, MAX_CONTENT);
 
+            // Strip query string + hash before sending — query params and
+            // fragments are noise for suggestion generation and can blow up
+            // the cache key cardinality (Fastly keys on the URL).
+            const cleanUrl = this.stripUrlIdentifiers(this.contentCache.url);
             const articleUrl = this.config.widgetMode === 'knowledgebase'
                 ? 'knowledgebase'
-                : this.contentCache.url;
+                : cleanUrl;
 
             // Try the CDN-cached GET first. Hits are served by Fastly without
             // invoking the edge function; misses return 404 (short negative
@@ -3322,13 +3384,15 @@
                 projectId: this.config.projectId,
                 articleId: this.config.articleId,
                 title,
-                url: this.contentCache.url,
+                url: cleanUrl,
                 content,
                 visitor_id: this.state.visitorId,
                 session_id: this.state.sessionId,
                 metadata: {
-                    image_url: this.contentCache.image_url,
-                    og_image: this.contentCache.og_image
+                    // Strip query+hash so any signed-URL tokens or tracking
+                    // params on publisher image URLs don't leak to backend/LLM.
+                    image_url: this.stripUrlIdentifiers(this.contentCache.image_url),
+                    og_image: this.stripUrlIdentifiers(this.contentCache.og_image)
                 }
             };
 
@@ -3379,16 +3443,7 @@
 
             if (!raw) return;
 
-            // Pre-flight redaction of high-confidence PII patterns. When
-            // anything fires, askQuestion surfaces a system notice in chat
-            // (using the redactionNotice translation) right after the user's
-            // message so they understand why their text looks different.
-            const { text: question, hits } = this.redactSensitivePatterns(raw);
-            if (hits.length > 0) {
-                this.trackEvent('input_redacted', { categories: hits });
-            }
-
-            this.askQuestion(question, 'custom', null, hits);
+            this.askQuestion(raw, 'custom', null);
             textarea.value = '';
             textarea.style.height = 'auto';
 
@@ -3399,7 +3454,18 @@
             }
         }
 
-        async askQuestion(question, type, questionId, redactionHits) {
+        async askQuestion(rawQuestion, type, questionId) {
+            // PII redaction lives here (not in sendQuestion) so every code
+            // path that reaches askQuestion — direct calls from suggestion
+            // chips, future entry points, etc. — gets the same scrubbing.
+            // Server-generated suggestions don't normally match these patterns,
+            // so this is a no-op for them; the system notice only fires when
+            // hits are non-empty.
+            const { text: question, hits } = this.redactSensitivePatterns(rawQuestion);
+            if (hits.length > 0) {
+                this.trackEvent('input_redacted', { categories: hits });
+            }
+
             // Track question event for session tracking
             const isSuggestion = type === 'suggestion' || type === 'suggestion-closed';
             const eventPayload = { question_type: type };
@@ -3418,7 +3484,7 @@
             // If we redacted anything from the user's input client-side, surface
             // a system notice between the user bubble and the AI response so
             // they understand why their message looks different.
-            if (redactionHits && redactionHits.length > 0) {
+            if (hits.length > 0) {
                 this.addSystemMessage(this.t('redactionNotice', 'We removed something that looked like personal info.'));
             }
 
@@ -3437,6 +3503,57 @@
             }
         }
 
+        // Build the streaming "thinking" indicator. A wrapped <video> so the
+        // cursor element keeps a stable identity — we preserve this DOM node
+        // across innerHTML rewrites in updateMessage to avoid restarting the
+        // video each chunk.
+        createCursorElement() {
+            const cursor = document.createElement('span');
+            cursor.className = 'divee-cursor';
+            const video = document.createElement('video');
+            video.className = 'divee-cursor-video';
+            video.src = 'https://srv.divee.ai/storage/v1/object/public/public-files/ai-think.webm';
+            video.autoplay = true;
+            video.muted = true;
+            video.loop = true;
+            video.playsInline = true;
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', '');
+            video.setAttribute('aria-hidden', 'true');
+            cursor.appendChild(video);
+            return cursor;
+        }
+
+        copyToClipboard(text, btn) {
+            const flash = () => {
+                if (!btn) return;
+                btn.classList.add('is-copied');
+                setTimeout(() => btn.classList.remove('is-copied'), 1200);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(flash, () => {});
+                return;
+            }
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                flash();
+            } catch (_) { /* swallow */ }
+        }
+
+        formatMessageTime(date) {
+            const d = date instanceof Date ? date : new Date(date);
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${hh}:${mm}`;
+        }
+
         addMessage(role, content, streaming = false) {
             const messagesContainer = this.elements.expandedView.querySelector('.divee-messages');
 
@@ -3446,42 +3563,92 @@
 
             const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
             const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const timestamp = this.formatMessageTime(new Date());
+            const config = this.state.serverConfig || this.getDefaultConfig();
 
             const messageDiv = document.createElement('div');
             messageDiv.className = `divee-message divee-message-${role}`;
             messageDiv.setAttribute('data-message-id', messageId);
             messageDiv.dataset.rawText = '';
 
-            const label = document.createElement('div');
-            label.className = 'divee-message-label';
             if (role === 'user') {
-                label.textContent = 'You';
-            } else {
-                label.innerHTML = `
-                    <div class="divee-sparkle-avatar" aria-label="AI">
-                        <svg class="divee-sparkle-msg-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/>
-                        </svg>
-                    </div>`;
-            }
+                const meta = document.createElement('div');
+                meta.className = 'divee-message-meta';
+                meta.innerHTML = `<span class="divee-message-time">${this.escapeHtml(timestamp)}</span>`;
 
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'divee-message-content';
-            if (streaming || role === 'user') {
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'divee-message-content';
                 contentDiv.textContent = content;
+
+                const tick = document.createElement('div');
+                tick.className = 'divee-message-tick';
+                tick.innerHTML = `
+                    <svg viewBox="0 0 122.88 74.46" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M1.87,47.2a6.33,6.33,0,1,1,8.92-9c8.88,8.85,17.53,17.66,26.53,26.45l-3.76,4.45-.35.37a6.33,6.33,0,0,1-8.95,0L1.87,47.2ZM30,43.55a6.33,6.33,0,1,1,8.82-9.07l25,24.38L111.64,2.29c5.37-6.35,15,1.84,9.66,8.18L69.07,72.22l-.3.33a6.33,6.33,0,0,1-8.95.12L30,43.55Zm28.76-4.21-.31.33-9.07-8.85L71.67,4.42c5.37-6.35,15,1.83,9.67,8.18L58.74,39.34Z"/>
+                    </svg>
+                `;
+
+                messageDiv.appendChild(meta);
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(tick);
             } else {
-                contentDiv.innerHTML = this.renderMarkdown(content);
+                const avatar = document.createElement('div');
+                avatar.className = 'divee-sparkle-avatar';
+                avatar.setAttribute('aria-hidden', 'true');
+                avatar.innerHTML = `
+                    <svg class="divee-sparkle-msg-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M12 2c.4 3.4 1.5 5.6 3 7.1S18.6 11.6 22 12c-3.4.4-5.6 1.5-7.1 3S12.4 18.6 12 22c-.4-3.4-1.5-5.6-3-7.1S5.4 12.4 2 12c3.4-.4 5.6-1.5 7.1-3S11.6 5.4 12 2z"/>
+                    </svg>
+                `;
+
+                const main = document.createElement('div');
+                main.className = 'divee-message-main';
+
+                const meta = document.createElement('div');
+                meta.className = 'divee-message-meta';
+                meta.innerHTML = `<span class="divee-message-name">${this.escapeHtml(config.client_name || '')}</span><span class="divee-message-time">${this.escapeHtml(timestamp)}</span>`;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'divee-message-content';
+                if (streaming) {
+                    contentDiv.textContent = content;
+                } else {
+                    contentDiv.innerHTML = this.renderMarkdown(content);
+                }
+
+                if (streaming) {
+                    contentDiv.appendChild(this.createCursorElement());
+                }
+
+                const reactions = document.createElement('div');
+                reactions.className = 'divee-reactions';
+                reactions.innerHTML = `
+                    <button type="button" class="divee-reaction" data-action="copy" aria-label="${this.escapeHtml(this.t('copyLabel', 'Copy'))}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="8" y="7" width="12" height="14"/>
+                            <polyline points="16 3 4 3 4 17"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="divee-reaction" data-action="thumb-up" aria-label="${this.escapeHtml(this.t('thumbUpLabel', 'Helpful'))}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M7.3 11.4 10.1 3a.6.6 0 0 1 .8-.3l1 .5a2.6 2.6 0 0 1 1.4 2.3V9.4h6.4a2 2 0 0 1 1.9 2.5l-2 8a2 2 0 0 1-1.9 1.5H4.3a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2h3v10"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="divee-reaction" data-action="thumb-down" aria-label="${this.escapeHtml(this.t('thumbDownLabel', 'Not helpful'))}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M7.3 12.6 10.1 21a.6.6 0 0 0 .8.3l1-.5a2.6 2.6 0 0 0 1.4-2.3v-3.9h6.4a2 2 0 0 0 1.9-2.5l-2-8a2 2 0 0 0-1.9-1.5H4.3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h3v-10"/>
+                        </svg>
+                    </button>
+                `;
+
+                main.appendChild(meta);
+                main.appendChild(contentDiv);
+                main.appendChild(reactions);
+
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(main);
             }
 
-            if (streaming) {
-                const cursor = document.createElement('span');
-                cursor.className = 'divee-cursor';
-                cursor.innerHTML = '<span class="divee-cursor-dot"></span><span class="divee-cursor-dot"></span><span class="divee-cursor-dot"></span>';
-                contentDiv.appendChild(cursor);
-            }
-
-            messageDiv.appendChild(label);
-            messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
 
             // Scroll to bottom of chat container
@@ -3527,12 +3694,11 @@
             if (append && isAI) {
                 // Accumulate raw text and re-render markdown live on every chunk
                 messageDiv.dataset.rawText = (messageDiv.dataset.rawText || '') + content;
+                // Preserve the existing cursor element across the innerHTML
+                // rewrite so the <video> doesn't reload/restart per chunk.
+                const existingCursor = contentDiv.querySelector('.divee-cursor');
                 contentDiv.innerHTML = this.renderMarkdown(messageDiv.dataset.rawText);
-                // Re-attach animated cursor at the end
-                const newCursor = document.createElement('span');
-                newCursor.className = 'divee-cursor';
-                newCursor.innerHTML = '<span class="divee-cursor-dot"></span><span class="divee-cursor-dot"></span><span class="divee-cursor-dot"></span>';
-                contentDiv.appendChild(newCursor);
+                contentDiv.appendChild(existingCursor || this.createCursorElement());
             } else if (append) {
                 const cursor = contentDiv.querySelector('.divee-cursor');
                 const textNode = document.createTextNode(content);
@@ -3577,8 +3743,10 @@
                 session_id: this.state.sessionId,
                 widget_mode: this.config.widgetMode || 'article',
                 metadata: {
-                    image_url: this.contentCache.image_url,
-                    og_image: this.contentCache.og_image
+                    // Strip query+hash so any signed-URL tokens or tracking
+                    // params on publisher image URLs don't leak to backend/LLM.
+                    image_url: this.stripUrlIdentifiers(this.contentCache.image_url),
+                    og_image: this.stripUrlIdentifiers(this.contentCache.og_image)
                 }
             };
 
@@ -4017,7 +4185,12 @@
                         article_id: suggestion.unique_id,
                         position_in_chat: this.state.aiResponseCount
                     });
-                    if (suggestion.url && /^https?:\/\//i.test(suggestion.url)) window.open(suggestion.url, '_blank');
+                    if (suggestion.url && /^https?:\/\//i.test(suggestion.url)) {
+                        // 'noopener,noreferrer' detaches window.opener so the
+                        // target page can't tabnab the publisher via opener.location.
+                        const w = window.open(suggestion.url, '_blank', 'noopener,noreferrer');
+                        if (w) w.opener = null;
+                    }
                 }
             });
 
@@ -4029,7 +4202,12 @@
                         article_id: suggestion.unique_id,
                         position_in_chat: this.state.aiResponseCount
                     });
-                    if (suggestion.url && /^https?:\/\//i.test(suggestion.url)) window.open(suggestion.url, '_blank');
+                    if (suggestion.url && /^https?:\/\//i.test(suggestion.url)) {
+                        // 'noopener,noreferrer' detaches window.opener so the
+                        // target page can't tabnab the publisher via opener.location.
+                        const w = window.open(suggestion.url, '_blank', 'noopener,noreferrer');
+                        if (w) w.opener = null;
+                    }
                 }
             });
 
@@ -4088,8 +4266,12 @@
         }
 
         autoResizeTextarea(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+            // Use setProperty with `important` because the base stylesheet
+            // declares `height: auto !important` and a plain inline write
+            // would lose the cascade.
+            textarea.style.setProperty('height', 'auto', 'important');
+            const next = Math.min(textarea.scrollHeight, 72);
+            textarea.style.setProperty('height', next + 'px', 'important');
         }
 
         updateCharacterCounter(textarea) {

@@ -226,16 +226,6 @@
   gap: 8px !important;
 }
 
-.divee-widget-sidebar .divee-header-ai-icon {
-  width: 28px !important;
-  height: 28px !important;
-}
-
-.divee-widget-sidebar .divee-sparkle-header-icon {
-  width: 14px !important;
-  height: 14px !important;
-}
-
 .divee-widget-sidebar .divee-site-favicon-header {
   width: 28px !important;
   height: 28px !important;
@@ -501,7 +491,6 @@
   direction: rtl;
 }
 
-.divee-widget[dir="rtl"] .divee-icons,
 .divee-widget[dir="rtl"] .divee-input-container,
 .divee-widget[dir="rtl"] .divee-input-footer {
   flex-direction: row-reverse;
@@ -537,10 +526,6 @@
 .divee-widget[dir="rtl"] .divee-message-ai .divee-message-content {
   border-bottom-right-radius: 4px;
   border-bottom-left-radius: 16px;
-}
-
-.divee-widget[dir="rtl"] .divee-warning {
-  text-align: right;
 }
 
 .divee-widget[dir="rtl"] .divee-counter {
@@ -771,13 +756,6 @@
   gap: 12px;
 }
 
-.divee-powered-by-wrapper {
-  padding: 0px 0px 0px 14px;
-  margin-top: 3px;
-  text-align: left;
-  direction: ltr;
-}
-
 .divee-powered-by {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.4);
@@ -798,35 +776,6 @@
 .divee-powered-by:hover {
   color: rgba(255, 255, 255, 0.75);
   text-decoration: underline;
-}
-
-.divee-icons {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 !important;
-}
-
-.divee-icon-ai,
-.divee-icon-site {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin: 0 !important;
-}
-
-.divee-icon-ai {
-  width: 32px;
-  height: 32px;
-  color: var(--divee-color-secondary);
-}
-
-.divee-icon-site {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
 }
 
 .divee-title {
@@ -944,7 +893,7 @@
   flex: 1;
   min-height: 0;
   overflow: visible !important;
-  padding: 14px;
+  padding: 0 14px 14px 14px;
   margin: 0 !important;
   display: flex;
   flex-direction: column;
@@ -1187,33 +1136,6 @@
   box-shadow: none !important;
 }
 
-.divee-message-label {
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  color: #9ca3af !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  margin: 0 !important;
-}
-
-.divee-message-ai .divee-message-label {
-  padding: 0;
-  margin-top: 0;
-}
-
-.divee-message-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  object-fit: cover;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-}
-
 .divee-message-content {
   padding: 12px 16px;
   border-radius: 16px;
@@ -1296,20 +1218,6 @@
   margin: 6px 0 4px;
 }
 
-.divee-message-user .divee-message-content {
-  background: #f3f4f6;
-  color: #1f2937 !important;
-  border-bottom-right-radius: 4px;
-}
-
-.divee-message-ai .divee-message-content {
-  background: transparent;
-  color: #1f2937 !important;
-  border: none;
-  box-shadow: none;
-  padding: 2px 0;
-}
-
 .divee-cursor {
   display: inline-flex;
   gap: 4px;
@@ -1318,36 +1226,13 @@
   vertical-align: middle;
 }
 
-.divee-cursor-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--divee-color-secondary);
-  animation: divee-dot-bounce 1.2s infinite ease-in-out;
+.divee-cursor-video {
+  height: 33px;
+  width: auto;
   display: inline-block;
-}
-
-.divee-cursor-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.divee-cursor-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes divee-dot-bounce {
-
-  0%,
-  80%,
-  100% {
-    transform: scaleY(0.5);
-    opacity: 0.4;
-  }
-
-  40% {
-    transform: scaleY(1);
-    opacity: 1;
-  }
+  vertical-align: middle;
+  pointer-events: none;
+  background: transparent;
 }
 
 /* Input - Search Box Style */
@@ -1371,14 +1256,6 @@
   flex: 0 0 100%;
   margin-top: 0;
   gap: 8px;
-}
-
-.divee-warning {
-  font-size: 11px !important;
-  color: #9ca3af !important;
-  line-height: 1.4 !important;
-  text-align: left;
-  margin: 5px !important;
 }
 
 .divee-counter {
@@ -1970,35 +1847,6 @@
    AI-FIRST DESIGN ELEMENTS (ChatGPT-inspired)
    ============================================ */
 
-/* Header: sparkle avatar circle */
-.divee-header-ai-icon {
-  width: 34px;
-  height: 34px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: none;
-}
-
-.divee-sparkle-header-icon {
-  width: 18px;
-  height: 18px;
-  color: rgba(255, 255, 255, 0.9);
-  display: block;
-}
-
-/* Header: text block (title + online badge stacked) */
-.divee-header-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
 .divee-site-favicon-header-image {
   border-radius: 50%;
   object-fit: cover;
@@ -2031,45 +1879,6 @@
   margin: 0 !important;
 }
 
-/* Online badge */
-.divee-online-badge {
-  font-size: 11px;
-  font-weight: 500;
-  color: #34d399;
-  line-height: 1;
-}
-
-/* Message: sparkle avatar for AI */
-.divee-sparkle-avatar {
-  width: 26px;
-  height: 26px;
-  background: linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary));
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.divee-sparkle-msg-icon {
-  width: 13px;
-  height: 13px;
-  color: white;
-  display: block;
-}
-
-/* User message - clean neutral bubble */
-.divee-message-user .divee-message-content {
-  background: #f3f4f6 !important;
-  color: #111827 !important;
-  border-bottom-right-radius: 4px !important;
-}
-
-/* AI message - no max-width cap, full width feel */
-.divee-message-ai {
-  max-width: 100% !important;
-}
 
 /* ============================================
    TAG POPUP
@@ -2302,13 +2111,13 @@
 
 .divee-content::-webkit-scrollbar-thumb,
 .divee-chat::-webkit-scrollbar-thumb {
-  background: var(--divee-color-secondary);
+  background: var(--divee-surface-dark);
   border-radius: 8px;
 }
 
 .divee-content::-webkit-scrollbar-thumb:hover,
 .divee-chat::-webkit-scrollbar-thumb:hover {
-  background: #8B6BC9;
+  background: #1a2744;
 }
 
 /* Responsive adjustments */
@@ -3107,4 +2916,1083 @@
   .divee-collapsed-bubble-track {
     transition: none !important;
   }
+}
+
+/* ============================================
+   v2 OPEN-STATE REDESIGN
+   ============================================ */
+
+.divee-widget {
+  --divee-surface-dark: #0E1A35;
+  --divee-bubble-user: #E1E7F4;
+  --divee-border-soft: #E5E7EB;
+  --divee-text-muted: #9CA3AF;
+  --divee-online: #22C55E;
+}
+
+/* Header — taller, more breathing room */
+.divee-header {
+  background: var(--divee-surface-dark) !important;
+  padding: 22px 18px !important;
+  border-bottom: none !important;
+}
+
+.divee-site-favicon-header {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.divee-site-favicon-header-image {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  display: block;
+}
+
+.divee-header-text {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 2px !important;
+  flex: 1;
+  min-width: 0;
+}
+
+.divee-header .divee-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  line-height: 1.2 !important;
+  flex: 0 0 auto !important;
+  width: 100%;
+}
+
+.divee-online-badge {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  line-height: 1;
+  margin: 0 !important;
+}
+
+.divee-online-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--divee-online);
+  display: inline-block;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
+}
+
+/* "powered by divee.ai" pill — outlined on dark header */
+.divee-header .divee-powered-by {
+  background: transparent !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.1px;
+  line-height: 1 !important;
+  padding: 9px 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 999px !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  height: 34px;
+  white-space: nowrap !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
+}
+
+.divee-header .divee-powered-by strong {
+  font-weight: 700;
+  margin-left: 5px;
+  color: #fff;
+}
+
+.divee-header .divee-powered-by:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+/* Rounded-square close button */
+.divee-header .divee-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  font-size: 0 !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  flex-shrink: 0;
+}
+
+.divee-header .divee-close svg {
+  width: 17px;
+  height: 17px;
+  color: #fff;
+}
+
+.divee-header .divee-close:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #fff !important;
+}
+
+/* Messages — AI: avatar + main column */
+.divee-message-ai {
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  max-width: 100% !important;
+  align-self: stretch !important;
+}
+
+.divee-message-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.divee-message-ai .divee-sparkle-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  background:
+    radial-gradient(circle at 30% 25%, #25365E 0%, var(--divee-surface-dark) 60%) !important;
+  border-radius: 50% !important;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.18),
+    0 4px 12px rgba(15, 23, 42, 0.16);
+}
+
+.divee-message-ai .divee-sparkle-msg-icon {
+  width: 20px !important;
+  height: 20px !important;
+  color: #F5C24A !important;
+  filter: drop-shadow(0 0 6px rgba(245, 194, 74, 0.45));
+}
+
+/* AI meta row: name + time */
+.divee-message-ai .divee-message-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.divee-message-ai .divee-message-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.divee-message-time {
+  font-size: 11px !important;
+  color: var(--divee-text-muted) !important;
+  font-weight: 400;
+}
+
+/* AI bubble — multi-layer shadow for elegant elevation */
+.divee-message-ai .divee-message-content {
+  background: #fff !important;
+  border: none !important;
+  border-radius: 16px !important;
+  padding: 18px 22px !important;
+  color: #1f2937 !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.025),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 8px rgba(15, 23, 42, 0.04),
+    0 12px 24px rgba(15, 23, 42, 0.06),
+    0 24px 48px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Reactions row */
+.divee-reactions {
+  display: flex;
+  gap: 4px;
+  padding: 0 4px;
+  margin-top: 2px;
+}
+
+.divee-reaction {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #9CA3AF;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0 !important;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.divee-reaction svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.divee-reaction:hover {
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+.divee-reaction[data-action="thumb-up"].is-active {
+  color: var(--divee-online);
+  background: transparent;
+}
+
+.divee-reaction[data-action="thumb-down"].is-active {
+  color: #EF4444;
+  background: transparent;
+}
+
+.divee-reaction.is-copied {
+  color: var(--divee-online);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+/* User message — meta above, light-blue bubble, tick below */
+.divee-message-user {
+  align-self: flex-end !important;
+  align-items: flex-end !important;
+  gap: 4px !important;
+}
+
+.divee-message-user .divee-message-meta {
+  font-size: 11px;
+  color: var(--divee-text-muted);
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.divee-message-user .divee-message-content {
+  background: var(--divee-bubble-user) !important;
+  color: #1f2937 !important;
+  border: none !important;
+  border-radius: 16px !important;
+  border-bottom-right-radius: 4px !important;
+  padding: 14px 20px !important;
+  box-shadow:
+    0 0 0 1px rgba(36, 56, 110, 0.04),
+    0 1px 2px rgba(36, 56, 110, 0.05),
+    0 4px 8px rgba(36, 56, 110, 0.05),
+    0 12px 24px rgba(36, 56, 110, 0.07),
+    0 24px 48px rgba(36, 56, 110, 0.05) !important;
+}
+
+.divee-message-tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: var(--divee-online);
+  padding: 0 4px;
+  height: 14px;
+}
+
+.divee-message-tick svg {
+  width: 18px;
+  height: 11px;
+  display: block;
+}
+
+/* Input row — single rounded surface containing textarea + send button */
+.divee-input-row {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid #C7D2E8;
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 8px rgba(15, 23, 42, 0.04),
+    0 12px 24px rgba(15, 23, 42, 0.06),
+    0 24px 48px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.divee-input-row:focus-within {
+  border-color: #93A5C9;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 8px rgba(15, 23, 42, 0.05),
+    0 12px 24px rgba(15, 23, 42, 0.07),
+    0 24px 48px rgba(15, 23, 42, 0.05),
+    0 0 0 3px rgba(147, 165, 201, 0.2);
+}
+
+/* Textarea: transparent inside the row, single-line height matches send button (42px) */
+.divee-widget .divee-input {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 11px 20px !important;
+  min-height: 42px !important;
+  box-shadow: none !important;
+  /* Allow the textarea to grow up to 2 rows. autoResizeTextarea sets
+     an explicit !important height; this caps how far that can go. */
+  max-height: 78px !important;
+  overflow-y: auto !important;
+}
+
+.divee-widget .divee-input:focus {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Send button — dark navy rounded square pinned to the right of the row */
+.divee-widget .divee-send {
+  background: var(--divee-surface-dark) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  max-width: 42px !important;
+  max-height: 42px !important;
+  margin: 0 !important;
+  align-self: flex-end;
+  flex-shrink: 0 !important;
+}
+
+.divee-widget .divee-send:hover {
+  background: #1a2744 !important;
+  transform: scale(1.05);
+}
+
+.divee-widget .divee-send-svg {
+  width: 16px;
+  height: 16px;
+  color: #fff !important;
+  display: inline-block;
+  transform: translate(-1px, 1px);
+}
+
+.divee-widget .divee-send-svg path {
+  fill: currentColor;
+}
+
+/* Privacy footer — lock icon + muted notice + counter */
+.divee-input-footer {
+  justify-content: flex-start !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-top: 8px !important;
+  padding: 0 4px;
+}
+
+.divee-input-footer .divee-privacy-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.divee-input-footer .divee-counter {
+  font-size: 11px !important;
+  color: var(--divee-text-muted) !important;
+  flex-shrink: 0;
+  margin: 0 !important;
+}
+
+/* Larger messages area — fit more turns without scrolling */
+.divee-widget .divee-chat {
+  height: 460px !important;
+  padding: 16px 16px 16px 10px !important;
+}
+
+/* Lift the expanded panel cap so the taller chat actually gets the room */
+.divee-widget[data-state="expanded"] .divee-expanded,
+.divee-expanded {
+  max-height: 720px !important;
+}
+
+/* Side padding so the input row + footer don't kiss the widget edges */
+.divee-widget .divee-input-container {
+  padding: 10px 16px 14px !important;
+}
+
+.divee-privacy-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--divee-text-muted);
+  flex-shrink: 0;
+}
+
+.divee-privacy-icon svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.divee-privacy-text {
+  font-size: 11px !important;
+  color: var(--divee-text-muted) !important;
+  line-height: 1.4;
+}
+
+/* ============================================
+   v2 OPEN-STATE — MOBILE
+   Re-tune the redesign for narrow widths. These rules sit after the
+   desktop block so they win the cascade against equally-!important
+   desktop declarations.
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Header — tighter vertical padding, smaller favicon */
+  .divee-header {
+    padding: 14px 14px !important;
+  }
+
+  .divee-site-favicon-header {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .divee-header .divee-title {
+    font-size: 15px !important;
+  }
+
+  .divee-online-badge {
+    font-size: 11px !important;
+  }
+
+  /* powered-by pill: shrink to keep header on one row.
+     Explicit overrides because an older mobile rule clamps width and
+     allows wrapping — those would otherwise leak in. */
+  .divee-header .divee-powered-by {
+    font-size: 11px !important;
+    padding: 7px 11px !important;
+    height: 30px;
+    max-width: none !important;
+    white-space: nowrap !important;
+    text-align: left !important;
+    flex-shrink: 0 !important;
+    line-height: 1 !important;
+  }
+
+  .divee-header .divee-close {
+    flex-shrink: 0 !important;
+  }
+
+  /* Tighter header gap on mobile so favicon+title+pill+close all fit */
+  .divee-header-top {
+    gap: 8px !important;
+  }
+
+  .divee-header .divee-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .divee-header .divee-close svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Chat: let height flex to viewport */
+  .divee-widget .divee-chat {
+    height: auto !important;
+    min-height: 220px !important;
+    flex: 1 !important;
+    padding: 12px 10px 12px 8px !important;
+  }
+
+  /* Tighter side padding around input area */
+  .divee-widget .divee-input-container {
+    padding: 8px 10px 10px !important;
+  }
+
+  /* Bubbles: reduce padding so text uses more horizontal room */
+  .divee-message-ai .divee-message-content {
+    padding: 14px 16px !important;
+    border-radius: 14px !important;
+  }
+
+  .divee-message-user .divee-message-content {
+    padding: 11px 15px !important;
+    border-radius: 14px !important;
+    border-bottom-right-radius: 4px !important;
+  }
+
+  /* Smaller AI avatar to give the bubble more room */
+  .divee-message-ai .divee-sparkle-avatar {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .divee-message-ai .divee-sparkle-msg-icon {
+    width: 17px !important;
+    height: 17px !important;
+  }
+
+  /* Smaller send button + textarea to fit narrow screens */
+  .divee-input-row {
+    border-radius: 14px;
+    padding: 5px;
+  }
+
+  .divee-widget .divee-input {
+    padding: 10px 16px !important;
+    min-height: 38px !important;
+  }
+
+  .divee-widget .divee-send {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    max-width: 38px !important;
+    max-height: 38px !important;
+    border-radius: 10px !important;
+  }
+
+  /* Footer: keep lock + disclaimer + counter on one row;
+     privacy text wraps internally if needed. */
+  .divee-input-footer {
+    flex-wrap: nowrap !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+
+  .divee-input-footer .divee-privacy-icon {
+    margin-top: 1px;
+  }
+
+  .divee-input-footer .divee-privacy-text {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    font-size: 10.5px !important;
+    line-height: 1.35;
+  }
+
+  .divee-input-footer .divee-counter {
+    font-size: 10.5px !important;
+    align-self: flex-start;
+  }
+
+  /* Reactions: slightly larger touch targets */
+  .divee-reaction {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Very narrow: hide the powered-by pill so the title has room */
+  .divee-header .divee-powered-by {
+    display: none !important;
+  }
+
+  .divee-header {
+    padding: 12px 12px !important;
+  }
+
+  /* Bubbles can use almost full width */
+  .divee-message-ai {
+    gap: 4px !important;
+  }
+
+  .divee-message-ai .divee-message-content {
+    padding: 12px 14px !important;
+  }
+}
+
+/* ============================================
+   v2 OPEN-STATE — RTL
+   Sits at the end so it overrides both the legacy RTL block (line 500)
+   and the v2 redesign defaults.
+   ============================================ */
+
+/* The "powered by divee.ai" pill is always English. Force LTR so the
+   visual reading order matches the text's grammatical order. Without
+   this the <strong>divee.ai</strong> renders before "powered by". */
+.divee-widget[dir="rtl"] .divee-header .divee-powered-by {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+}
+
+/* The legacy RTL block sets `flex-direction: row-reverse` on the footer,
+   which in an RTL container double-reverses and pushes the lock icon
+   to the visual far-left, detached from the disclaimer text. With plain
+   `row` direction inside an RTL container the lock sits at the start
+   (right side, next to the disclaimer) and the counter ends up on the
+   left, which is what the design wants. */
+.divee-widget[dir="rtl"] .divee-input-footer {
+  flex-direction: row !important;
+}
+
+/* Same reason — the row-reverse rule from the legacy block reverses the
+   AI meta row. Plain row keeps name at the start (right), time after it. */
+.divee-widget[dir="rtl"] .divee-message-ai .divee-message-meta,
+.divee-widget[dir="rtl"] .divee-message-user .divee-message-meta {
+  flex-direction: row !important;
+}
+
+/* Reactions row reads right-to-left naturally; no reverse needed. The
+   copy/thumb-up/thumb-down ordering is meaningless either way. */
+.divee-widget[dir="rtl"] .divee-reactions {
+  flex-direction: row !important;
+}
+
+/* Send button on the LEFT in RTL. The legacy block at line 510 sets
+   `order: -1` on .divee-send to push it to the start (right side in
+   an RTL flex). Reset that — natural document order puts the textarea
+   first (right side, where the user types) and the send button second
+   (left side). */
+.divee-widget[dir="rtl"] .divee-input-row .divee-send {
+  order: 0 !important;
+}
+
+/* Tag pills aligned to the right in RTL. The legacy rule at line 1959
+   sets `justify-content: flex-end`, which in an RTL flex container is
+   the visual LEFT side. flex-start = visual right in RTL = what we want. */
+.divee-widget[dir="rtl"] .divee-tag-pills {
+  justify-content: flex-start !important;
+}
+
+/* ============================================
+   v2 OPEN-STATE — SIDEBAR
+   The sidebar is a fixed-width column regardless of viewport, so the
+   desktop v2 sizes (44px favicon, 22px header padding, 460px chat,
+   42px send) are too generous. Mirror the mobile compactness here.
+   ============================================ */
+
+/* Width: 380px → 437px (+15%) */
+.divee-widget-sidebar[data-state="expanded"] {
+  width: 437px !important;
+}
+
+/* Sidebar takes the full viewport height; the v2 desktop rule clamping
+   .divee-expanded to 720px must be overridden here. */
+.divee-widget-sidebar .divee-expanded,
+.divee-widget-sidebar[data-state="expanded"] .divee-expanded {
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
+}
+
+/* Header — tighter, smaller items */
+.divee-widget-sidebar .divee-header {
+  padding: 14px 12px !important;
+}
+
+.divee-widget-sidebar .divee-site-favicon-header {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.divee-widget-sidebar .divee-header .divee-title {
+  font-size: 14px !important;
+}
+
+.divee-widget-sidebar .divee-online-badge {
+  font-size: 11px !important;
+}
+
+/* Override the legacy sidebar rule that clamps powered-by to 60px and
+   wraps the text — that's what's clipping it to "powered by div…". */
+.divee-widget-sidebar .divee-header .divee-powered-by {
+  font-size: 11px !important;
+  padding: 7px 10px !important;
+  height: 28px;
+  max-width: none !important;
+  white-space: nowrap !important;
+  text-align: left !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+}
+
+.divee-widget-sidebar .divee-header .divee-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  padding: 0 !important;
+}
+
+.divee-widget-sidebar .divee-header .divee-close svg {
+  width: 15px;
+  height: 15px;
+}
+
+.divee-widget-sidebar .divee-header-top {
+  gap: 8px !important;
+}
+
+/* Chat — flex to viewport instead of the 460px desktop fixed height */
+.divee-widget-sidebar .divee-chat {
+  height: auto !important;
+  flex: 1 !important;
+  padding: 12px 10px 12px 8px !important;
+}
+
+/* Input area — tighter side padding so the row uses the full width */
+.divee-widget-sidebar .divee-input-container {
+  padding: 8px 10px 10px !important;
+}
+
+.divee-widget-sidebar .divee-input-row {
+  padding: 5px;
+  border-radius: 14px;
+}
+
+.divee-widget-sidebar .divee-input {
+  padding: 10px 14px !important;
+  min-height: 38px !important;
+}
+
+/* Smaller send button so the textarea has room for placeholder text */
+.divee-widget-sidebar .divee-send {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  max-width: 38px !important;
+  max-height: 38px !important;
+  border-radius: 10px !important;
+}
+
+/* Smaller AI avatar to free horizontal room for the bubble */
+.divee-widget-sidebar .divee-message-ai .divee-sparkle-avatar {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.divee-widget-sidebar .divee-message-ai .divee-sparkle-msg-icon {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+.divee-widget-sidebar .divee-message-ai {
+  gap: 6px !important;
+}
+
+/* Tighter bubble padding for the narrow column */
+.divee-widget-sidebar .divee-message-ai .divee-message-content {
+  padding: 14px 16px !important;
+  border-radius: 14px !important;
+}
+
+.divee-widget-sidebar .divee-message-user .divee-message-content {
+  padding: 11px 15px !important;
+  border-radius: 14px !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+/* ============================================
+   v2 OPEN-STATE — COLLAPSED VIEW
+   Apply the same visual language used in the expanded chat: white
+   surface with a soft lavender border and 4-layer elevation, dark-navy
+   rounded-square send button, and dark-navy circular AI avatar with a
+   gold sparkle (replaces the gradient "AI" badge).
+   ============================================ */
+
+/* Search container becomes the analog of the v2 input row */
+.divee-widget .divee-search-container-collapsed {
+  background: #fff !important;
+  border: 1px solid #C7D2E8 !important;
+  border-radius: 16px !important;
+  padding: 13px 8px 13px 12px !important;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 8px rgba(15, 23, 42, 0.04),
+    0 12px 24px rgba(15, 23, 42, 0.06),
+    0 24px 48px rgba(15, 23, 42, 0.04) !important;
+  gap: 10px !important;
+}
+
+.divee-widget .divee-search-container-collapsed:hover {
+  background: #fff !important;
+  border-color: #93A5C9 !important;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 8px rgba(15, 23, 42, 0.05),
+    0 12px 24px rgba(15, 23, 42, 0.07),
+    0 24px 48px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* AI identity becomes a dark-navy circle with a gold sparkle (mirrors
+   the AI avatar used in chat messages). The "AI" text label is hidden
+   to keep the badge tight; the icon alone signals AI affordance. */
+.divee-widget .divee-ai-identity {
+  background:
+    radial-gradient(circle at 30% 25%, #25365E 0%, var(--divee-surface-dark) 60%) !important;
+  border-radius: 50% !important;
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  justify-content: center;
+  gap: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.18);
+}
+
+.divee-widget .divee-ai-identity-sparkle {
+  width: 16px;
+  height: 16px;
+  color: #F5C24A;
+  filter: drop-shadow(0 0 4px rgba(245, 194, 74, 0.45));
+}
+
+.divee-widget .divee-ai-label {
+  display: none;
+}
+
+/* Send icon — dark-navy rounded square, 36×36 (slightly smaller than
+   open-view 42 since the collapsed bar already has tight padding).
+   Hosts the same paper-plane SVG used in the open view. */
+.divee-widget .divee-send-icon-collapsed {
+  background: var(--divee-surface-dark) !important;
+  border-radius: 12px !important;
+  width: 36px;
+  height: 36px;
+  font-size: 0;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.divee-widget .divee-send-icon-collapsed svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  transform: translate(-1px, 1px);
+}
+
+.divee-widget .divee-search-container-collapsed:hover .divee-send-icon-collapsed {
+  background: #1a2744 !important;
+  box-shadow: none !important;
+  transform: scale(1.05);
+}
+
+/* Search input — match the open-view textarea typography */
+.divee-widget .divee-search-input-collapsed {
+  font-size: 14px !important;
+  color: #1f2937 !important;
+}
+
+.divee-widget .divee-search-input-collapsed::placeholder {
+  color: #9CA3AF !important;
+}
+
+/* The typewriter caret used the old secondary color; align with the
+   new lavender border tone so it doesn't jar */
+.divee-search-input-collapsed.typewriter-active {
+  border-right-color: #93A5C9 !important;
+}
+
+/* Site favicon in the collapsed bar matches the AI avatar size (32px)
+   so the two badges sit visually balanced. */
+.divee-widget .divee-search-container-collapsed .divee-site-favicon-collapsed {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+/* ============================================
+   v2 OPEN-STATE — SUGGESTIONS POPUP
+   Match the chat panel's elevation language: lavender border, four-layer
+   shadow, generous spacing. Each suggestion is a row that lifts on hover
+   with a chevron sliding in to signal interactivity.
+   ============================================ */
+
+.divee-widget .divee-suggestions-input {
+  background: #fff !important;
+  border: 1px solid #C7D2E8 !important;
+  border-radius: 18px !important;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 8px rgba(15, 23, 42, 0.04),
+    0 12px 24px rgba(15, 23, 42, 0.06),
+    0 24px 48px rgba(15, 23, 42, 0.05) !important;
+  margin-bottom: 4px !important;
+  /* Centered within the input container, almost full-width so it reads
+     as a tray sitting right above the input row. */
+  left: 0 !important;
+  right: 0 !important;
+  width: auto !important;
+  max-width: 80%;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.divee-widget .divee-suggestions-list {
+  padding: 6px !important;
+  gap: 2px;
+}
+
+/* Each suggestion is a flex row so we can dock a chevron on the end
+   without disturbing text wrap. */
+.divee-widget .divee-suggestion {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
+  font-size: 13.5px !important;
+  color: #374151 !important;
+  background: #fff !important;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  position: relative;
+}
+
+/* Soft separator between rows — subtle, doesn't show on hovered/last row */
+.divee-widget .divee-suggestion + .divee-suggestion {
+  margin-top: 0;
+}
+
+.divee-widget .divee-suggestion::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(15, 23, 42, 0.06), transparent);
+}
+
+.divee-widget .divee-suggestion:first-child::before {
+  display: none;
+}
+
+/* Chevron sits at the end (or start in RTL). Always visible at low
+   opacity to signal interactivity; lifts to full opacity and nudges
+   forward on hover. */
+.divee-widget .divee-suggestion::after {
+  content: "";
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+  opacity: 0.55;
+  transform: translateX(0);
+  transition: opacity 0.15s ease, transform 0.18s ease;
+  margin-left: auto;
+}
+
+.divee-widget[dir="rtl"] .divee-suggestion::after {
+  transform: scaleX(-1) translateX(0);
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.divee-widget .divee-suggestion:hover {
+  background: #F3F6FB !important;
+  color: var(--divee-surface-dark) !important;
+  border-color: transparent !important;
+}
+
+.divee-widget .divee-suggestion:hover::after {
+  opacity: 1;
+  transform: translateX(3px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E1A35' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E");
+}
+
+.divee-widget[dir="rtl"] .divee-suggestion:hover::after {
+  transform: scaleX(-1) translateX(3px);
+}
+
+.divee-widget .divee-suggestion:hover::before {
+  background: transparent;
+}
+
+/* Hide the separator on the row directly after a hovered row too, so
+   the visual line doesn't survive next to the active highlight. */
+.divee-widget .divee-suggestion:hover + .divee-suggestion::before {
+  background: transparent;
+}
+
+.divee-widget .divee-suggestion:active {
+  transform: scale(0.99);
+}
+
+/* Cubic mode header card — apply the same elevation language so the
+   card reads as a sibling surface to the v2 chat panel */
+.divee-widget-cubic .divee-search-container-collapsed {
+  border-radius: 14px !important;
+}
+
+/* Collapsed-view powered-by — same outlined pill as the open-view header
+   but with a gray-light treatment because it sits on a light surface
+   instead of the dark navy header. */
+.divee-widget .divee-powered-by-collapsed {
+  text-align: right;
+  padding: 0 12px 6px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.divee-widget .divee-powered-by-collapsed .divee-powered-by {
+  background: transparent !important;
+  color: #6B7280 !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.1px;
+  line-height: 1 !important;
+  padding: 6px 11px !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  border-radius: 999px !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  height: 26px;
+  white-space: nowrap !important;
+  max-width: none !important;
+  text-align: left !important;
+}
+
+.divee-widget .divee-powered-by-collapsed .divee-powered-by strong {
+  font-weight: 700;
+  margin-left: 4px;
+  color: #1f2937;
+}
+
+.divee-widget .divee-powered-by-collapsed .divee-powered-by:hover {
+  background: rgba(15, 23, 42, 0.04) !important;
+  border-color: rgba(15, 23, 42, 0.2) !important;
+  color: #4B5563 !important;
 }
