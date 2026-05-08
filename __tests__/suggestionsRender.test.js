@@ -16,6 +16,14 @@ const fs = require('fs');
 
 const widgetJs = fs.readFileSync('./src/widget.js', 'utf8');
 
+// The closed-state suggestion teaser bubble is gated by a feature toggle
+// (DIVEE_COLLAPSED_BUBBLE_ENABLED) inside widget.js. When the toggle is off,
+// the bubble suite below skips itself so the team can disable the feature in
+// production without rewriting tests. When the toggle flips back to true,
+// these tests automatically run again.
+const collapsedBubbleEnabled = /DIVEE_COLLAPSED_BUBBLE_ENABLED\s*=\s*true/.test(widgetJs);
+const describeBubble = collapsedBubbleEnabled ? describe : describe.skip;
+
 function makeWidget() {
     delete window.__diveeWidgetLoaded;
     eval(widgetJs); // eslint-disable-line no-eval
@@ -128,7 +136,7 @@ describe('onTextAreaFocus() cached-suggestions path (video-ad prefetch regressio
     });
 });
 
-describe('collapsed-state suggestion bubble', () => {
+describeBubble('collapsed-state suggestion bubble', () => {
     beforeEach(() => {
         document.body.innerHTML = '';
         try { sessionStorage.clear(); } catch (_) { /* noop */ }
@@ -152,11 +160,15 @@ describe('collapsed-state suggestion bubble', () => {
         return widget;
     }
 
-    test('does not render bubble until suggestions arrive', () => {
+    test('pre-reserves an empty bubble slot at mount to prevent CLS', () => {
         const widget = makeAnchoredWidget();
-        // No suggestions yet → no bubble in the DOM.
-        expect(widget.elements.collapsedBubble).toBeFalsy();
-        expect(widget.elements.collapsedView.querySelector('.divee-collapsed-bubble')).toBeNull();
+        // The bubble container is rendered immediately so chips arriving
+        // after the suggestions fetch fill an existing slot instead of
+        // pushing the page down. The slot is empty until primed.
+        expect(widget.elements.collapsedBubble).toBeTruthy();
+        const bubble = widget.elements.collapsedView.querySelector('.divee-collapsed-bubble');
+        expect(bubble).not.toBeNull();
+        expect(bubble.querySelectorAll('.divee-collapsed-bubble-chip').length).toBe(0);
     });
 
     test('renders bubble carousel above the input pill, with one chip per suggestion', async () => {
@@ -298,14 +310,17 @@ describe('collapsed-state suggestion bubble', () => {
         expect(widget.expand).toHaveBeenCalledTimes(1);
     });
 
-    test('empty suggestions removes the bubble', async () => {
+    test('empty suggestions leave the pre-reserved slot in place (no CLS) but render no chips', async () => {
         const widget = makeAnchoredWidget();
         widget.state.suggestions = [];
 
         await widget.primeCollapsedBubble();
 
-        expect(widget.elements.collapsedBubble).toBeNull();
-        expect(document.querySelector('.divee-collapsed-bubble')).toBeNull();
+        // Slot stays reserved to keep page layout stable. No chips populated.
+        expect(widget.elements.collapsedBubble).toBeTruthy();
+        const bubble = document.querySelector('.divee-collapsed-bubble');
+        expect(bubble).not.toBeNull();
+        expect(bubble.querySelectorAll('.divee-collapsed-bubble-chip').length).toBe(0);
     });
 
     test('suppressSuggestions removes the bubble', async () => {

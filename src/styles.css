@@ -2925,10 +2925,20 @@
 
 .divee-skeleton-line,
 .divee-skeleton-pill,
-.divee-skeleton-chip {
+.divee-skeleton-chip,
+.divee-skeleton-bubble {
   background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
   background-size: 200% 100%;
   animation: divee-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Mirrors the .divee-collapsed-bubble reserved slot (40px height +
+   6px bottom margin = 46px total) so the skeleton → real-widget swap
+   doesn't shift page content. */
+.divee-skeleton-bubble {
+  height: 40px;
+  margin: 0 4px 6px 4px;
+  border-radius: 999px;
 }
 
 .divee-skeleton-line {
@@ -2978,7 +2988,8 @@
 @media (prefers-reduced-motion: reduce) {
   .divee-skeleton-line,
   .divee-skeleton-pill,
-  .divee-skeleton-chip {
+  .divee-skeleton-chip,
+  .divee-skeleton-bubble {
     animation: none !important;
   }
 }
@@ -2997,6 +3008,10 @@
 .divee-collapsed-bubble {
   margin: 0 4px 6px 4px;
   padding: 6px 8px;
+  /* Reserve the slot so chips arriving after the suggestions fetch don't
+     push the rest of the page down (CLS). 28px chip + 12px vertical padding. */
+  min-height: 40px;
+  box-sizing: border-box;
   position: relative;
   overflow: hidden;
   mask-image: linear-gradient(to right, black calc(100% - 36px), transparent 100%);

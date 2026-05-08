@@ -29,6 +29,12 @@
     const DIVEE_NON_RENDER_ENDPOINT = 'https://srv.divee.ai/functions/v1/widget-non-render';
     let diveeNonRenderReported = false;
 
+    // Feature toggle: closed-state suggestion teaser bubble. Temporarily off
+    // while the team evaluates impact. Flip to `true` to restore. Gates both
+    // the runtime render path and the pre-mount skeleton's bubble row so the
+    // page reserves no extra height while disabled.
+    const DIVEE_COLLAPSED_BUBBLE_ENABLED = false;
+
     // Unload guard: errors thrown by pending fetches during navigation/tab-close
     // surface as `TypeError: Failed to fetch` in most browsers and aren't real
     // bugs — just requests the browser aborted. Suppress reports once the page
@@ -2045,6 +2051,17 @@
                     </div>
                     <div class="divee-tag-pills divee-tag-pills-collapsed"></div>
                 `;
+
+                // Pre-reserve the suggestion-bubble slot so when chips arrive
+                // after the suggestions fetch they fill the existing space
+                // instead of pushing page content down (CLS). primeCollapsedBubble
+                // reuses this element rather than creating a new one.
+                if (this.shouldRenderCollapsedBubble()) {
+                    const bubble = this.createCollapsedSuggestionBubble();
+                    const searchContainer = view.querySelector('.divee-search-container-collapsed');
+                    if (searchContainer) view.insertBefore(bubble, searchContainer);
+                    this.elements.collapsedBubble = bubble;
+                }
             }
 
             // Add typewriter effect. The closed-state suggestion bubble is
@@ -2909,10 +2926,11 @@
         // Closed-state suggestion teaser bubble
         // ============================================================
         // Shown above the collapsed input pill in anchored / anchored+floating
-        // modes. Cycles through up to 5 fetched suggestions, ~4s each. Click
+        // modes. Cycles through up to 5 fetched suggestions, ~10.5s each. Click
         // expands the widget and asks the suggestion immediately.
 
         shouldRenderCollapsedBubble() {
+            if (!DIVEE_COLLAPSED_BUBBLE_ENABLED) return false;
             const m = this.config.displayMode;
             if (m === 'floating' || m === 'sidebar' || m === 'cubic') return false;
             if (this.config.widgetMode === 'knowledgebase') return false;
@@ -2988,7 +3006,8 @@
 
             const items = (this.state.suggestions || []).slice(0, 5);
             if (items.length === 0) {
-                this.removeCollapsedBubble();
+                // Slot was pre-reserved at mount to avoid CLS — leave it
+                // empty rather than removing it (which would shift the page).
                 return;
             }
 
@@ -3029,7 +3048,7 @@
             cycle.paused = false;
 
             if (items.length > 1) {
-                cycle.intervalId = setInterval(() => this.advanceCollapsedBubble(), 3500);
+                cycle.intervalId = setInterval(() => this.advanceCollapsedBubble(), 10500);
             }
 
             if (!this._handleBubbleVisibility) {
@@ -4268,6 +4287,7 @@
                 <div class="divee-skeleton-line divee-skeleton-line--small"></div>
                 <div class="divee-skeleton-line divee-skeleton-line--medium"></div>
             </div>
+            ${DIVEE_COLLAPSED_BUBBLE_ENABLED ? '<div class="divee-skeleton-bubble"></div>' : ''}
             <div class="divee-skeleton-pill"></div>
             <div class="divee-skeleton-tags">
                 <div class="divee-skeleton-chip"></div>
