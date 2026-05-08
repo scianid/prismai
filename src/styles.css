@@ -3410,11 +3410,9 @@
    ============================================ */
 
 @media (max-width: 768px) {
-  /* Header — tighter vertical padding, smaller favicon */
-  .divee-header {
-    padding: 14px 14px !important;
-  }
-
+  /* Header keeps its desktop padding so the panel header doesn't feel
+     compressed on mobile. Only the favicon and title shrink slightly to
+     leave room for the powered-by pill + close button on a one-line row. */
   .divee-site-favicon-header {
     width: 36px !important;
     height: 36px !important;
@@ -3462,10 +3460,12 @@
     height: 15px;
   }
 
-  /* Chat: let height flex to viewport */
+  /* Chat keeps the desktop visible height so the bubble area doesn't
+     feel compressed on mobile. Use min-height + flex to let it grow on
+     taller phones, but never shrink below the desktop baseline. */
   .divee-widget .divee-chat {
     height: auto !important;
-    min-height: 220px !important;
+    min-height: 460px !important;
     flex: 1 !important;
     padding: 12px 10px 12px 8px !important;
   }
@@ -3496,6 +3496,12 @@
   .divee-message-ai .divee-sparkle-msg-icon {
     width: 17px !important;
     height: 17px !important;
+  }
+
+  /* Suggestions popup: 10% wider than desktop on mobile so the questions
+     don't wrap as aggressively in the narrower column. */
+  .divee-widget .divee-suggestions-input {
+    max-width: 90%;
   }
 
   /* Smaller send button + textarea to fit narrow screens */
@@ -3551,13 +3557,12 @@
 }
 
 @media (max-width: 400px) {
-  /* Very narrow: hide the powered-by pill so the title has room */
+  /* Very narrow: hide the powered-by pill so the title has room.
+     Header padding intentionally not shrunk further — keeping the
+     desktop chrome height on small phones reads better than a thin
+     compressed strip. */
   .divee-header .divee-powered-by {
     display: none !important;
-  }
-
-  .divee-header {
-    padding: 12px 12px !important;
   }
 
   /* Bubbles can use almost full width */
