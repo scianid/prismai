@@ -39,12 +39,16 @@
   width: 400px !important;
 }
 
-/* Floating collapsed state - compact button */
+/* Floating collapsed state - compact button.
+   The visible pill is .divee-search-container-collapsed (its own gradient
+   border + shadow). Keep the outer container shrink-wrapped and chrome-free
+   so we don't get a phantom rounded halo around the inner pill. */
 .divee-widget-floating[data-state="collapsed"] {
   width: auto !important;
   max-width: none !important;
-  border-radius: 50px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 /* Floating expanded state - chat window */
@@ -74,15 +78,24 @@
   left: 24px !important;
 }
 
-/* Floating collapsed view adjustments */
+/* Floating collapsed view adjustments. Strip outer padding/margins so the
+   visible pill is flush with the floating widget's bounding box. */
 .divee-widget-floating .divee-collapsed {
-  padding: 12px 20px !important;
+  padding: 0 !important;
   margin: 0 !important;
+  background: transparent !important;
 }
 
 .divee-widget-floating .divee-search-container-collapsed {
-  margin-bottom: 0 !important;
-  min-width: 280px !important;
+  margin: 0 !important;
+  min-width: 320px !important;
+}
+
+/* Hide secondary chrome in floating-collapsed: publisher favicon and the
+   tag-pills row would crowd the compact pill. */
+.divee-widget-floating .divee-collapsed .divee-site-favicon-collapsed,
+.divee-widget-floating .divee-tag-pills-collapsed {
+  display: none !important;
 }
 
 .divee-widget-floating .divee-powered-by-collapsed {
