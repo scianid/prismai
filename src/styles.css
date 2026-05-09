@@ -51,35 +51,33 @@
    copy of the token overrides. */
 .divee-widget.divee-dark,
 .divee-floating-ask-ai.divee-dark {
-  --divee-surface: #1a1d24;
-  --divee-surface-alt: #242832;
-  --divee-surface-muted: #1e2128;
-  --divee-surface-hover: #2f3542;
-  --divee-text: #e5e7eb;
-  --divee-text-muted: #b8bfcc;
-  /* Bumped well above the light-mode value — placeholder/counter need
-     stronger contrast against the dark surface to feel readable rather
-     than ghosted. */
-  --divee-text-subtle: #aeb6c4;
-  --divee-border: #2f3542;
-  --divee-border-strong: #3f4654;
-  --divee-backdrop: rgba(0, 0, 0, 0.6);
-  /* v2-era tokens (defined further down). The light-theme navy header
-     (`--divee-surface-dark: #0E1A35`) reads as a separate brand panel
-     against white — fine on light, jarring on dark. Re-tint to a neutral
-     dark band that sits one shade above `--divee-surface` so the header
-     still has presence without a competing color temperature.
-     `--divee-bubble-ai` lifts the AI bubble off the panel since shadows
-     alone don't provide enough separation on dark.
-     `--divee-avatar-*` are split out from `--divee-surface-dark` so the
-     AI sparkle avatar keeps brand-blue presence on dark panels (the
-     header re-tint above would otherwise drag the avatar to near-black). */
-  --divee-surface-dark: #11141b;
+  /* Deep midnight-navy palette. Whole stack sits in the same blue family
+     (panel, lifted, deeper) so elements don't read as dropped-in
+     neutrals. Cool blue-gray text + navy hairline borders carry the
+     same family through type and outlines. The gold halo on the avatar
+     (defined in the avatar-glow rule below) is the single warm note. */
+  --divee-surface: #0e1a3a;
+  --divee-surface-alt: #172548;
+  --divee-surface-muted: #0a1530;
+  --divee-surface-hover: #21305c;
+  --divee-text: #e5e9f5;
+  --divee-text-muted: #a0b0d0;
+  --divee-text-subtle: #7888a8;
+  --divee-border: #1f2d52;
+  --divee-border-strong: #2c3d6e;
+  --divee-backdrop: rgba(0, 0, 0, 0.65);
+  /* Header band sits one shade deeper than panel — quiet hierarchy
+     without leaving the blue family. */
+  --divee-surface-dark: #0a1530;
   --divee-bubble-ai: var(--divee-surface-alt);
-  --divee-bubble-user: #2a3550;
-  --divee-border-soft: #2f3542;
-  --divee-avatar-start: #6b4a82;
-  --divee-avatar-end: #2f1f3d;
+  /* User bubble lifts into navy too so messages read as the same family
+     as the panel rather than the previous slate-gray. */
+  --divee-bubble-user: #1f2f5a;
+  --divee-border-soft: #1f2d52;
+  /* Avatar mirrors the lifted "AI" pill in the reference: brighter
+     top-left highlight on a navy body. */
+  --divee-avatar-start: #3d5a99;
+  --divee-avatar-end: #15233f;
 }
 
 /* Floating mode styles */
@@ -3895,10 +3893,12 @@
    stack above uses `rgba(255,255,255,0.9)` inset highlights along the
    bottom edge to fake a "raised paper" 3D feel — on a dark surface those
    render as a stark white line. Replace the whole stack with a quieter
-   top highlight + outer drop shadow that reads as elevation on dark. */
+   top highlight + outer drop shadow that reads as elevation on dark.
+   Top-edge inset is faintly cool-blue tinted to pick up the cyan-rim
+   feel of the dark-mode reference palette. */
 .divee-widget.divee-dark .divee-search-container-collapsed {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(150, 195, 255, 0.06),
     0 1px 2px rgba(0, 0, 0, 0.35),
     0 4px 10px rgba(0, 0, 0, 0.28),
     0 12px 24px rgba(0, 0, 0, 0.22),
@@ -3907,7 +3907,7 @@
 
 .divee-widget.divee-dark .divee-search-container-collapsed:hover {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(150, 195, 255, 0.08),
     0 2px 4px rgba(0, 0, 0, 0.4),
     0 6px 14px rgba(0, 0, 0, 0.32),
     0 16px 32px rgba(0, 0, 0, 0.26),
@@ -3920,28 +3920,30 @@
    the entire stack with a quieter dark-appropriate version. */
 .divee-widget.divee-dark .divee-input-row {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(150, 195, 255, 0.06),
     0 1px 2px rgba(0, 0, 0, 0.3),
     0 4px 8px rgba(0, 0, 0, 0.22) !important;
 }
 
 .divee-widget.divee-dark .divee-input-row:focus-within {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(150, 195, 255, 0.08),
     0 2px 4px rgba(0, 0, 0, 0.35),
     0 6px 14px rgba(0, 0, 0, 0.26) !important;
 }
 
-/* Avatar glow in dark mode. Picks up the gold from the sparkle inside
-   so the badge reads as "lit from within" — warm halo + hairline ring
-   + slightly stronger top highlight. Kept subtle (low opacities, tight
-   blur) so it's elegant rather than neon. */
+/* Avatar treatment in dark mode: navy outline + soft cool light glow.
+   Outline `#33558F` is the same family as the avatar gradient, so it
+   reads as a clean rim rather than a foreign ring. The outer glow is
+   a low-opacity blue-white that picks up the cyan-rim feel from the
+   palette reference, paired with a faint top inset and grounding
+   shadow. Kept subtle so it reads as ambient light, not neon. */
 .divee-widget.divee-dark .divee-ai-identity,
 .divee-widget.divee-dark .divee-message-ai .divee-sparkle-avatar {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 0 0 1px rgba(245, 194, 74, 0.14),
-    0 0 14px rgba(245, 194, 74, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 0 1px #33558F,
+    0 0 18px rgba(200, 220, 255, 0.22),
     0 2px 6px rgba(0, 0, 0, 0.4) !important;
 }
 
