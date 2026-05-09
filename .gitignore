@@ -8,3 +8,4 @@ coverage/
 _bmad/
 src/widget.js
 __tests__/cors.test.js
+.DS_Store
