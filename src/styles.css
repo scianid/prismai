@@ -51,33 +51,40 @@
    copy of the token overrides. */
 .divee-widget.divee-dark,
 .divee-floating-ask-ai.divee-dark {
-  /* Deep midnight-navy palette. Whole stack sits in the same blue family
-     (panel, lifted, deeper) so elements don't read as dropped-in
-     neutrals. Cool blue-gray text + navy hairline borders carry the
-     same family through type and outlines. The gold halo on the avatar
-     (defined in the avatar-glow rule below) is the single warm note. */
-  --divee-surface: #0e1a3a;
-  --divee-surface-alt: #172548;
-  --divee-surface-muted: #0a1530;
-  --divee-surface-hover: #21305c;
-  --divee-text: #e5e9f5;
-  --divee-text-muted: #a0b0d0;
-  --divee-text-subtle: #7888a8;
-  --divee-border: #1f2d52;
-  --divee-border-strong: #2c3d6e;
+  /* Warm-gray palette. Panel sits at a cool-warm neutral, with lifted
+     surfaces and borders all in the same family so message bubbles
+     and the header don't read as foreign tones. The gold avatar
+     (overridden below) is the single saturated accent. */
+  --divee-surface: #22242A;
+  --divee-surface-alt: #2d2f36;
+  --divee-surface-muted: #1c1e23;
+  --divee-surface-hover: #3a3d44;
+  --divee-text: #E2E5E8;
+  --divee-text-muted: #b0b4ba;
+  --divee-text-subtle: #8a8e94;
+  --divee-border: #33363d;
+  --divee-border-strong: #454850;
   --divee-backdrop: rgba(0, 0, 0, 0.65);
-  /* Header band sits one shade deeper than panel — quiet hierarchy
-     without leaving the blue family. */
-  --divee-surface-dark: #0a1530;
+  /* Header band one shade deeper than panel — quiet hierarchy. */
+  --divee-surface-dark: #1c1e23;
   --divee-bubble-ai: var(--divee-surface-alt);
-  /* User bubble lifts into navy too so messages read as the same family
-     as the panel rather than the previous slate-gray. */
-  --divee-bubble-user: #1f2f5a;
-  --divee-border-soft: #1f2d52;
-  /* Avatar mirrors the lifted "AI" pill in the reference: brighter
-     top-left highlight on a navy body. */
-  --divee-avatar-start: #3d5a99;
-  --divee-avatar-end: #15233f;
+  --divee-bubble-user: #3a3d44;
+  --divee-border-soft: #33363d;
+  /* Gold avatar with depth — bright cream highlight at top-left fading
+     through the spec gold (#FFBA29 sits naturally as the mid-tone in
+     the radial gradient) into a deeper amber at the edges. Reads as a
+     polished metallic disc rather than a flat sticker. */
+  --divee-avatar-start: #FDB425;
+  --divee-avatar-end: #E47100;
+  /* Input fill is intentionally lighter than the panel so the input
+     reads as a distinct surface that you can type into. */
+  --divee-input-surface: #4D5156;
+}
+
+/* Light-mode default for the new token so the existing white-fill
+   inputs keep behaving identically when dark mode isn't engaged. */
+.divee-widget {
+  --divee-input-surface: #ffffff;
 }
 
 /* Floating mode styles */
@@ -3327,7 +3334,7 @@
   border-radius: 16px;
   padding: 6px;
   background:
-    linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
+    linear-gradient(var(--divee-input-surface), var(--divee-input-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box;
   /* 3D-recessed look: hard top "lip" line, then a deep top-down shadow
      that fades through three blurs, plus a soft bottom highlight to
@@ -3350,7 +3357,7 @@
 
 .divee-input-row:focus-within {
   background:
-    linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
+    linear-gradient(var(--divee-input-surface), var(--divee-input-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box;
   box-shadow:
     inset 0 1px 0 rgba(15, 23, 42, 0.10),
@@ -3854,7 +3861,7 @@
   border-radius: 16px !important;
   padding: 13px 8px 13px 12px !important;
   background:
-    linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
+    linear-gradient(var(--divee-input-surface), var(--divee-input-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box !important;
   box-shadow:
     inset 0 1px 0 rgba(15, 23, 42, 0.08),
@@ -3873,7 +3880,7 @@
 
 .divee-widget .divee-search-container-collapsed:hover {
   background:
-    linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
+    linear-gradient(var(--divee-input-surface), var(--divee-input-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box !important;
   box-shadow:
     inset 0 1px 0 rgba(15, 23, 42, 0.10),
@@ -3932,12 +3939,10 @@
     0 6px 14px rgba(0, 0, 0, 0.26) !important;
 }
 
-/* Avatar treatment in dark mode: navy outline + soft cool light glow.
-   Outline `#33558F` is the same family as the avatar gradient, so it
-   reads as a clean rim rather than a foreign ring. The outer glow is
-   a low-opacity blue-white that picks up the cyan-rim feel from the
-   palette reference, paired with a faint top inset and grounding
-   shadow. Kept subtle so it reads as ambient light, not neon. */
+/* Avatar treatment in dark mode: navy outline + soft cool light glow
+   around the gold disc. The cool ring + halo against warm gold gives
+   a sharp, premium "enamel pin" feel without competing colors inside
+   the avatar itself. */
 .divee-widget.divee-dark .divee-ai-identity,
 .divee-widget.divee-dark .divee-message-ai .divee-sparkle-avatar {
   box-shadow:
@@ -3945,6 +3950,21 @@
     0 0 0 1px #33558F,
     0 0 18px rgba(200, 220, 255, 0.22),
     0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Placeholder + inner sparkle icon color overrides for dark mode.
+   Sparkle icon picks up the panel color so it reads as a clean cutout
+   on the gold disc; the gold drop-shadow filter from light mode is
+   neutralized since it would only smear a gold halo into the gold bg. */
+.divee-widget.divee-dark .divee-input::placeholder,
+.divee-widget.divee-dark .divee-search-input-collapsed::placeholder {
+  color: #E2E5E8 !important;
+}
+
+.divee-widget.divee-dark .divee-ai-identity-sparkle,
+.divee-widget.divee-dark .divee-message-ai .divee-sparkle-msg-icon {
+  color: #22242A !important;
+  filter: none !important;
 }
 
 /* AI identity becomes a dark-navy circle with a gold sparkle (mirrors
