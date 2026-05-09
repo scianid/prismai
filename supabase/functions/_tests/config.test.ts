@@ -65,6 +65,7 @@ function fakeProject(overrides: Record<string, unknown> = {}) {
     override_mobile_container_selector: null,
     disclaimer_text: null,
     widget_mode: "article",
+    ui_theme: "light",
     ask_concent: false,
     ...overrides,
   };

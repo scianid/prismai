@@ -153,6 +153,7 @@ export async function configHandler(
       override_mobile_container_selector: project.override_mobile_container_selector || null,
       disclaimer_text: project.disclaimer_text || null,
       widget_mode: project.widget_mode || "article",
+      ui_theme: project.ui_theme === "dark" ? "dark" : "light",
       ask_concent: project.ask_concent === true,
       allowed_urls: project.allowed_urls || [],
       // `language_code` is the canonical ISO 639-1 key for the

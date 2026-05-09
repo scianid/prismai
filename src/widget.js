@@ -1645,6 +1645,21 @@
             }
         }
 
+        // Dark mode resolution. Server config carries `ui_theme` ('light' |
+        // 'dark', defaults to 'light' on the backend). The `diveeDarkMode`
+        // URL param is honored as a per-page override for QA/preview:
+        // - missing  → use server config
+        // - 'true'   → force dark (regardless of server)
+        // - 'false'  → force light (regardless of server)
+        shouldUseDarkTheme() {
+            try {
+                const override = new URLSearchParams(window.location.search).get('diveeDarkMode');
+                if (override === 'true') return true;
+                if (override === 'false') return false;
+            } catch (_) { /* ignore — non-browser test envs */ }
+            return this.state?.serverConfig?.ui_theme === 'dark';
+        }
+
         applyThemeColors(config) {
             if (!this.elements.container) return;
 
@@ -1717,6 +1732,7 @@
                 show_ad: true,
                 white_label: false,
                 widgetMode: 'article',
+                ui_theme: 'light',
                 input_text_placeholders: [
                     'Ask anything about this article...'
                 ],
@@ -1901,8 +1917,9 @@
             container.setAttribute('data-state', 'collapsed');
             container.style.setProperty('overflow', 'visible', 'important');
 
-            // Dark mode (URL override; server config will drive this in a future phase).
-            if (new URLSearchParams(window.location.search).get('diveeDarkMode') === 'true') {
+            // Dark mode: server config drives the default; `?diveeDarkMode=`
+            // remains as a per-page override (true forces on, false forces off).
+            if (this.shouldUseDarkTheme()) {
                 container.classList.add('divee-dark');
             }
             
@@ -2462,7 +2479,7 @@
             btn.setAttribute('role', 'button');
             btn.setAttribute('tabindex', '0');
             btn.setAttribute('aria-label', this.t('askAi', 'Ask AI'));
-            if (new URLSearchParams(window.location.search).get('diveeDarkMode') === 'true') {
+            if (this.shouldUseDarkTheme()) {
                 btn.classList.add('divee-dark');
             }
             btn.innerHTML = `
