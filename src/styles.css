@@ -9,6 +9,21 @@
   --divee-color-primary: #68E5FD;
   --divee-color-secondary: #A389E0;
 
+  /* Semantic theme tokens (light defaults). Dark variants live under
+     .divee-widget.divee-dark / .divee-floating-ask-ai.divee-dark.
+     Text colors here apply to surfaces — text on brand-colored surfaces
+     (sidebar header, send button, brand pills) stays white in both modes. */
+  --divee-surface: #ffffff;
+  --divee-surface-alt: #f3f4f6;
+  --divee-surface-muted: #f5f5f5;
+  --divee-surface-hover: #e5e7eb;
+  --divee-text: #1f2937;
+  --divee-text-muted: #6b7280;
+  --divee-text-subtle: #9ca3af;
+  --divee-border: #e5e7eb;
+  --divee-border-strong: #d1d5db;
+  --divee-backdrop: rgba(0, 0, 0, 0.35);
+
   all: initial;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   width: 100% !important;
@@ -28,6 +43,43 @@
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   overflow: visible;
+}
+
+/* Dark theme overrides. Toggled via the `divee-dark` class (URL param
+   `diveeDarkMode=true` for now; server-config-driven later). The FAB
+   lives on <body> outside the widget container, so it carries its own
+   copy of the token overrides. */
+.divee-widget.divee-dark,
+.divee-floating-ask-ai.divee-dark {
+  --divee-surface: #1a1d24;
+  --divee-surface-alt: #242832;
+  --divee-surface-muted: #1e2128;
+  --divee-surface-hover: #2f3542;
+  --divee-text: #e5e7eb;
+  --divee-text-muted: #b8bfcc;
+  /* Bumped well above the light-mode value — placeholder/counter need
+     stronger contrast against the dark surface to feel readable rather
+     than ghosted. */
+  --divee-text-subtle: #aeb6c4;
+  --divee-border: #2f3542;
+  --divee-border-strong: #3f4654;
+  --divee-backdrop: rgba(0, 0, 0, 0.6);
+  /* v2-era tokens (defined further down). The light-theme navy header
+     (`--divee-surface-dark: #0E1A35`) reads as a separate brand panel
+     against white — fine on light, jarring on dark. Re-tint to a neutral
+     dark band that sits one shade above `--divee-surface` so the header
+     still has presence without a competing color temperature.
+     `--divee-bubble-ai` lifts the AI bubble off the panel since shadows
+     alone don't provide enough separation on dark.
+     `--divee-avatar-*` are split out from `--divee-surface-dark` so the
+     AI sparkle avatar keeps brand-blue presence on dark panels (the
+     header re-tint above would otherwise drag the avatar to near-black). */
+  --divee-surface-dark: #11141b;
+  --divee-bubble-ai: var(--divee-surface-alt);
+  --divee-bubble-user: #2a3550;
+  --divee-border-soft: #2f3542;
+  --divee-avatar-start: #6b4a82;
+  --divee-avatar-end: #2f1f3d;
 }
 
 /* Floating mode styles */
@@ -194,7 +246,7 @@
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--divee-backdrop);
   z-index: -1;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -210,7 +262,7 @@
   max-height: 100vh !important;
   max-height: 100dvh !important;
   border-radius: 0 !important;
-  background: #fff;
+  background: var(--divee-surface);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -346,7 +398,7 @@
   justify-content: space-between !important;
   height: 100% !important;
   padding: 16px !important;
-  background: white !important;
+  background: var(--divee-surface) !important;
   box-sizing: border-box !important;
 }
 
@@ -378,7 +430,7 @@
   display: block !important;
   font-size: 18px !important;
   font-weight: 700 !important;
-  color: #111827 !important;
+  color: var(--divee-text) !important;
   line-height: 1.3 !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
 }
@@ -388,7 +440,7 @@
   display: block !important;
   font-size: 13px !important;
   font-weight: 400 !important;
-  color: #6b7280 !important;
+  color: var(--divee-text-muted) !important;
   line-height: 1.4 !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
 }
@@ -457,7 +509,7 @@
 
 .divee-widget-cubic .divee-powered-by-collapsed .divee-powered-by {
   font-size: 11px !important;
-  color: #d1d5db !important;
+  color: var(--divee-text-subtle) !important;
 }
 
 /* Ad column — right side */
@@ -469,7 +521,7 @@
   align-items: center !important;
   justify-content: center !important;
   overflow: hidden !important;
-  background: #f5f5f5 !important;
+  background: var(--divee-surface-muted) !important;
 }
 
 /* Ad slot fills the ad column */
@@ -568,13 +620,13 @@
   background: transparent;
 }
 
-/* In collapsed view, powered-by link should be dark since bg is white */
+/* In collapsed view, powered-by link sits on the surface (not brand) */
 .divee-collapsed .divee-powered-by {
-  color: #9ca3af;
+  color: var(--divee-text-subtle);
 }
 
 .divee-collapsed .divee-powered-by:hover {
-  color: #6b7280;
+  color: var(--divee-text-muted);
 }
 
 .divee-search-container-collapsed {
@@ -585,9 +637,9 @@
   overflow: visible;
   margin: 0 12px;
   background: linear-gradient(var(--divee-gradient-angle),
-      color-mix(in srgb, var(--divee-color-primary) 6%, white) 0%,
-      white 50%,
-      color-mix(in srgb, var(--divee-color-secondary) 6%, white) 100%) padding-box,
+      color-mix(in srgb, var(--divee-color-primary) 6%, var(--divee-surface)) 0%,
+      var(--divee-surface) 50%,
+      color-mix(in srgb, var(--divee-color-secondary) 6%, var(--divee-surface)) 100%) padding-box,
     linear-gradient(var(--divee-gradient-angle), var(--divee-color-primary), var(--divee-color-secondary)) border-box;
   border: 2px solid transparent;
   border-radius: 40px;
@@ -619,9 +671,9 @@
 
 .divee-search-container-collapsed:hover {
   background: linear-gradient(var(--divee-gradient-angle),
-      color-mix(in srgb, var(--divee-color-primary) 10%, white) 0%,
-      white 50%,
-      color-mix(in srgb, var(--divee-color-secondary) 10%, white) 100%) padding-box,
+      color-mix(in srgb, var(--divee-color-primary) 10%, var(--divee-surface)) 0%,
+      var(--divee-surface) 50%,
+      color-mix(in srgb, var(--divee-color-secondary) 10%, var(--divee-surface)) 100%) padding-box,
     linear-gradient(var(--divee-gradient-angle), var(--divee-color-primary), var(--divee-color-secondary)) border-box;
   border: 2px solid transparent;
   box-shadow:
@@ -664,7 +716,7 @@
   background: transparent !important;
   outline: none !important;
   font-size: 16px !important;
-  color: #1f2937 !important;
+  color: var(--divee-text) !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -681,7 +733,7 @@
 }
 
 .divee-widget .divee-search-input-collapsed::placeholder {
-  color: #6b7280 !important;
+  color: var(--divee-text-muted) !important;
 }
 
 @keyframes typewriter {
@@ -825,7 +877,7 @@
 .divee-ad-container-shared {
   width: 100%;
   display: block;
-  background: white;
+  background: var(--divee-surface);
   padding: 0;
   margin: 0;
 }
@@ -873,7 +925,7 @@
 
 /* Expanded View */
 .divee-expanded {
-  background: white;
+  background: var(--divee-surface);
   display: flex;
   flex-direction: column;
   max-height: 600px;
@@ -890,7 +942,7 @@
 
 /* Show expanded view when expanded */
 .divee-widget[data-state="expanded"] .divee-expanded {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--divee-border);
   border-radius: 16px;
   overflow: visible;
   box-shadow:
@@ -927,8 +979,8 @@
   left: 0;
   right: 0;
   margin-bottom: 12px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--divee-surface);
+  border: 1px solid var(--divee-border);
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 100;
@@ -951,13 +1003,13 @@
 
 .divee-suggestion {
   font-weight: 400;
-  background: white;
+  background: var(--divee-surface);
   border: 1px solid transparent;
   padding: 10px 14px;
   border-radius: 8px;
   text-align: left;
   font-size: 13px;
-  color: #374151;
+  color: var(--divee-text);
   cursor: pointer;
   transition: all 0.2s;
   display: block;
@@ -967,9 +1019,9 @@
 }
 
 .divee-suggestion:hover {
-  background: #f3f4f6;
-  color: #111827;
-  border-color: #e5e7eb;
+  background: var(--divee-surface-alt);
+  color: var(--divee-text);
+  border-color: var(--divee-border);
 }
 
 .divee-widget[dir="rtl"] .divee-suggestion {
@@ -993,16 +1045,16 @@
 .divee-loading {
   padding: 12px;
   text-align: center;
-  color: #6b7280;
+  color: var(--divee-text-muted);
   font-size: 14px;
 }
 
 .divee-shimmer-line {
   height: 14px;
   background: linear-gradient(90deg,
-      #f3f4f6 0%,
-      #e5e7eb 50%,
-      #f3f4f6 100%);
+      var(--divee-surface-alt) 0%,
+      var(--divee-surface-hover) 50%,
+      var(--divee-surface-alt) 100%);
   background-size: 200% 100%;
   border-radius: 4px;
   animation: divee-shimmer 1.5s ease-in-out infinite;
@@ -1056,7 +1108,7 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
-  background: white;
+  background: var(--divee-surface);
 }
 
 .divee-messages {
@@ -1104,14 +1156,14 @@
   margin-bottom: 0 !important;
   font-size: 17px !important;
   font-weight: 700 !important;
-  color: #111827 !important;
+  color: var(--divee-text) !important;
   line-height: 1.3 !important;
   margin: 0 !important;
 }
 
 .divee-welcome-subtitle {
   font-size: 13px !important;
-  color: #6b7280 !important;
+  color: var(--divee-text-muted) !important;
   line-height: 1.5 !important;
   max-width: 240px !important;
   margin-bottom: 0 !important;
@@ -1147,7 +1199,7 @@
 
 .divee-message-system .divee-message-content {
   background: rgba(148, 163, 184, 0.12) !important;
-  color: #6b7280 !important;
+  color: var(--divee-text-muted) !important;
   font-size: 12px !important;
   font-style: italic;
   padding: 6px 12px !important;
@@ -1161,7 +1213,7 @@
   border-radius: 16px;
   font-size: 14px !important;
   line-height: 1.6 !important;
-  color: #1f2937 !important;
+  color: var(--divee-text) !important;
   white-space: normal;
   word-wrap: break-word;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -1196,8 +1248,8 @@
 .divee-inline-code {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
   font-size: 12.5px !important;
-  color: #1f2937 !important;
-  background: rgba(0, 0, 0, 0.06);
+  color: var(--divee-text) !important;
+  background: var(--divee-surface-alt);
   padding: 1px 5px;
   border-radius: 4px;
 }
@@ -1260,7 +1312,7 @@
   display: flex;
   align-items: flex-start;
   padding: 10px 0 0;
-  background: white;
+  background: var(--divee-surface);
   position: relative;
   flex-wrap: wrap;
   gap: 10px;
@@ -1280,7 +1332,7 @@
 
 .divee-counter {
   font-size: 11px !important;
-  color: #9ca3af !important;
+  color: var(--divee-text-subtle) !important;
   line-height: 1.4 !important;
   text-align: right;
   white-space: nowrap;
@@ -1290,8 +1342,9 @@
 
 .divee-widget .divee-input {
   flex: 1 !important;
-  background: linear-gradient(white, white) padding-box,
+  background: linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box !important;
+  color: var(--divee-text) !important;
   border: 2px solid transparent !important;
   border-radius: 40px !important;
   padding: 10px 22px !important;
@@ -1313,7 +1366,7 @@
 }
 
 .divee-widget .divee-input:focus {
-  background: linear-gradient(white, white) padding-box,
+  background: linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box !important;
   border: 2px solid transparent !important;
   box-shadow: 0 4px 12px rgba(104, 229, 253, 0.15),
@@ -1321,7 +1374,7 @@
 }
 
 .divee-widget .divee-input::placeholder {
-  color: #9ca3af !important;
+  color: var(--divee-text-subtle) !important;
 }
 
 .divee-send {
@@ -1360,7 +1413,7 @@
 }
 
 .divee-send:disabled {
-  background: #d1d5db;
+  background: var(--divee-border-strong);
   cursor: not-allowed;
 }
 
@@ -1440,7 +1493,7 @@
   margin: 7px 0;
 
   /* Border & Background */
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--divee-border);
   border-left: 3px solid var(--divee-color-secondary);
   border-radius: 7px;
   background: linear-gradient(135deg,
@@ -1465,7 +1518,7 @@
 /* RTL entrance animation + flip the colored accent border to the right */
 [dir="rtl"] .divee-suggestion-card {
   animation: slideInRTL 300ms ease-out;
-  border-left: 1px solid #e5e7eb;
+  border-left: 1px solid var(--divee-border);
   border-right: 3px solid var(--divee-color-secondary);
 }
 
@@ -1532,7 +1585,7 @@
   overflow: hidden;
 
   /* Fallback */
-  background: #E5E7EB;
+  background: var(--divee-surface-hover);
 }
 
 .divee-suggestion-image img {
@@ -1568,7 +1621,7 @@
 .divee-suggestion-label {
   font-size: 8px;
   font-weight: 500;
-  color: #6B7280;
+  color: var(--divee-text-muted);
   letter-spacing: 0.3px;
   text-transform: uppercase;
   margin-bottom: 5px;
@@ -1585,7 +1638,7 @@
 .divee-suggestion-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1F2937;
+  color: var(--divee-text);
   line-height: 1.3;
 
   /* Truncation */
@@ -1628,7 +1681,7 @@
   height: 19px;
 
   /* Style */
-  color: #9CA3AF;
+  color: var(--divee-text-subtle);
   font-size: 17px;
   background: transparent;
   border: none;
@@ -1648,7 +1701,7 @@
 }
 
 .divee-suggestion-dismiss:hover {
-  color: #374151;
+  color: var(--divee-text);
 }
 
 .divee-suggestion-dismiss:focus {
@@ -1682,13 +1735,13 @@
 .divee-suggestion-confirm-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1F2937;
+  color: var(--divee-text);
   margin: 0 0 4px 0;
 }
 
 .divee-suggestion-confirm-subtitle {
   font-size: 13px;
-  color: #6B7280;
+  color: var(--divee-text-muted);
   font-style: italic;
   margin: 0 0 20px 0;
 }
@@ -1702,10 +1755,10 @@
 /* Cancel button (ghost) */
 .divee-btn-ghost {
   padding: 8px 16px;
-  border: 1px solid #D1D5DB;
+  border: 1px solid var(--divee-border-strong);
   border-radius: 6px;
   background: transparent;
-  color: #6B7280;
+  color: var(--divee-text-muted);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -1713,7 +1766,7 @@
 }
 
 .divee-btn-ghost:hover {
-  background: #F9FAFB;
+  background: var(--divee-surface-alt);
 }
 
 .divee-btn-ghost:focus {
@@ -1784,10 +1837,10 @@
   font-size: 11px !important;
   font-weight: 500 !important;
   line-height: 1.4 !important;
-  color: #374151 !important;
+  color: var(--divee-text) !important;
   border-radius: 12px;
-  border: 1px solid #E5E7EB;
-  background: #F9FAFB;
+  border: 1px solid var(--divee-border);
+  background: var(--divee-surface-alt);
   cursor: pointer;
   transition: all 150ms ease;
   white-space: nowrap;
@@ -1823,8 +1876,8 @@
 }
 
 .divee-tag-pill:hover {
-  background: #F3F4F6;
-  border-color: #D1D5DB;
+  background: var(--divee-surface-hover);
+  border-color: var(--divee-border-strong);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
@@ -2137,19 +2190,19 @@
 
 .divee-content::-webkit-scrollbar-track,
 .divee-chat::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: var(--divee-surface-alt);
   border-radius: 8px;
 }
 
 .divee-content::-webkit-scrollbar-thumb,
 .divee-chat::-webkit-scrollbar-thumb {
-  background: var(--divee-surface-dark);
+  background: var(--divee-border-strong);
   border-radius: 8px;
 }
 
 .divee-content::-webkit-scrollbar-thumb:hover,
 .divee-chat::-webkit-scrollbar-thumb:hover {
-  background: #1a2744;
+  background: var(--divee-text-muted);
 }
 
 /* Responsive adjustments */
@@ -2378,7 +2431,7 @@
   border-radius: 999px;
   font-size: 12px;
   line-height: 1.35;
-  color: #1f2937;
+  color: var(--divee-text);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   animation: divee-consent-fade-in 0.25s ease-out;
 }
@@ -2435,13 +2488,13 @@
 
 .divee-consent-decline {
   background: transparent;
-  border-color: rgba(15, 23, 42, 0.15);
-  color: #6b7280;
+  border-color: var(--divee-border);
+  color: var(--divee-text-muted);
 }
 
 .divee-consent-decline:hover {
-  border-color: rgba(15, 23, 42, 0.3);
-  color: #374151;
+  border-color: var(--divee-border-strong);
+  color: var(--divee-text);
 }
 
 .divee-consent-accept {
@@ -2480,6 +2533,10 @@
   /* Theme vars — will be overridden per-project via applyThemeColors() */
   --divee-color-primary: #68E5FD;
   --divee-color-secondary: #A389E0;
+  /* Light-mode neutral tokens (FAB lives outside the widget container so it
+     needs its own copy; .divee-floating-ask-ai.divee-dark overrides these). */
+  --divee-surface: #ffffff;
+  --divee-text: #1f2937;
   --divee-fab-gradient-angle: 135deg;
   animation: divee-fab-gradient-rotate 6s linear infinite;
 
@@ -2520,12 +2577,12 @@
   border-radius: 22px !important;
   background:
     linear-gradient(var(--divee-fab-gradient-angle),
-      color-mix(in srgb, var(--divee-color-primary) 6%, white) 0%,
-      white 50%,
-      color-mix(in srgb, var(--divee-color-secondary) 6%, white) 100%) padding-box,
+      color-mix(in srgb, var(--divee-color-primary) 6%, var(--divee-surface)) 0%,
+      var(--divee-surface) 50%,
+      color-mix(in srgb, var(--divee-color-secondary) 6%, var(--divee-surface)) 100%) padding-box,
     linear-gradient(var(--divee-fab-gradient-angle), var(--divee-color-primary), var(--divee-color-secondary)) border-box !important;
   border: 2px solid transparent !important;
-  color: #1f2937 !important;
+  color: var(--divee-text) !important;
   /* Subtle inward glow from the gradient outline */
   box-shadow:
     inset 0 0 8px color-mix(in srgb, var(--divee-color-primary) 8%, transparent),
@@ -2550,7 +2607,7 @@
   font-weight: 800 !important;
   letter-spacing: 0.1em !important;
   white-space: nowrap !important;
-  color: #1f2937 !important;
+  color: var(--divee-text) !important;
 }
 
 .divee-floating-ask-ai.divee-fab-revealed .divee-fab-pill {
@@ -2569,7 +2626,7 @@
   height: 56px !important;
   border-radius: 50% !important;
   background:
-    linear-gradient(white, white) padding-box,
+    linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
     linear-gradient(var(--divee-fab-gradient-angle), var(--divee-color-primary), var(--divee-color-secondary)) border-box !important;
   border: 2px solid transparent !important;
   flex: 0 0 auto !important;
@@ -2875,12 +2932,12 @@
   gap: 8px;
   flex-shrink: 0;
   padding: 4px 4px 4px 14px;
-  background: #f3f4f6;
+  background: var(--divee-surface-alt);
   border: 0;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
-  color: #1f2937;
+  color: var(--divee-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   cursor: pointer;
   white-space: nowrap;
@@ -2892,7 +2949,7 @@
 }
 
 .divee-collapsed-bubble-chip:hover {
-  background: #e5e7eb;
+  background: var(--divee-surface-hover);
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.07),
     0 5px 12px rgba(0, 0, 0, 0.09);
@@ -2956,10 +3013,15 @@
 
 .divee-widget {
   --divee-surface-dark: #0E1A35;
+  --divee-bubble-ai: var(--divee-surface);
   --divee-bubble-user: #E1E7F4;
   --divee-border-soft: #E5E7EB;
   --divee-text-muted: #9CA3AF;
   --divee-online: #22C55E;
+  /* AI sparkle avatar gradient — pinned tokens so the header re-tint
+     in dark mode doesn't drag the avatar's dark stop to near-black. */
+  --divee-avatar-start: #25365E;
+  --divee-avatar-end: #0E1A35;
 }
 
 /* Header — taller, more breathing room */
@@ -3102,7 +3164,7 @@
   width: 28px !important;
   height: 28px !important;
   background:
-    radial-gradient(circle at 30% 25%, #25365E 0%, var(--divee-surface-dark) 60%) !important;
+    radial-gradient(circle at 30% 25%, var(--divee-avatar-start) 0%, var(--divee-avatar-end) 60%) !important;
   border-radius: 50% !important;
   flex-shrink: 0;
   display: inline-flex;
@@ -3133,7 +3195,7 @@
 
 .divee-message-ai .divee-message-name {
   font-weight: 600;
-  color: #1f2937;
+  color: var(--divee-text);
   font-size: 13px;
 }
 
@@ -3145,11 +3207,11 @@
 
 /* AI bubble — multi-layer shadow for elegant elevation */
 .divee-message-ai .divee-message-content {
-  background: #fff !important;
+  background: var(--divee-bubble-ai) !important;
   border: none !important;
   border-radius: 16px !important;
   padding: 18px 22px !important;
-  color: #1f2937 !important;
+  color: var(--divee-text) !important;
   box-shadow:
     0 0 0 1px rgba(15, 23, 42, 0.025),
     0 1px 2px rgba(15, 23, 42, 0.04),
@@ -3172,7 +3234,7 @@
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: #9CA3AF;
+  color: var(--divee-text-subtle);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -3189,8 +3251,8 @@
 }
 
 .divee-reaction:hover {
-  background: #F3F4F6;
-  color: #4B5563;
+  background: var(--divee-surface-alt);
+  color: var(--divee-text);
 }
 
 .divee-reaction[data-action="thumb-up"].is-active {
@@ -3224,7 +3286,7 @@
 
 .divee-message-user .divee-message-content {
   background: var(--divee-bubble-user) !important;
-  color: #1f2937 !important;
+  color: var(--divee-text) !important;
   border: none !important;
   border-radius: 16px !important;
   border-bottom-right-radius: 4px !important;
@@ -3267,7 +3329,7 @@
   border-radius: 16px;
   padding: 6px;
   background:
-    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box;
   /* 3D-recessed look: hard top "lip" line, then a deep top-down shadow
      that fades through three blurs, plus a soft bottom highlight to
@@ -3290,7 +3352,7 @@
 
 .divee-input-row:focus-within {
   background:
-    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box;
   box-shadow:
     inset 0 1px 0 rgba(15, 23, 42, 0.10),
@@ -3794,7 +3856,7 @@
   border-radius: 16px !important;
   padding: 13px 8px 13px 12px !important;
   background:
-    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), var(--divee-color-secondary)) border-box !important;
   box-shadow:
     inset 0 1px 0 rgba(15, 23, 42, 0.08),
@@ -3813,7 +3875,7 @@
 
 .divee-widget .divee-search-container-collapsed:hover {
   background:
-    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(var(--divee-surface), var(--divee-surface)) padding-box,
     linear-gradient(135deg, var(--divee-color-primary), #FD3C4F) border-box !important;
   box-shadow:
     inset 0 1px 0 rgba(15, 23, 42, 0.10),
@@ -3829,12 +3891,66 @@
     0 24px 48px rgba(15, 23, 42, 0.05) !important;
 }
 
+/* Dark-mode shadow override for the v2 collapsed pill. The light-mode
+   stack above uses `rgba(255,255,255,0.9)` inset highlights along the
+   bottom edge to fake a "raised paper" 3D feel — on a dark surface those
+   render as a stark white line. Replace the whole stack with a quieter
+   top highlight + outer drop shadow that reads as elevation on dark. */
+.divee-widget.divee-dark .divee-search-container-collapsed {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 4px 10px rgba(0, 0, 0, 0.28),
+    0 12px 24px rgba(0, 0, 0, 0.22),
+    0 24px 48px rgba(0, 0, 0, 0.18) !important;
+}
+
+.divee-widget.divee-dark .divee-search-container-collapsed:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 6px 14px rgba(0, 0, 0, 0.32),
+    0 16px 32px rgba(0, 0, 0, 0.26),
+    0 28px 56px rgba(0, 0, 0, 0.22) !important;
+}
+
+/* Same white-line problem as the collapsed pill — the v2 input row
+   stack uses bottom-edge `rgba(255,255,255,0.9)` insets to fake raised
+   paper, which become a stark white line on a dark surface. Replace
+   the entire stack with a quieter dark-appropriate version. */
+.divee-widget.divee-dark .divee-input-row {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 8px rgba(0, 0, 0, 0.22) !important;
+}
+
+.divee-widget.divee-dark .divee-input-row:focus-within {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 6px 14px rgba(0, 0, 0, 0.26) !important;
+}
+
+/* Avatar glow in dark mode. Picks up the gold from the sparkle inside
+   so the badge reads as "lit from within" — warm halo + hairline ring
+   + slightly stronger top highlight. Kept subtle (low opacities, tight
+   blur) so it's elegant rather than neon. */
+.divee-widget.divee-dark .divee-ai-identity,
+.divee-widget.divee-dark .divee-message-ai .divee-sparkle-avatar {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(245, 194, 74, 0.14),
+    0 0 14px rgba(245, 194, 74, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
 /* AI identity becomes a dark-navy circle with a gold sparkle (mirrors
    the AI avatar used in chat messages). The "AI" text label is hidden
    to keep the badge tight; the icon alone signals AI affordance. */
 .divee-widget .divee-ai-identity {
   background:
-    radial-gradient(circle at 30% 25%, #25365E 0%, var(--divee-surface-dark) 60%) !important;
+    radial-gradient(circle at 30% 25%, var(--divee-avatar-start) 0%, var(--divee-avatar-end) 60%) !important;
   border-radius: 50% !important;
   width: 32px;
   height: 32px;
@@ -3888,11 +4004,11 @@
 /* Search input — match the open-view textarea typography */
 .divee-widget .divee-search-input-collapsed {
   font-size: 14px !important;
-  color: #1f2937 !important;
+  color: var(--divee-text) !important;
 }
 
 .divee-widget .divee-search-input-collapsed::placeholder {
-  color: #9CA3AF !important;
+  color: var(--divee-text-subtle) !important;
 }
 
 /* The typewriter caret used the old secondary color; align with the
@@ -3916,8 +4032,8 @@
    ============================================ */
 
 .divee-widget .divee-suggestions-input {
-  background: #fff !important;
-  border: 1px solid #C7D2E8 !important;
+  background: var(--divee-surface) !important;
+  border: 1px solid var(--divee-border) !important;
   border-radius: 18px !important;
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.04),
@@ -3950,8 +4066,8 @@
   border-radius: 12px !important;
   border: 1px solid transparent !important;
   font-size: 13.5px !important;
-  color: #374151 !important;
-  background: #fff !important;
+  color: var(--divee-text) !important;
+  background: var(--divee-surface) !important;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
   position: relative;
@@ -4001,8 +4117,8 @@
 }
 
 .divee-widget .divee-suggestion:hover {
-  background: #F3F6FB !important;
-  color: var(--divee-surface-dark) !important;
+  background: var(--divee-surface-alt) !important;
+  color: var(--divee-text) !important;
   border-color: transparent !important;
 }
 
@@ -4048,13 +4164,13 @@
 
 .divee-widget .divee-powered-by-collapsed .divee-powered-by {
   background: transparent !important;
-  color: #6B7280 !important;
+  color: var(--divee-text-muted) !important;
   font-size: 11px !important;
   font-weight: 400 !important;
   letter-spacing: -0.1px;
   line-height: 1 !important;
   padding: 6px 11px !important;
-  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  border: 1px solid var(--divee-border) !important;
   border-radius: 999px !important;
   text-decoration: none !important;
   display: inline-flex !important;
@@ -4070,11 +4186,11 @@
 .divee-widget .divee-powered-by-collapsed .divee-powered-by strong {
   font-weight: 700;
   margin-left: 4px;
-  color: #1f2937;
+  color: var(--divee-text);
 }
 
 .divee-widget .divee-powered-by-collapsed .divee-powered-by:hover {
-  background: rgba(15, 23, 42, 0.04) !important;
-  border-color: rgba(15, 23, 42, 0.2) !important;
-  color: #4B5563 !important;
+  background: var(--divee-surface-alt) !important;
+  border-color: var(--divee-border-strong) !important;
+  color: var(--divee-text) !important;
 }

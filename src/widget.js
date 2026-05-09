@@ -1900,6 +1900,11 @@
             container.className = 'divee-widget';
             container.setAttribute('data-state', 'collapsed');
             container.style.setProperty('overflow', 'visible', 'important');
+
+            // Dark mode (URL override; server config will drive this in a future phase).
+            if (new URLSearchParams(window.location.search).get('diveeDarkMode') === 'true') {
+                container.classList.add('divee-dark');
+            }
             
             // Apply display mode
             if (this.config.displayMode === 'floating') {
@@ -2457,6 +2462,9 @@
             btn.setAttribute('role', 'button');
             btn.setAttribute('tabindex', '0');
             btn.setAttribute('aria-label', this.t('askAi', 'Ask AI'));
+            if (new URLSearchParams(window.location.search).get('diveeDarkMode') === 'true') {
+                btn.classList.add('divee-dark');
+            }
             btn.innerHTML = `
                 <span class="divee-fab-pill" aria-hidden="true">
                     <span class="divee-fab-pill-text">${this.escapeHtml(this.t('askAi', 'ASK AI'))}</span>
