@@ -834,9 +834,18 @@
 }
 
 .divee-ad-mobile {
-  display: block;
+  display: none;
   width: 100% !important;
   overflow: hidden !important;
+}
+
+@media (max-width: 767px) {
+  .divee-ad-desktop {
+    display: none;
+  }
+  .divee-ad-mobile {
+    display: block;
+  }
 }
 
 /* Mock ad (shown when diveeMockAd=true and ads are off in config) */
