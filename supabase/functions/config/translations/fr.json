@@ -17,5 +17,8 @@
   "topPlayersToday": "Meilleurs joueurs du jour",
   "more": "Plus",
   "sponsoredInsight": "Contenu sponsorisé",
-  "exploreMore": "En savoir plus"
+  "exploreMore": "En savoir plus",
+  "genericSuggestion1": "De quoi parle ce texte ?",
+  "genericSuggestion2": "Résume les points principaux",
+  "genericSuggestion3": "Quels sont les points clés ?"
 }

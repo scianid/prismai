@@ -17,5 +17,8 @@
   "topPlayersToday": "Päivän parhaat pelaajat",
   "more": "Lisää",
   "sponsoredInsight": "Sponsoroitu sisältö",
-  "exploreMore": "Tutustu lisää"
+  "exploreMore": "Tutustu lisää",
+  "genericSuggestion1": "Mistä tämä teksti kertoo?",
+  "genericSuggestion2": "Tiivistä pääkohdat",
+  "genericSuggestion3": "Mitkä ovat tärkeimmät opit?"
 }

@@ -17,5 +17,8 @@
   "topPlayersToday": "Dagens beste spillere",
   "more": "Mer",
   "sponsoredInsight": "Sponset innhold",
-  "exploreMore": "Utforsk mer"
+  "exploreMore": "Utforsk mer",
+  "genericSuggestion1": "Hva handler denne teksten om?",
+  "genericSuggestion2": "Oppsummer hovedpunktene",
+  "genericSuggestion3": "Hva er de viktigste poengene?"
 }
