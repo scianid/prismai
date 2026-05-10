@@ -15,6 +15,7 @@ const AI_PROVIDERS = {
     label: "openai",
     apiKeyEnv: "OPENAI_API_KEY",
     model: "gpt-5.2",
+    suggestionsModel: "gpt-5.4-mini",
     url: "https://api.openai.com/v1/chat/completions",
     responsesUrl: "https://api.openai.com/v1/responses",
   },
@@ -119,7 +120,11 @@ export async function generateSuggestions(
   content: string,
   language: string,
 ): Promise<SuggestionsResult> {
-  const { apiKey, url, model, provider } = getAiConfig();
+  const config = getAiConfig();
+  const { apiKey, url, provider } = config;
+  const model = ("suggestionsModel" in config && config.suggestionsModel)
+    ? config.suggestionsModel
+    : config.model;
   console.info("ai: generateSuggestions", { provider, model });
 
   const tokenParam = provider === "openai"
