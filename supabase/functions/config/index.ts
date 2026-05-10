@@ -156,6 +156,13 @@ export async function configHandler(
       ui_theme: project.ui_theme === "dark" ? "dark" : "light",
       ask_concent: project.ask_concent === true,
       allowed_urls: project.allowed_urls || [],
+      // Per-project experimental feature toggles. Flat { key: boolean } map.
+      // The widget reads from this and falls back to its hard-coded default
+      // when a key is unset — admins can flip features remotely without
+      // shipping new widget code.
+      experimental: (project.experimental && typeof project.experimental === "object")
+        ? project.experimental
+        : {},
       // `language_code` is the canonical ISO 639-1 key for the
       // translation bundle. Rows where it is NULL (unknown language
       // at analyze time) resolve to the English default inside
