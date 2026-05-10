@@ -29,11 +29,13 @@
     const DIVEE_NON_RENDER_ENDPOINT = 'https://srv.divee.ai/functions/v1/widget-non-render';
     let diveeNonRenderReported = false;
 
-    // Feature toggle: closed-state suggestion teaser bubble. Temporarily off
-    // while the team evaluates impact. Flip to `true` to restore. Gates both
-    // the runtime render path and the pre-mount skeleton's bubble row so the
-    // page reserves no extra height while disabled.
-    const DIVEE_COLLAPSED_BUBBLE_ENABLED = false;
+    // Hard-coded default for the closed-state suggestion carousel. Used when
+    // the per-project experimental override is absent. Admins can flip it on
+    // for individual widgets via project.experimental.animatedSuggestionsOnClosed
+    // (see /config endpoint). Gates both the runtime render path and the
+    // pre-mount skeleton's bubble row so the page reserves no extra height
+    // while disabled.
+    const DIVEE_COLLAPSED_BUBBLE_DEFAULT = false;
 
     // Unload guard: errors thrown by pending fetches during navigation/tab-close
     // surface as `TypeError: Failed to fetch` in most browsers and aren't real
@@ -3111,8 +3113,17 @@
         // modes. Cycles through up to 5 fetched suggestions, ~10.5s each. Click
         // expands the widget and asks the suggestion immediately.
 
+        // Read a per-project experimental feature toggle, falling back to the
+        // hard-coded default when the project hasn't set it. Server config
+        // exposes the map at `serverConfig.experimental`.
+        experimentalEnabled(key, fallback) {
+            const exp = this.state.serverConfig && this.state.serverConfig.experimental;
+            if (exp && typeof exp[key] === 'boolean') return exp[key];
+            return fallback;
+        }
+
         shouldRenderCollapsedBubble() {
-            if (!DIVEE_COLLAPSED_BUBBLE_ENABLED) return false;
+            if (!this.experimentalEnabled('animatedSuggestionsOnClosed', DIVEE_COLLAPSED_BUBBLE_DEFAULT)) return false;
             const m = this.config.displayMode;
             if (m === 'floating' || m === 'sidebar' || m === 'cubic') return false;
             if (this.config.widgetMode === 'knowledgebase') return false;
@@ -3143,7 +3154,7 @@
             return bubble;
         }
 
-        _createCollapsedSuggestionChip(item) {
+        _createCollapsedSuggestionChip(item, { isGeneric = false } = {}) {
             const text = typeof item === 'string' ? item : item.question;
             const id = typeof item === 'string' ? null : item.id;
             const chip = document.createElement('button');
@@ -3151,20 +3162,51 @@
             chip.className = 'divee-collapsed-bubble-chip';
             if (id) chip.dataset.questionId = id;
             chip.dataset.questionText = text;
+            if (isGeneric) chip.dataset.generic = 'true';
             chip.innerHTML = `
                 <span class="divee-collapsed-bubble-chip-text"></span>
                 <span class="divee-collapsed-bubble-chip-send" aria-hidden="true">&#10148;</span>
             `;
             chip.querySelector('.divee-collapsed-bubble-chip-text').textContent = text;
+            const source = isGeneric ? 'suggestion-generic' : 'suggestion-closed';
             chip.addEventListener('click', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 this.expand({ skipAutoFocus: true, trigger: 'collapsed_bubble' });
                 setTimeout(() => {
-                    this.askQuestion(text, 'suggestion-closed', id);
+                    this.askQuestion(text, source, id);
                 }, 200);
             });
             return chip;
+        }
+
+        // Closed-state, GET-only suggestion fetch. Hits the CDN cache only —
+        // never falls through to the AI-generation POST. Cost-aware so the
+        // long tail of articles nobody opens never costs us suggestion AI.
+        async _prefetchCachedSuggestionsOnly() {
+            if (this.config.widgetMode === 'knowledgebase') return;
+            if (this.state.suggestions.length > 0) return;
+            if (this.state.suggestionsSuppressed) return;
+            const url = (typeof window !== 'undefined' && window.location && window.location.href) || '';
+            if (!url) return;
+            try {
+                const cached = await this.fetchCachedSuggestions(url);
+                if (cached && cached.length > 0) {
+                    this.state.suggestions = cached;
+                }
+            } catch (_) { /* non-fatal — fall back to generic carousel */ }
+        }
+
+        // Returns the localized generic-question fallback used when no AI
+        // suggestions are cached for this article yet. Uses the standard
+        // serverConfig.translations lookup — publishers can override per-locale
+        // by populating these keys; otherwise the English defaults apply.
+        _getGenericSuggestions() {
+            return [
+                this.t('genericSuggestion1', 'What is this text about?'),
+                this.t('genericSuggestion2', 'Summarize the main points'),
+                this.t('genericSuggestion3', 'What are the key takeaways?')
+            ];
         }
 
         async primeCollapsedBubble({ collapsedViewEl } = {}) {
@@ -3175,7 +3217,10 @@
                 return;
             }
 
-            await this.prefetchSuggestions();
+            // GET-only fetch. Never POSTs from the closed state — AI generation
+            // happens only when the user actually opens the widget, keeping
+            // cost proportional to engagement rather than raw page views.
+            await this._prefetchCachedSuggestionsOnly();
 
             // Re-check after the await — the widget may have expanded, the user
             // may have suppressed suggestions mid-flight, or display mode may
@@ -3186,12 +3231,16 @@
                 return;
             }
 
-            const items = (this.state.suggestions || []).slice(0, 5);
+            // If the CDN cache had AI suggestions, show those. Otherwise fall
+            // back to localized generic questions so the carousel always has
+            // visible content (no AI cost incurred).
+            let items = (this.state.suggestions || []).slice(0, 5);
+            let isGeneric = false;
             if (items.length === 0) {
-                // Slot was pre-reserved at mount to avoid CLS — leave it
-                // empty rather than removing it (which would shift the page).
-                return;
+                items = this._getGenericSuggestions();
+                isGeneric = true;
             }
+            if (items.length === 0) return;
 
             // Create and attach the bubble lazily, only now that we have
             // something to show. The carousel sits at the top of the collapsed
@@ -3206,10 +3255,10 @@
                 this.elements.collapsedBubble = bubble;
             }
 
-            this.startCollapsedBubbleCycle(items);
+            this.startCollapsedBubbleCycle(items, { isGeneric });
         }
 
-        startCollapsedBubbleCycle(items) {
+        startCollapsedBubbleCycle(items, { isGeneric = false } = {}) {
             const bubble = this.elements.collapsedBubble;
             if (!bubble) return;
             const track = bubble.querySelector('.divee-collapsed-bubble-track');
@@ -3223,14 +3272,14 @@
             track.innerHTML = '';
             track.style.transition = 'none';
             track.style.transform = 'translateX(0)';
-            items.forEach(item => track.appendChild(this._createCollapsedSuggestionChip(item)));
+            items.forEach(item => track.appendChild(this._createCollapsedSuggestionChip(item, { isGeneric })));
 
             cycle.items = items;
             cycle.index = 0;
             cycle.paused = false;
 
             if (items.length > 1) {
-                cycle.intervalId = setInterval(() => this.advanceCollapsedBubble(), 10500);
+                cycle.intervalId = setInterval(() => this.advanceCollapsedBubble(), 5250);
             }
 
             if (!this._handleBubbleVisibility) {
@@ -3256,7 +3305,7 @@
             if (!shift) return;
 
             // Slide the track left by the width of the first chip.
-            track.style.transition = 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)';
+            track.style.transition = 'transform 250ms cubic-bezier(0.4, 0, 0.2, 1)';
             track.style.transform = `translateX(-${shift}px)`;
 
             if (cycle.swapTimeoutId) clearTimeout(cycle.swapTimeoutId);
@@ -3269,7 +3318,7 @@
                 // Force reflow so the next transition takes effect.
                 void track.offsetWidth;
                 cycle.swapTimeoutId = null;
-            }, 520);
+            }, 270);
         }
 
         stopCollapsedBubbleCycle() {
@@ -3492,9 +3541,10 @@
             }
 
             // Track question event for session tracking
-            const isSuggestion = type === 'suggestion' || type === 'suggestion-closed';
+            const isSuggestion = type === 'suggestion' || type === 'suggestion-closed' || type === 'suggestion-generic';
             const eventPayload = { question_type: type };
             if (type === 'suggestion-closed') eventPayload.source = 'closed_bubble';
+            if (type === 'suggestion-generic') eventPayload.source = 'closed_bubble_generic';
             this.trackEvent(isSuggestion ? 'suggestion_question_asked' : 'custom_question_asked', eventPayload);
 
             // Close suggestions overlay so user can see the chat
@@ -4593,7 +4643,7 @@
                 <div class="divee-skeleton-line divee-skeleton-line--small"></div>
                 <div class="divee-skeleton-line divee-skeleton-line--medium"></div>
             </div>
-            ${DIVEE_COLLAPSED_BUBBLE_ENABLED ? '<div class="divee-skeleton-bubble"></div>' : ''}
+            ${DIVEE_COLLAPSED_BUBBLE_DEFAULT ? '<div class="divee-skeleton-bubble"></div>' : ''}
             <div class="divee-skeleton-pill"></div>
             <div class="divee-skeleton-tags">
                 <div class="divee-skeleton-chip"></div>

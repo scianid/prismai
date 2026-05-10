@@ -16,19 +16,23 @@ const fs = require('fs');
 
 const widgetJs = fs.readFileSync('./src/widget.js', 'utf8');
 
-// The closed-state suggestion teaser bubble is gated by a feature toggle
-// (DIVEE_COLLAPSED_BUBBLE_ENABLED) inside widget.js. When the toggle is off,
-// the bubble suite below skips itself so the team can disable the feature in
-// production without rewriting tests. When the toggle flips back to true,
-// these tests automatically run again.
-const collapsedBubbleEnabled = /DIVEE_COLLAPSED_BUBBLE_ENABLED\s*=\s*true/.test(widgetJs);
-const describeBubble = collapsedBubbleEnabled ? describe : describe.skip;
+// The closed-state suggestion teaser bubble is gated by a per-project
+// experimental flag (`animatedSuggestionsOnClosed`). The bubble test suite
+// below opts in by setting it to true on the widget's serverConfig — see
+// `makeAnchoredWidget`.
+const describeBubble = describe;
 
-function makeWidget() {
+function makeWidget({ experimental } = {}) {
     delete window.__diveeWidgetLoaded;
     eval(widgetJs); // eslint-disable-line no-eval
     const widget = new DiveeWidget({ projectId: 'test-project' }); // eslint-disable-line no-undef
-    widget.state.serverConfig = { show_ad: false, ad_tag_id: null, client_name: 'Test', icon_url: '' };
+    widget.state.serverConfig = {
+        show_ad: false,
+        ad_tag_id: null,
+        client_name: 'Test',
+        icon_url: '',
+        experimental: experimental || {}
+    };
     widget.createWidget();
     // askQuestion would start a real fetch / streaming flow — stub it for tests.
     widget.askQuestion = jest.fn();
@@ -149,14 +153,20 @@ describeBubble('collapsed-state suggestion bubble', () => {
     });
 
     function makeAnchoredWidget(opts = {}) {
-        const widget = makeWidget();
+        // Opt into the closed-state carousel experimental flag at construction
+        // time so createWidget() pre-reserves the bubble slot. The widget's
+        // hard-coded default is `false`; production projects flip it on via
+        // serverConfig.experimental.animatedSuggestionsOnClosed.
+        const widget = makeWidget({ experimental: { animatedSuggestionsOnClosed: true } });
         // makeWidget defaulted to anchored. Mutate displayMode if a test needs another mode.
         if (opts.displayMode) widget.config.displayMode = opts.displayMode;
         if (opts.widgetMode) widget.config.widgetMode = opts.widgetMode;
-        // Stub prefetch so primeCollapsedBubble doesn't try real network.
-        widget.prefetchSuggestions = jest.fn(async () => {
-            // suggestions already on state if test pre-set them.
-        });
+        // Stub network-touching methods so primeCollapsedBubble runs offline.
+        // Tests that need a cache hit pre-populate widget.state.suggestions
+        // before calling primeCollapsedBubble (the GET-only helper short-
+        // circuits when state already has suggestions).
+        widget.prefetchSuggestions = jest.fn(async () => { /* not used in closed flow */ });
+        widget.fetchCachedSuggestions = jest.fn(async () => null); // default: cache miss
         return widget;
     }
 
@@ -194,6 +204,19 @@ describeBubble('collapsed-state suggestion bubble', () => {
         expect(chips[1].dataset.questionText).toBe('Second?');
         expect(chips[2].dataset.questionText).toBe('Third?');
         expect(chips[0].querySelector('.divee-collapsed-bubble-chip-text').textContent).toBe('First?');
+    });
+
+    test('experimental flag gates the bubble: false → no render even when everything else passes', () => {
+        const widget = makeAnchoredWidget();
+        // Disable the per-project experimental override.
+        widget.state.serverConfig.experimental = { animatedSuggestionsOnClosed: false };
+        expect(widget.shouldRenderCollapsedBubble()).toBe(false);
+        // Re-enable: gate passes (other gates also pass for an anchored article widget).
+        widget.state.serverConfig.experimental = { animatedSuggestionsOnClosed: true };
+        expect(widget.shouldRenderCollapsedBubble()).toBe(true);
+        // Unset key falls back to the hard-coded default (false).
+        widget.state.serverConfig.experimental = {};
+        expect(widget.shouldRenderCollapsedBubble()).toBe(false);
     });
 
     test('shouldRenderCollapsedBubble returns false in cubic/sidebar/floating/knowledgebase/suppression', () => {
@@ -242,8 +265,8 @@ describeBubble('collapsed-state suggestion bubble', () => {
 
         jest.useFakeTimers();
         widget.advanceCollapsedBubble();
-        // After the 520ms recycle window, the first chip moves to the end.
-        jest.advanceTimersByTime(520);
+        // After the 270ms recycle window, the first chip moves to the end.
+        jest.advanceTimersByTime(270);
 
         const chips = track.querySelectorAll('.divee-collapsed-bubble-chip');
         expect(chips[0].dataset.questionText).toBe('B?');
@@ -310,17 +333,54 @@ describeBubble('collapsed-state suggestion bubble', () => {
         expect(widget.expand).toHaveBeenCalledTimes(1);
     });
 
-    test('empty suggestions leave the pre-reserved slot in place (no CLS) but render no chips', async () => {
+    test('cache miss falls back to generic carousel (no POST fired)', async () => {
         const widget = makeAnchoredWidget();
         widget.state.suggestions = [];
+        // Spy on the POST path to confirm it is never called from the closed state.
+        widget.fetchSuggestions = jest.fn(async () => []);
+        widget.prefetchSuggestions = jest.fn(async () => { /* should never be called either */ });
 
         await widget.primeCollapsedBubble();
 
-        // Slot stays reserved to keep page layout stable. No chips populated.
-        expect(widget.elements.collapsedBubble).toBeTruthy();
         const bubble = widget.elements.collapsedView.querySelector('.divee-collapsed-bubble');
         expect(bubble).not.toBeNull();
-        expect(bubble.querySelectorAll('.divee-collapsed-bubble-chip').length).toBe(0);
+        const chips = bubble.querySelectorAll('.divee-collapsed-bubble-chip');
+        expect(chips.length).toBeGreaterThan(0);
+        // Generic chips are flagged with data-generic="true".
+        chips.forEach(c => expect(c.dataset.generic).toBe('true'));
+        // Critically: no AI-generation POST may have fired.
+        expect(widget.fetchSuggestions).not.toHaveBeenCalled();
+        expect(widget.prefetchSuggestions).not.toHaveBeenCalled();
+    });
+
+    test('clicking a generic chip uses the suggestion-generic source', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = [];
+        await widget.primeCollapsedBubble();
+        widget.expand = jest.fn();
+
+        jest.useFakeTimers();
+        const firstChip = widget.elements.collapsedBubble.querySelector('.divee-collapsed-bubble-chip');
+        const text = firstChip.dataset.questionText;
+        firstChip.click();
+
+        jest.advanceTimersByTime(200);
+        expect(widget.askQuestion).toHaveBeenCalledWith(text, 'suggestion-generic', null);
+    });
+
+    test('cache hit renders AI suggestions, not generic fallback', async () => {
+        const widget = makeAnchoredWidget();
+        widget.state.suggestions = [
+            { id: 'q1', question: 'Real AI question 1?' },
+            { id: 'q2', question: 'Real AI question 2?' }
+        ];
+
+        await widget.primeCollapsedBubble();
+
+        const chips = widget.elements.collapsedBubble.querySelectorAll('.divee-collapsed-bubble-chip');
+        expect(chips.length).toBe(2);
+        chips.forEach(c => expect(c.dataset.generic).toBeUndefined());
+        expect(chips[0].dataset.questionText).toBe('Real AI question 1?');
     });
 
     test('suppressSuggestions removes the bubble', async () => {
