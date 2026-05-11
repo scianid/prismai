@@ -2577,7 +2577,10 @@
   height: 34px !important;
   max-width: 0 !important;
   padding: 0 0 0 0 !important;
-  margin-right: -22px !important;
+  /* Logical margin so the pill tucks under the circle on the trailing edge
+     in both LTR (= right) and RTL (= left). Using physical `margin-right`
+     here meant the pill peeked out from the wrong side in Hebrew/Arabic. */
+  margin-inline-end: -22px !important;
   /* pill tucks under the circle when collapsed */
   border-radius: 22px !important;
   background:
@@ -2593,6 +2596,8 @@
     inset 0 0 8px color-mix(in srgb, var(--divee-color-primary) 8%, transparent),
     inset 0 0 14px color-mix(in srgb, var(--divee-color-secondary) 5%, transparent) !important;
   opacity: 0 !important;
+  /* Starts shifted toward the trailing (circle) side; the [dir="rtl"]
+     override below flips the sign so the pill slides in correctly. */
   transform: translateX(18px) !important;
   overflow: hidden !important;
   /* Gentler, widget-native easing — no bounce, calm fade/slide */
@@ -2606,8 +2611,10 @@
 
 .divee-fab-pill-text {
   display: inline-block !important;
-  padding: 0 26px 0 14px !important;
-  /* extra right padding so text clears the circle overlap */
+  /* Extra padding on the trailing (circle) side so the text clears the
+     22px overlap with the circle in both LTR and RTL layouts. */
+  padding-inline: 14px 26px !important;
+  padding-block: 0 !important;
   font-size: 12px !important;
   font-weight: 800 !important;
   letter-spacing: 0.1em !important;
@@ -2618,6 +2625,17 @@
 .divee-floating-ask-ai.divee-fab-revealed .divee-fab-pill {
   max-width: 220px !important;
   opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+
+/* In RTL the pill is on the right of the circle and slides in from the
+   left, so the initial transform needs to flip sign. The revealed state
+   stays at translateX(0). */
+[dir="rtl"] .divee-fab-pill {
+  transform: translateX(-18px) !important;
+}
+
+[dir="rtl"] .divee-floating-ask-ai.divee-fab-revealed .divee-fab-pill {
   transform: translateX(0) !important;
 }
 
@@ -2713,12 +2731,13 @@
 
   .divee-fab-pill {
     height: 38px !important;
-    margin-right: -22px !important;
+    margin-inline-end: -22px !important;
   }
 
   .divee-fab-pill-text {
     font-size: 13px !important;
-    padding: 0 28px 0 16px !important;
+    padding-inline: 16px 28px !important;
+    padding-block: 0 !important;
   }
 }
 
