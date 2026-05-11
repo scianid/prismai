@@ -75,4 +75,28 @@ describe('Singleton guard (__diveeWidgetLoaded)', () => {
     expect(window.DiveeWidget).toBeDefined();
     expect(window.__diveeWidgetLoaded).toBeUndefined();
   });
+
+  test('two script tags with the same projectId only fetch config once', () => {
+    // Regression for shmua.com: publisher had `<script data-project-id="X">`
+    // pasted twice (once in <head>, once in <body>). Without dedup, each
+    // tag spawned its own widget — so three floating buttons appeared on the
+    // page and the config endpoint was hit per duplicate.
+    const pid = '8896cf03-3071-47f2-b308-5ddc72b452c4';
+    [1, 2].forEach(() => {
+      const s = document.createElement('script');
+      s.setAttribute('data-project-id', pid);
+      document.body.appendChild(s);
+    });
+
+    fetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+    );
+
+    eval(widgetJs);
+
+    const configCalls = fetch.mock.calls.filter(([url]) =>
+      typeof url === 'string' && url.includes(`/config?projectId=${pid}`)
+    );
+    expect(configCalls.length).toBe(1);
+  });
 });

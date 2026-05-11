@@ -4656,6 +4656,12 @@
 
     // Auto-initialize from script tag
     function autoInit() {
+        // Idempotent: if a prior IIFE eval already started initialization,
+        // bail. This catches the race where the publisher includes the SDK
+        // `<script>` twice — each eval registers a `load` listener before the
+        // first one has had a chance to set the flag, so both listeners fire.
+        if (window.__diveeWidgetLoaded) return;
+
         // Bail out if running inside a cross-origin subframe. Publisher pages
         // have many ad/recommendation iframes (Taboola, Outbrain, GPT, etc.),
         // and if the SDK is loaded in any of them — typically via a browser
@@ -4688,9 +4694,21 @@
 
         if (isDebug) installDebugApi();
 
+        const seenProjectIds = new Set();
         scripts.forEach((script, index) => {
+            const projectId = script.getAttribute('data-project-id');
+            // Dedupe by project id — a publisher who pastes the embed twice
+            // (e.g. once in <head> and once in the page body) otherwise gets
+            // one widget instance per script tag.
+            if (seenProjectIds.has(projectId)) {
+                if (isDebug)
+                    console.log(`[Divee] Auto-init [${index}]: skipping duplicate projectId ${projectId}`);
+                return;
+            }
+            seenProjectIds.add(projectId);
+
             const config = {
-                projectId: script.getAttribute('data-project-id'),
+                projectId,
                 cachedBaseUrl: "https://cdn.divee.ai/functions/v1",
                 nonCacheBaseUrl: "https://srv.divee.ai/functions/v1",
                 analyticsBaseUrl: "https://analytic.divee.ai/functions/v1",
