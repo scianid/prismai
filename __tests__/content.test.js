@@ -131,13 +131,55 @@ describe('Content Extraction', () => {
           <p>More actual article content that provides value to readers.</p>
         </article>
       `;
-      
+
       const contentJs = require('fs').readFileSync('./src/content.js', 'utf8');
       eval(contentJs);
-      
+
       const content = getContent();
       expect(content).toContain('actual article content');
       expect(content).not.toContain('Special offer');
+    });
+
+    test('should keep paragraphs wrapped in Elementor "widget" containers', () => {
+      // Regression for shmua.com: Elementor wraps every <p> in
+      // `<div class="elementor-widget-container">`. A substring match on the
+      // word "widget" would drop the entire article body.
+      document.body.innerHTML = `
+        <div class="elementor-element post-cont-single elementor-widget elementor-widget-theme-post-content">
+          <div class="elementor-widget-container">
+            <p>First real article paragraph with enough text to clear the length filter.</p>
+            <p>Second real article paragraph that should also survive ad-content filtering.</p>
+            <p>Third paragraph carrying additional meaningful editorial content for readers.</p>
+          </div>
+        </div>
+      `;
+
+      const contentJs = require('fs').readFileSync('./src/content.js', 'utf8');
+      eval(contentJs);
+
+      const content = getContent('.post-cont-single');
+      expect(content).toContain('First real article paragraph');
+      expect(content).toContain('Second real article paragraph');
+      expect(content).toContain('Third paragraph');
+    });
+
+    test('should still drop content under a standalone "widget" class', () => {
+      document.body.innerHTML = `
+        <article>
+          <p>Real article paragraph with substantial editorial content for readers.</p>
+          <div class="widget sidebar">
+            <p>Promoted listings you might also enjoy reading right now today.</p>
+          </div>
+          <p>Another real article paragraph that should survive extraction filtering.</p>
+        </article>
+      `;
+
+      const contentJs = require('fs').readFileSync('./src/content.js', 'utf8');
+      eval(contentJs);
+
+      const content = getContent();
+      expect(content).toContain('Real article paragraph');
+      expect(content).not.toContain('Promoted listings');
     });
 
     test.skip('should use custom articleClass if provided', () => {

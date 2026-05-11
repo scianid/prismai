@@ -78,15 +78,24 @@ function getContent(articleClass) {
     ];
     if (textFlags.some(r => r.test(t))) return true;
 
-    const cls = (el.className || "").toLowerCase();
-    const id = (el.id || "").toLowerCase();
-    const parentCls = (el.parentElement?.className || "").toLowerCase();
-    const tokens = [
+    const tokens = new Set([
       "ad","ads","advertisement","sponsor","promoted","promo","banner","commercial",
       "widget","sidebar","related","recommended",
-    ];
-    const matchesToken = (str) => tokens.some(k => new RegExp(`\\b${k}\\b`).test(str));
-    if (matchesToken(cls) || matchesToken(id) || matchesToken(parentCls)) return true;
+    ]);
+    // Match whole class/id tokens, not regex against the joined string —
+    // otherwise frameworks like Elementor (which wraps every paragraph in
+    // `elementor-widget-container`) get every paragraph dropped because
+    // `\bwidget\b` matches inside the hyphenated class name.
+    const hasBadToken = (node) => {
+      if (!node) return false;
+      const classes = node.classList
+        ? Array.from(node.classList)
+        : ((node.className || "") + "").split(/\s+/).filter(Boolean);
+      if (classes.some(c => tokens.has(c.toLowerCase()))) return true;
+      const id = (node.id || "").toLowerCase();
+      return !!id && tokens.has(id);
+    };
+    if (hasBadToken(el) || hasBadToken(el.parentElement)) return true;
 
     const links = Array.from(el.getElementsByTagName("a"));
     if (links.length === 1 && (links[0].textContent || "").trim() === text) return true;
