@@ -1168,7 +1168,13 @@
             this.log('ads', 'GPT preloaded:', gptAlreadyLoaded, 'Ad tag:', adTagId);
             this._gptAlreadyLoaded = gptAlreadyLoaded;
             
-            window.googletag = window.googletag || { cmd: [] };
+            // Defend against the publisher stub-pattern where the page sets
+            // `window.googletag = {}` *before* GPT's loader populates `cmd`.
+            // The `||` shortcut alone keeps that empty object, leaving
+            // `googletag.cmd` undefined, and the push() below would throw and
+            // take the whole widget init down with it (shmua.com bug, 2026-05).
+            window.googletag = window.googletag || {};
+            window.googletag.cmd = window.googletag.cmd || [];
             window.googletag._initialized_by_divee = true;
             
             // Only load GPT script if not already loaded
