@@ -2679,12 +2679,12 @@
   height: 36px !important;
 }
 
-.divee-fab-sparkle .divee-fab-star-stop-start {
-  stop-color: var(--divee-color-primary);
-}
-
+/* Sparkle icon stays solid white regardless of the publisher's
+   highlight_color — otherwise brand-dark colors (e.g. shmua.com's
+   #32373c / #000000) render the icon invisible on the dark circle. */
+.divee-fab-sparkle .divee-fab-star-stop-start,
 .divee-fab-sparkle .divee-fab-star-stop-end {
-  stop-color: var(--divee-color-secondary);
+  stop-color: #ffffff;
 }
 
 /* LIVE badge — coral/pink gradient pill with bold white text.
