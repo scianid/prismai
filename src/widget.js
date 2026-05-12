@@ -2124,6 +2124,9 @@
                              alt="Ad placeholder"
                              class="divee-mock-inchat-ad-img" />
                     `;
+                    // Mock doesn't fire slotRenderEnded, so mark the strip
+                    // as "filled" up-front — it always renders the placeholder.
+                    container.classList.add('divee-lightbox-strip-filled');
                 } else {
                     inchatEl.innerHTML = `
                         <div id="div-gpt-ad-divee-inchat-desktop" class="divee-ad-inchat-desktop"></div>
@@ -2775,14 +2778,13 @@
                         if (event.isEmpty) {
                             if (adElement) adElement.style.display = 'none';
                             if (adOuterContainer && !isInchat) adOuterContainer.style.display = 'none';
-                            // In-chat: collapse the shadow-DOM strip to 0
-                            // height (via CSS var on the widget container)
-                            // so we don't leave a 125px gap when nothing fills.
-                            // Re-run the light-DOM positioner after the DOM
-                            // settles so the container collapses with it.
+                            // In-chat: drop the "filled" class so the
+                            // shadow-DOM strip collapses back to 0. Re-run
+                            // the light-DOM positioner after the DOM settles
+                            // so the ad container collapses with it.
                             if (isInchat) {
                                 const widgetEl = self.elements.container;
-                                if (widgetEl) widgetEl.classList.add('divee-lightbox-strip-empty');
+                                if (widgetEl) widgetEl.classList.remove('divee-lightbox-strip-filled');
                                 requestAnimationFrame(() => self._positionLightboxInchatAd());
                             }
                             self.log('ads', 'Slot empty, hiding container:', slotId);
@@ -2800,12 +2802,12 @@
                             // Setting inline `display: block` here would
                             // leak past collapse and leave the ad on screen.
                             if (adOuterContainer && !isInchat) adOuterContainer.style.display = 'block';
-                            // In-chat: make sure the strip is at full height
-                            // (in case a previous render had collapsed it),
-                            // then re-position the light-DOM container.
+                            // In-chat: flip the strip to its filled height
+                            // (125px desktop / 110px mobile) and re-position
+                            // the light-DOM container over it.
                             if (isInchat) {
                                 const widgetEl = self.elements.container;
-                                if (widgetEl) widgetEl.classList.remove('divee-lightbox-strip-empty');
+                                if (widgetEl) widgetEl.classList.add('divee-lightbox-strip-filled');
                                 requestAnimationFrame(() => self._positionLightboxInchatAd());
                             }
                             self.log('ads', 'Slot filled, showing container:', slotId);
@@ -3186,14 +3188,13 @@
                     this.elements.expandedView.classList.add('divee-lightbox-open');
 
                     // Light-DOM in-chat ad: align it over the sponsored strip
-                    // and reveal. GPT lazy-load will detect viewport visibility
-                    // and fetch the creative. Position runs after the open
-                    // animation kicks in so the strip's rect is final.
+                    // and reveal. The strip starts collapsed (height 0), so
+                    // GPT lazy-load can't fetch (zero-dimension slot) — we
+                    // force an explicit refresh on every open, including the
+                    // first, to trigger the fetch. slotRenderEnded then flips
+                    // the strip to filled (grows to 125px) or leaves it
+                    // collapsed on empty.
                     if (this.elements.lightboxInchatAdContainer) {
-                        // Reset the strip's collapsed state so a previously
-                        // empty fill doesn't keep the strip at 0 height on
-                        // reopen — the slot gets a fresh chance to fill.
-                        this.elements.container.classList.remove('divee-lightbox-strip-empty');
                         this.elements.lightboxInchatAdContainer.classList.add('divee-lightbox-inchat-ad-visible');
                         this._positionLightboxInchatAd();
                         if (!this._lightboxRepositionHandler) {
@@ -3201,6 +3202,7 @@
                             window.addEventListener('resize', this._lightboxRepositionHandler);
                             window.addEventListener('scroll', this._lightboxRepositionHandler, { passive: true });
                         }
+                        this._refreshLightboxInchatSlot();
                     }
                 });
 
@@ -3348,6 +3350,25 @@
             this.trackEvent('widget_collapsed', {
                 time_spent: Date.now(),
                 questions_asked: this.state.messages.filter(m => m.role === 'user').length
+            });
+        }
+
+        // Force GPT to refetch the in-chat slot. Called on every modal reopen
+        // so a previously empty slot gets a fresh chance to fill. The
+        // resulting `slotRenderEnded` updates the strip's expanded/collapsed
+        // state via the existing handler.
+        _refreshLightboxInchatSlot() {
+            if (!window.googletag || !window.googletag.cmd) return;
+            const slotId = window.innerWidth >= 768
+                ? 'div-gpt-ad-divee-inchat-desktop'
+                : 'div-gpt-ad-divee-inchat-mobile';
+            const self = this;
+            googletag.cmd.push(function () {
+                const slot = googletag.pubads().getSlots().find(s => s.getSlotElementId() === slotId);
+                if (slot) {
+                    googletag.pubads().refresh([slot]);
+                    self.log('ads', '✓ Forced refresh of lightbox in-chat slot:', slotId);
+                }
             });
         }
 

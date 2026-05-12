@@ -4365,14 +4365,16 @@
    ad iframe (in light DOM) is positioned over this by JS. No background or
    border chrome and no margins — the strip spans the full modal width so
    ads sit as close to the edges as their own dimensions allow.
-   Height is driven by --divee-strip-h so the slotRenderEnded handler can
-   collapse the strip to 0 when the in-chat slot has no fill. */
+   Default state: collapsed (height 0) so we don't reserve space while the
+   slot is fetching, or at all when no ad fills. The `.divee-lightbox-strip-filled`
+   class flips the height to 125px after `slotRenderEnded` confirms a fill
+   (or, in mock-ad mode, when the mock image is in place). */
 .divee-widget-lightbox {
-  --divee-strip-h: 125px;
+  --divee-strip-h: 0px;
 }
 
-.divee-widget-lightbox.divee-lightbox-strip-empty {
-  --divee-strip-h: 0px;
+.divee-widget-lightbox.divee-lightbox-strip-filled {
+  --divee-strip-h: 125px;
 }
 
 .divee-lightbox-sponsored-strip {
@@ -4479,12 +4481,9 @@
     transform: translateY(0);
   }
 
-  /* Mobile creatives top out smaller — shrink the reserved height to match. */
-  .divee-widget-lightbox {
+  /* Mobile creatives top out smaller — shrink the filled height to match. */
+  .divee-widget-lightbox.divee-lightbox-strip-filled {
     --divee-strip-h: 110px;
-  }
-  .divee-widget-lightbox.divee-lightbox-strip-empty {
-    --divee-strip-h: 0px;
   }
 
   .divee-lightbox-sponsored-strip {
