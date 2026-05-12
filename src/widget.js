@@ -2980,7 +2980,11 @@
                 }, 150);
             }
 
-            this.trackEvent('widget_expanded', { trigger });
+            // Don't count auto-open-on-load (anchoredOpen displayMode) as an
+            // interaction — DAU should only reflect events the visitor caused.
+            if (trigger !== 'init') {
+                this.trackEvent('widget_expanded', { trigger });
+            }
 
             // Play video ad on first open when ?diveeVideoAd=true. One-shot per
             // page load — the videoAdPlayed flag is set before the async work
