@@ -4383,17 +4383,23 @@
 
 /* Light-DOM in-chat ad container — appended to <body> so GPT can find its
    slot divs via getElementById. JS positions it over the sponsored strip
-   when the lightbox is open. The 125px max-height matches the strip's
-   reserved zone; the iframe inside is constrained the same way. */
+   when the lightbox is open. Default: hidden. The `divee-lightbox-inchat-ad-visible`
+   class flips it on; using a class toggle (vs an inline `display` value)
+   avoids fighting `!important` cascades from publisher CSS or our own
+   reset rules. The 125px max-height matches the strip's reserved zone. */
 .divee-lightbox-inchat-ad {
   box-sizing: border-box;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  display: none;
+  align-items: center;
+  justify-content: center;
   max-height: 125px !important;
   overflow: hidden !important;
   pointer-events: auto;
   background: transparent;
+}
+
+.divee-lightbox-inchat-ad.divee-lightbox-inchat-ad-visible {
+  display: flex !important;
 }
 
 .divee-lightbox-inchat-ad .divee-ad-inchat-desktop,

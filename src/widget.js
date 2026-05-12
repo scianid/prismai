@@ -2118,7 +2118,6 @@
             if (hasInchatAds || showInchatMockAd) {
                 const inchatEl = document.createElement('div');
                 inchatEl.className = 'divee-lightbox-inchat-ad';
-                inchatEl.style.display = 'none';
                 if (showInchatMockAd) {
                     inchatEl.innerHTML = `
                         <img src="https://srv.divee.ai/storage/v1/object/public/public-files/fake-ad.gif"
@@ -2789,7 +2788,11 @@
                             // Ad filled — reveal it
                             if (adElement) adElement.style.setProperty('display', 'block', 'important');
                             if (adSlotContainer) adSlotContainer.style.display = '';
-                            if (adOuterContainer) adOuterContainer.style.display = 'block';
+                            // For in-chat: visibility is owned by the
+                            // expand/collapse class toggle, not slot fill.
+                            // Setting inline `display: block` here would
+                            // leak past collapse and leave the ad on screen.
+                            if (adOuterContainer && !isInchat) adOuterContainer.style.display = 'block';
                             self.log('ads', 'Slot filled, showing container:', slotId);
                             self.trackEvent('ad_impression', {
                                 ad_unit: slotId,
@@ -3162,7 +3165,7 @@
                     // and fetch the creative. Position runs after the open
                     // animation kicks in so the strip's rect is final.
                     if (this.elements.lightboxInchatAdContainer) {
-                        this.elements.lightboxInchatAdContainer.style.display = 'block';
+                        this.elements.lightboxInchatAdContainer.classList.add('divee-lightbox-inchat-ad-visible');
                         this._positionLightboxInchatAd();
                         if (!this._lightboxRepositionHandler) {
                             this._lightboxRepositionHandler = () => this._positionLightboxInchatAd();
@@ -3260,7 +3263,7 @@
                 // position. The ad slot stays defined; GPT auto-refresh keeps
                 // serving when the modal reopens.
                 if (this.elements.lightboxInchatAdContainer) {
-                    this.elements.lightboxInchatAdContainer.style.display = 'none';
+                    this.elements.lightboxInchatAdContainer.classList.remove('divee-lightbox-inchat-ad-visible');
                 }
                 if (this._lightboxRepositionHandler) {
                     window.removeEventListener('resize', this._lightboxRepositionHandler);
