@@ -5037,11 +5037,10 @@
         });
     }
 
-    // Initialize after the page has fully loaded (all assets, styles, late DOM)
-    if (document.readyState === 'complete') {
-        autoInit();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', autoInit);
     } else {
-        window.addEventListener('load', autoInit);
+        autoInit();
     }
 
     // Expose for manual initialization
