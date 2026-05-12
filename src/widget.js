@@ -3143,15 +3143,25 @@
                 // Portal the entire shadow host to document.body so the modal
                 // escapes the article's stacking context. Required because
                 // :host has `isolation: isolate` which confines our z-index
-                // 999999 to a local stacking context — publisher elements that
-                // come later in the DOM (e.g. article images with non-1
-                // opacity) would otherwise paint over the modal.
+                // to a local stacking context — publisher elements that come
+                // later in the DOM (e.g. article images with non-1 opacity)
+                // would otherwise paint over the modal.
                 const shadowHost = this.elements.shadowHost;
                 if (shadowHost && shadowHost.parentNode !== document.body) {
                     this._lightboxHostOriginalParent = shadowHost.parentNode;
                     this._lightboxHostOriginalNextSibling = shadowHost.nextSibling;
                     document.body.appendChild(shadowHost);
                 }
+
+                // Lock body scroll while the modal is open so wheel/touch
+                // events on the backdrop don't scroll the publisher page
+                // behind. Stash the previous inline values so we can put them
+                // back exactly on collapse, even if the publisher had its own
+                // overflow style.
+                this._lightboxBodyOverflow = document.body.style.overflow;
+                this._lightboxHtmlOverflow = document.documentElement.style.overflow;
+                document.body.style.overflow = 'hidden';
+                document.documentElement.style.overflow = 'hidden';
 
                 this.elements.collapsedView.style.display = 'none';
                 this.elements.expandedView.style.display = 'flex';
@@ -3278,6 +3288,13 @@
                     document.removeEventListener('keydown', this._lightboxEscHandler);
                     this._lightboxEscHandler = null;
                 }
+                // Restore page scroll. Use the stashed inline values (which
+                // may have been empty strings) so we don't clobber a
+                // publisher's own overflow setting.
+                document.body.style.overflow = this._lightboxBodyOverflow || '';
+                document.documentElement.style.overflow = this._lightboxHtmlOverflow || '';
+                this._lightboxBodyOverflow = null;
+                this._lightboxHtmlOverflow = null;
                 // Hide the in-chat ad container and stop tracking the strip
                 // position. The ad slot stays defined; GPT auto-refresh keeps
                 // serving when the modal reopens.
@@ -3354,7 +3371,9 @@
             container.style.height = rect.height + 'px';
             // Above the backdrop + modal (999999) so the ad renders on top of
             // the placeholder strip; clicks pass through to the iframe.
-            container.style.zIndex = '1000000';
+            // Sit above the modal (2147483647) so the ad iframe paints over
+            // the shadow-DOM strip's placeholder area.
+            container.style.zIndex = '2147483647';
         }
 
         // Silent fetch — populates this.state.suggestions but does NOT open

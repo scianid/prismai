@@ -4275,7 +4275,11 @@
   height: 100vh !important;
   height: 100dvh !important;
   background: rgba(0, 0, 0, 0.7) !important;
-  z-index: 999998 !important;
+  /* Max signed-int z-index — publisher chrome (video players, sticky
+     headers, GDPR banners) frequently goes to 2147483647 to "win the page",
+     so the backdrop sits one notch below the modal but above everything
+     else the publisher can throw at us. */
+  z-index: 2147483646 !important;
   opacity: 0;
   display: none;
   transition: opacity 220ms ease;
@@ -4299,7 +4303,9 @@
   width: min(960px, 92vw) !important;
   max-width: min(960px, 92vw) !important;
   margin: 0 !important;
-  z-index: 999999 !important;
+  /* One above the backdrop (2147483646) and high enough to beat publisher
+     video chrome that uses the max int as a default. */
+  z-index: 2147483647 !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
