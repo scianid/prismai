@@ -1295,6 +1295,17 @@
   margin: 6px 0 4px;
 }
 
+.divee-md-link {
+  color: var(--divee-color-secondary) !important;
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+
+.divee-md-link:hover {
+  text-decoration: none !important;
+}
+
 .divee-cursor {
   display: inline-flex;
   gap: 4px;

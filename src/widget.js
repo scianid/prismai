@@ -944,12 +944,31 @@
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-            const inline = (s) => s
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/__(.*?)__/g, '<strong>$1</strong>')
-                .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
-                .replace(/_([^_\n]+)_/g, '<em>$1</em>')
-                .replace(/`([^`\n]+)`/g, '<code class="divee-inline-code">$1</code>');
+            // Stash link/code HTML behind a sentinel so later bold/italic regexes
+            // can't chew through URLs (e.g. underscores in slugs) or break code spans.
+            const inline = (s) => {
+                const tokens = [];
+                const stash = (html) => `\x00${tokens.push(html) - 1}\x00`;
+                const isSafeUrl = (u) => /^(https?:\/\/|mailto:)/i.test(u.replace(/&amp;/g, '&'));
+
+                s = s
+                    .replace(/`([^`\n]+)`/g, (_m, code) => stash(`<code class="divee-inline-code">${code}</code>`))
+                    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, txt, url) => {
+                        if (!isSafeUrl(url)) return m;
+                        return stash(`<a class="divee-md-link" href="${url}" target="_blank" rel="noopener noreferrer">${txt}</a>`);
+                    })
+                    .replace(/\bhttps?:\/\/[^\s<]+/g, (m) => {
+                        const tail = m.match(/[.,;:!?)\]'"]+$/);
+                        const url = tail ? m.slice(0, -tail[0].length) : m;
+                        return stash(`<a class="divee-md-link" href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`) + (tail ? tail[0] : '');
+                    })
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+                    .replace(/_([^_\n]+)_/g, '<em>$1</em>');
+
+                return s.replace(/\x00(\d+)\x00/g, (_, i) => tokens[+i]);
+            };
 
             // Split into code-block vs text sections first
             const segments = [];
