@@ -1289,15 +1289,35 @@
                     }
                 }
 
-                // Filter out ad sizes wider than the container
-                const containerEl = self.elements.container
-                    || (self.config.containerSelector && document.querySelector(self.config.containerSelector))
+                // Filter out ad sizes wider than the widget's mount area.
+                // initGoogleAds runs before createWidget, so self.elements.container
+                // doesn't exist yet — predict where insertWidget() will mount and
+                // measure that. Mirror its priority: containerSelector(+fallbacks)
+                // → #divee-widget-placeholder → article/main. Worst-case fall back
+                // to the viewport, never Infinity: on pages with no <article>/<main>
+                // (e.g. gandul.ro) the old fallback skipped filtering entirely and
+                // GAM shipped 728×90 into a 700px slot, cropping the creative.
+                let containerEl = self.elements.container || null;
+                if (!containerEl) {
+                    const selectors = [
+                        self.config.containerSelector,
+                        ...(Array.isArray(self.config.containerSelectorFallbacks) ? self.config.containerSelectorFallbacks : []),
+                    ];
+                    for (const sel of selectors) {
+                        if (typeof sel === 'string' && sel.trim()) {
+                            const el = document.querySelector(sel);
+                            if (el) { containerEl = el; break; }
+                        }
+                    }
+                }
+                containerEl = containerEl
+                    || document.getElementById('divee-widget-placeholder')
                     || document.querySelector('article')
                     || document.querySelector('[role="article"]')
                     || document.querySelector('main');
-                const containerWidth = containerEl?.offsetWidth || Infinity;
-                
-                if (containerWidth !== Infinity) {
+                const containerWidth = containerEl?.offsetWidth || window.innerWidth || 0;
+
+                if (containerWidth > 0) {
                     desktopSizes = desktopSizes.filter(size => size[0] <= containerWidth);
                     desktopSizes768 = desktopSizes768.filter(size => size[0] <= containerWidth);
                     mobileSizes = mobileSizes.filter(size => size[0] <= containerWidth);
