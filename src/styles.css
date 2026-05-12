@@ -4254,3 +4254,231 @@
   border-color: var(--divee-border-strong) !important;
   color: var(--divee-text) !important;
 }
+
+/* ============================================
+   Lightbox Display Mode
+   Closed: identical to anchored inline pill (no overrides).
+   Opened: large modal pinned to the bottom-center of the viewport with a
+           solid black backdrop. Reserves a sponsored strip below the chat
+           for future ad/sponsored content; chat layout is unchanged.
+   ============================================ */
+
+/* Closed state inherits all anchored behavior — no rules needed. */
+
+/* Backdrop — solid black, sibling of the container inside the shadow root
+   so it isn't affected by the container's transform. */
+.divee-lightbox-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  z-index: 999998 !important;
+  opacity: 0;
+  display: none;
+  transition: opacity 220ms ease;
+  cursor: pointer;
+}
+
+.divee-lightbox-backdrop.divee-lightbox-backdrop-visible {
+  opacity: 1;
+}
+
+/* Expanded container — escapes inline flow and pins to the bottom-center of
+   the viewport. The closed-state pill keeps the default anchored rules
+   (since the [data-state="collapsed"] selector doesn't apply these). */
+.divee-widget.divee-widget-lightbox[data-state="expanded"] {
+  position: fixed !important;
+  bottom: 24px !important;
+  left: 50% !important;
+  top: auto !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  width: min(960px, 92vw) !important;
+  max-width: min(960px, 92vw) !important;
+  margin: 0 !important;
+  z-index: 999999 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Inner expanded panel — the visible surface. Selector bumped to
+   `.divee-widget.divee-widget-lightbox[data-state="expanded"] .divee-expanded`
+   so it beats the base `.divee-widget[data-state="expanded"] .divee-expanded`
+   rule that would otherwise set a 16px border-radius and 600px max-height. */
+.divee-widget.divee-widget-lightbox[data-state="expanded"] .divee-expanded {
+  background: var(--divee-surface) !important;
+  border: 1px solid var(--divee-border) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: min(720px, 82vh) !important;
+  opacity: 0;
+  transform: translateY(24px) scale(0.97);
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.divee-widget.divee-widget-lightbox[data-state="expanded"] .divee-expanded.divee-lightbox-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Roomier internal padding so the modal feels intentional, not like the
+   anchored pill stretched out. */
+.divee-widget-lightbox .divee-header {
+  padding: 16px 20px 12px 20px !important;
+}
+
+.divee-widget-lightbox .divee-content {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.divee-widget-lightbox .divee-chat {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  min-height: 240px;
+  padding: 0 20px !important;
+}
+
+.divee-widget-lightbox .divee-messages {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+/* Sponsored strip — reserved zone for the in-chat ad (light-DOM iframe is
+   positioned over it by JS). Min-height matches the ad's max-height (125px)
+   so the layout doesn't jump when the ad fills. When no ad fills, the
+   "Sponsored" label is visible underneath as a quiet placeholder. */
+.divee-lightbox-sponsored-strip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 125px;
+  max-height: 125px;
+  margin: 8px 20px 0 20px;
+  background: var(--divee-surface-muted);
+  border: 1px dashed var(--divee-border);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+.divee-lightbox-sponsored-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--divee-text-subtle);
+}
+
+/* Light-DOM in-chat ad container — appended to <body> so GPT can find its
+   slot divs via getElementById. JS positions it over the sponsored strip
+   when the lightbox is open. The 125px max-height matches the strip's
+   reserved zone; the iframe inside is constrained the same way. */
+.divee-lightbox-inchat-ad {
+  box-sizing: border-box;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  max-height: 125px !important;
+  overflow: hidden !important;
+  pointer-events: auto;
+  background: transparent;
+}
+
+.divee-lightbox-inchat-ad .divee-ad-inchat-desktop,
+.divee-lightbox-inchat-ad .divee-ad-inchat-mobile {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  max-width: 100% !important;
+  max-height: 125px !important;
+}
+
+.divee-lightbox-inchat-ad iframe {
+  max-width: 100% !important;
+  max-height: 125px !important;
+  border: 0;
+  display: block;
+}
+
+.divee-lightbox-inchat-ad .divee-mock-inchat-ad-img {
+  max-width: 100%;
+  max-height: 125px;
+  object-fit: contain;
+}
+
+/* Non-lightbox modes shouldn't see the strip even if it ever leaks into
+   the markup — defensive belt + suspenders. */
+.divee-widget:not(.divee-widget-lightbox) .divee-lightbox-sponsored-strip {
+  display: none !important;
+}
+
+/* Input row — match the modal's roomier padding. */
+.divee-widget-lightbox .divee-input-container {
+  padding: 12px 20px 16px 20px !important;
+}
+
+/* Suggestions popover sits above the sponsored strip, not over it.
+   The popover is `position: absolute; bottom: 100%` on .divee-input-container
+   — by default that anchors flush to the top of the input row, which would
+   cover the strip. Bump margin-bottom by the strip's height (125px) + its
+   top-gap (8px), keeping the original 12px gap above. The strip is only
+   rendered in lightbox mode so other modes are unaffected. */
+.divee-widget-lightbox .divee-suggestions-input {
+  margin-bottom: 145px !important;
+}
+
+/* Mobile: full-screen takeover, edge-to-edge, no rounded corners. Selectors
+   match the desktop specificity so the override actually wins. */
+@media (max-width: 640px) {
+  .divee-widget.divee-widget-lightbox[data-state="expanded"] {
+    bottom: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  .divee-widget.divee-widget-lightbox[data-state="expanded"] .divee-expanded {
+    border-radius: 0 !important;
+    border: none !important;
+    max-height: none !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    transform: translateY(100%);
+  }
+
+  .divee-widget.divee-widget-lightbox[data-state="expanded"] .divee-expanded.divee-lightbox-open {
+    transform: translateY(0);
+  }
+
+  .divee-lightbox-sponsored-strip {
+    min-height: 110px;
+    max-height: 125px;
+    margin: 8px 12px 0 12px;
+  }
+
+  /* Strip is slightly shorter on mobile (110px) since mobile creatives top
+     out smaller; the popover offset shrinks to match. */
+  .divee-widget-lightbox .divee-suggestions-input {
+    margin-bottom: 130px !important;
+  }
+
+  .divee-widget-lightbox .divee-header,
+  .divee-widget-lightbox .divee-chat,
+  .divee-widget-lightbox .divee-input-container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}

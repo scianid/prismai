@@ -1352,6 +1352,47 @@
                     console.error('[Divee] Failed to define mobile slot');
                 }
 
+                // Lightbox in-chat ad slots — only defined when displayMode is
+                // lightbox. Restricted to creative heights ≤ 125px so the ad
+                // fits the modal's sponsored strip without overflowing the
+                // layout. Width is inherited from the existing size pool
+                // (already filtered to the container width above).
+                if (self.config.displayMode === 'lightbox') {
+                    const inchatDesktopPath = `/${accountId},${adTagId}/Divee/desktop_Inline`;
+                    const inchatMobilePath = `/${accountId},${adTagId}/Divee/Divee_mobile_Inline`;
+                    const inchatDesktopSizes = desktopSizes.filter(s => s[1] <= 125);
+                    const inchatDesktopSizes768 = desktopSizes768.filter(s => s[1] <= 125);
+                    const inchatMobileSizes = mobileSizes.filter(s => s[1] <= 125);
+
+                    const inchatDesktopMapping = googletag.sizeMapping()
+                        .addSize([1024, 0], inchatDesktopSizes)
+                        .addSize([768, 0], inchatDesktopSizes768)
+                        .addSize([0, 0], [])
+                        .build();
+                    const inchatMobileMapping = googletag.sizeMapping()
+                        .addSize([768, 0], [])
+                        .addSize([0, 0], inchatMobileSizes)
+                        .build();
+
+                    const inchatDesktopSlot = googletag.defineSlot(inchatDesktopPath, inchatDesktopSizes, 'div-gpt-ad-divee-inchat-desktop');
+                    if (inchatDesktopSlot) {
+                        inchatDesktopSlot.defineSizeMapping(inchatDesktopMapping);
+                        inchatDesktopSlot.addService(googletag.pubads());
+                    } else {
+                        console.error('[Divee] Failed to define in-chat desktop slot');
+                    }
+
+                    const inchatMobileSlot = googletag.defineSlot(inchatMobilePath, inchatMobileSizes, 'div-gpt-ad-divee-inchat-mobile');
+                    if (inchatMobileSlot) {
+                        inchatMobileSlot.defineSizeMapping(inchatMobileMapping);
+                        inchatMobileSlot.addService(googletag.pubads());
+                    } else {
+                        console.error('[Divee] Failed to define in-chat mobile slot');
+                    }
+
+                    self.log('ads', '✓ Lightbox in-chat ad slots defined', { inchatDesktopSizes, inchatMobileSizes });
+                }
+
                 self.log('ads', '✓ Ad slots defined');
 
                 googletag.pubads().collapseEmptyDivs();
@@ -1985,6 +2026,13 @@
             } else if (this.config.displayMode === 'anchored+floating') {
                 this.log('ui', 'Anchored+floating mode, position:', this.config.anchoredPosition);
                 // Main container renders as anchored (no special class); floating button is injected separately.
+            } else if (this.config.displayMode === 'lightbox') {
+                this.log('ui', 'Lightbox mode, position:', this.config.anchoredPosition);
+                // Closed state renders as anchored (inline in the article); the
+                // expanded state takes over the viewport. The class lets the
+                // expanded-state CSS find the container, but the closed-state
+                // styling stays identical to anchored.
+                container.classList.add('divee-widget-lightbox');
             } else {
                 this.log('ui', 'Anchored mode, position:', this.config.anchoredPosition);
             }
@@ -2059,6 +2107,33 @@
             this.elements.collapsedView = collapsedView;
             this.elements.expandedView = expandedView;
             this.elements.adContainer = adContainer;
+
+            // Lightbox in-chat ad container — lives in light DOM (appended to
+            // body) so GPT's `document.getElementById` slot lookup works. The
+            // container is positioned absolutely over the sponsored strip
+            // (inside the shadow DOM modal) whenever the lightbox is open.
+            // Stays hidden while the modal is collapsed.
+            const hasInchatAds = config.show_ad && config.ad_tag_id && this.config.displayMode === 'lightbox';
+            const showInchatMockAd = !config.show_ad && this.isMockAdRequested() && this.config.displayMode === 'lightbox';
+            if (hasInchatAds || showInchatMockAd) {
+                const inchatEl = document.createElement('div');
+                inchatEl.className = 'divee-lightbox-inchat-ad';
+                inchatEl.style.display = 'none';
+                if (showInchatMockAd) {
+                    inchatEl.innerHTML = `
+                        <img src="https://srv.divee.ai/storage/v1/object/public/public-files/fake-ad.gif"
+                             alt="Ad placeholder"
+                             class="divee-mock-inchat-ad-img" />
+                    `;
+                } else {
+                    inchatEl.innerHTML = `
+                        <div id="div-gpt-ad-divee-inchat-desktop" class="divee-ad-inchat-desktop"></div>
+                        <div id="div-gpt-ad-divee-inchat-mobile" class="divee-ad-inchat-mobile"></div>
+                    `;
+                }
+                document.body.appendChild(inchatEl);
+                this.elements.lightboxInchatAdContainer = inchatEl;
+            }
 
             // Apply initial theme colors (will be updated when server config loads)
             this.applyThemeColors(this.state.serverConfig || this.getDefaultConfig());
@@ -2246,6 +2321,14 @@
                             </div>
                         </div>` : '';
 
+            // Lightbox mode reserves a horizontal strip below the messages
+            // for sponsored cards / ads. Empty placeholder for now — ad wiring
+            // is a follow-up. CSS hides this for non-lightbox modes.
+            const lightboxStripHtml = this.config.displayMode === 'lightbox' ? `
+                        <div class="divee-lightbox-sponsored-strip" aria-hidden="true">
+                            <span class="divee-lightbox-sponsored-label">Sponsored</span>
+                        </div>` : '';
+
             view.innerHTML = `
                 <div class="divee-header">
                     <div class="divee-header-top">
@@ -2268,6 +2351,7 @@
                     <div class="divee-chat">
                         <div class="divee-messages"></div>
           </div>
+                    ${lightboxStripHtml}
                     <div class="divee-consent" style="display:none;" role="dialog" aria-label="Privacy preference">
                         <svg class="divee-consent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M21.54 15.88A8 8 0 1 1 8.12 2.46"/>
@@ -2637,11 +2721,29 @@
                         self.log('ads', '✓ Mobile ad slot displayed');
                     }
 
+                    // Lightbox in-chat slots: queue them with GPT. They stay
+                    // hidden until the modal opens (expand() makes the light-
+                    // DOM container visible), at which point GPT's lazy load
+                    // detects viewport visibility and fetches the creative.
+                    if (self.config.displayMode === 'lightbox') {
+                        if (isDesktop) {
+                            googletag.display('div-gpt-ad-divee-inchat-desktop');
+                        } else {
+                            googletag.display('div-gpt-ad-divee-inchat-mobile');
+                        }
+                        self.log('ads', '✓ Lightbox in-chat ad slot displayed');
+                    }
+
                     // If GPT was already loaded, refresh newly defined slots
                     if (self._needsSlotRefresh) {
+                        const allDiveeSlotIds = [
+                            'div-gpt-ad-1770993606680-0',
+                            'div-gpt-ad-1770993160534-0',
+                            'div-gpt-ad-divee-inchat-desktop',
+                            'div-gpt-ad-divee-inchat-mobile',
+                        ];
                         const collapsedSlots = googletag.pubads().getSlots().filter(slot => {
-                            const slotId = slot.getSlotElementId();
-                            return slotId === 'div-gpt-ad-1770993606680-0' || slotId === 'div-gpt-ad-1770993160534-0';
+                            return allDiveeSlotIds.includes(slot.getSlotElementId());
                         });
                         if (collapsedSlots.length > 0) {
                             googletag.pubads().refresh(collapsedSlots);
@@ -2651,24 +2753,36 @@
                     }
 
                     // Listen for ad slot rendering events
-                    const diveeAdSlotIds = ['div-gpt-ad-1770993606680-0', 'div-gpt-ad-1770993160534-0'];
+                    const diveeAdSlotIds = [
+                        'div-gpt-ad-1770993606680-0',
+                        'div-gpt-ad-1770993160534-0',
+                        'div-gpt-ad-divee-inchat-desktop',
+                        'div-gpt-ad-divee-inchat-mobile',
+                    ];
+                    const inchatSlotIds = ['div-gpt-ad-divee-inchat-desktop', 'div-gpt-ad-divee-inchat-mobile'];
 
                     googletag.pubads().addEventListener('slotRenderEnded', function (event) {
                         const slotId = event.slot.getSlotElementId();
                         if (!diveeAdSlotIds.includes(slotId)) return;
                         const adElement = document.getElementById(slotId);
+                        const isInchat = inchatSlotIds.includes(slotId);
 
-                        // Traverse up from the specific ad element — more reliable than document.querySelector
+                        // For in-chat slots the outer container is the light-DOM
+                        // .divee-lightbox-inchat-ad div on body. For collapsed-state
+                        // slots it's the article-sibling .divee-ad-container-shared.
                         const adSlotContainer = adElement?.closest('.divee-ad-slot-shared');
-                        const adOuterContainer = adElement?.closest('.divee-ad-container-shared');
+                        const adOuterContainer = adElement?.closest(isInchat ? '.divee-lightbox-inchat-ad' : '.divee-ad-container-shared');
 
                         if (event.isEmpty) {
                             if (adElement) adElement.style.display = 'none';
-                            if (adOuterContainer) adOuterContainer.style.display = 'none';
+                            if (adOuterContainer && !isInchat) adOuterContainer.style.display = 'none';
+                            // For in-chat: leave the container in place; the
+                            // shadow-DOM strip's "Sponsored" placeholder shows
+                            // through underneath when nothing fills.
                             self.log('ads', 'Slot empty, hiding container:', slotId);
                             self.trackEvent('ad_unfilled', {
                                 ad_unit: slotId,
-                                position: 'collapsed',
+                                position: isInchat ? 'lightbox_inchat' : 'collapsed',
                                 reason: 'no_fill'
                             });
                         } else {
@@ -2679,7 +2793,7 @@
                             self.log('ads', 'Slot filled, showing container:', slotId);
                             self.trackEvent('ad_impression', {
                                 ad_unit: slotId,
-                                position: 'collapsed',
+                                position: isInchat ? 'lightbox_inchat' : 'collapsed',
                                 size: event.size ? `${event.size[0]}x${event.size[1]}` : 'unknown',
                                 advertiser_id: event.advertiserId || null,
                                 creative_id: event.creativeId || null,
@@ -3004,6 +3118,66 @@
                     this.elements.sidebarBackdrop.style.opacity = '1';
                     this.elements.expandedView.classList.add('divee-sidebar-open');
                 });
+            } else if (this.config.displayMode === 'lightbox') {
+                // Lightbox: hide the inline closed pill, show a modal pinned to
+                // the bottom-center of the viewport with a black backdrop.
+                //
+                // Portal the entire shadow host to document.body so the modal
+                // escapes the article's stacking context. Required because
+                // :host has `isolation: isolate` which confines our z-index
+                // 999999 to a local stacking context — publisher elements that
+                // come later in the DOM (e.g. article images with non-1
+                // opacity) would otherwise paint over the modal.
+                const shadowHost = this.elements.shadowHost;
+                if (shadowHost && shadowHost.parentNode !== document.body) {
+                    this._lightboxHostOriginalParent = shadowHost.parentNode;
+                    this._lightboxHostOriginalNextSibling = shadowHost.nextSibling;
+                    document.body.appendChild(shadowHost);
+                }
+
+                this.elements.collapsedView.style.display = 'none';
+                this.elements.expandedView.style.display = 'flex';
+
+                // Backdrop lives as a sibling of the container inside the
+                // shadow root so it inherits shadow-scoped styles but isn't
+                // trapped by the container's own transform.
+                if (!this.elements.lightboxBackdrop) {
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'divee-lightbox-backdrop';
+                    backdrop.addEventListener('click', () => this.collapse());
+                    const mountPoint = this.elements.container.parentNode || this.elements.container;
+                    mountPoint.appendChild(backdrop);
+                    this.elements.lightboxBackdrop = backdrop;
+                }
+                this.elements.lightboxBackdrop.style.display = 'block';
+
+                // Trigger reflow then animate. The .divee-lightbox-open class
+                // flips opacity + transform so CSS handles the easing.
+                requestAnimationFrame(() => {
+                    this.elements.lightboxBackdrop.classList.add('divee-lightbox-backdrop-visible');
+                    this.elements.expandedView.classList.add('divee-lightbox-open');
+
+                    // Light-DOM in-chat ad: align it over the sponsored strip
+                    // and reveal. GPT lazy-load will detect viewport visibility
+                    // and fetch the creative. Position runs after the open
+                    // animation kicks in so the strip's rect is final.
+                    if (this.elements.lightboxInchatAdContainer) {
+                        this.elements.lightboxInchatAdContainer.style.display = 'block';
+                        this._positionLightboxInchatAd();
+                        if (!this._lightboxRepositionHandler) {
+                            this._lightboxRepositionHandler = () => this._positionLightboxInchatAd();
+                            window.addEventListener('resize', this._lightboxRepositionHandler);
+                            window.addEventListener('scroll', this._lightboxRepositionHandler, { passive: true });
+                        }
+                    }
+                });
+
+                // ESC to close. Bound on expand, removed on collapse so we
+                // don't leak a global listener after the lightbox is gone.
+                this._lightboxEscHandler = (e) => {
+                    if (e.key === 'Escape') this.collapse();
+                };
+                document.addEventListener('keydown', this._lightboxEscHandler);
             } else {
                 // Default: fade in expanded view
                 this.elements.expandedView.style.display = 'block';
@@ -3070,6 +3244,48 @@
                     }
                     this.elements.collapsedView.style.display = 'block';
                 }, 300);
+            } else if (this.config.displayMode === 'lightbox') {
+                // Lightbox: reverse the open animation, then restore the
+                // shadow host to its original inline location so the anchored
+                // closed pill renders back in the article.
+                this.elements.expandedView.classList.remove('divee-lightbox-open');
+                if (this.elements.lightboxBackdrop) {
+                    this.elements.lightboxBackdrop.classList.remove('divee-lightbox-backdrop-visible');
+                }
+                if (this._lightboxEscHandler) {
+                    document.removeEventListener('keydown', this._lightboxEscHandler);
+                    this._lightboxEscHandler = null;
+                }
+                // Hide the in-chat ad container and stop tracking the strip
+                // position. The ad slot stays defined; GPT auto-refresh keeps
+                // serving when the modal reopens.
+                if (this.elements.lightboxInchatAdContainer) {
+                    this.elements.lightboxInchatAdContainer.style.display = 'none';
+                }
+                if (this._lightboxRepositionHandler) {
+                    window.removeEventListener('resize', this._lightboxRepositionHandler);
+                    window.removeEventListener('scroll', this._lightboxRepositionHandler);
+                    this._lightboxRepositionHandler = null;
+                }
+                setTimeout(() => {
+                    this.elements.expandedView.style.display = 'none';
+                    if (this.elements.lightboxBackdrop) {
+                        this.elements.lightboxBackdrop.style.display = 'none';
+                    }
+                    this.elements.collapsedView.style.display = 'block';
+
+                    // Restore the shadow host to its original location in the
+                    // article so the closed pill renders inline again.
+                    const shadowHost = this.elements.shadowHost;
+                    if (shadowHost && this._lightboxHostOriginalParent) {
+                        this._lightboxHostOriginalParent.insertBefore(
+                            shadowHost,
+                            this._lightboxHostOriginalNextSibling
+                        );
+                        this._lightboxHostOriginalParent = null;
+                        this._lightboxHostOriginalNextSibling = null;
+                    }
+                }, 250);
             } else {
                 // Default: fade out expanded view
                 this.elements.expandedView.style.opacity = '0';
@@ -3094,6 +3310,29 @@
                 time_spent: Date.now(),
                 questions_asked: this.state.messages.filter(m => m.role === 'user').length
             });
+        }
+
+        // Align the light-DOM in-chat ad container with the shadow-DOM
+        // sponsored strip's screen coordinates. Called on expand, on viewport
+        // resize, and on scroll (the strip is `position: fixed` inside the
+        // modal so its rect changes only on viewport changes, but we cover
+        // scroll too in case publisher pages set overflow surprises).
+        _positionLightboxInchatAd() {
+            const host = this.elements.shadowHost;
+            const container = this.elements.lightboxInchatAdContainer;
+            if (!host || !host.shadowRoot || !container) return;
+            const strip = host.shadowRoot.querySelector('.divee-lightbox-sponsored-strip');
+            if (!strip) return;
+            const rect = strip.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            container.style.position = 'fixed';
+            container.style.left = rect.left + 'px';
+            container.style.top = rect.top + 'px';
+            container.style.width = rect.width + 'px';
+            container.style.height = rect.height + 'px';
+            // Above the backdrop + modal (999999) so the ad renders on top of
+            // the placeholder strip; clicks pass through to the iframe.
+            container.style.zIndex = '1000000';
         }
 
         // Silent fetch — populates this.state.suggestions but does NOT open
