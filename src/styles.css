@@ -4414,13 +4414,37 @@
   display: flex !important;
 }
 
-.divee-lightbox-inchat-ad .divee-ad-inchat-desktop,
-.divee-lightbox-inchat-ad .divee-ad-inchat-mobile {
+/* Per-viewport slot gating — mirrors the existing .divee-ad-desktop /
+   .divee-ad-mobile pattern. Only the matching slot div is `display: flex`
+   so:
+     - GPT lazy-load (visibility-driven) can never see both.
+     - The auto-refresh loop's getComputedStyle/getBoundingClientRect check
+       filters out the wrong-viewport slot, so it never refreshes both.
+   The explicit display()/refresh() calls in widget.js already pick only the
+   active slot, so this is belt-and-suspenders. */
+.divee-lightbox-inchat-ad .divee-ad-inchat-desktop {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   max-width: 100% !important;
   max-height: 260px !important;
+}
+
+.divee-lightbox-inchat-ad .divee-ad-inchat-mobile {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .divee-lightbox-inchat-ad .divee-ad-inchat-desktop {
+    display: none !important;
+  }
+  .divee-lightbox-inchat-ad .divee-ad-inchat-mobile {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    max-width: 100% !important;
+    max-height: 260px !important;
+  }
 }
 
 .divee-lightbox-inchat-ad iframe {

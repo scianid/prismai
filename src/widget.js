@@ -1374,7 +1374,7 @@
                         .addSize([0, 0], inchatMobileSizes)
                         .build();
 
-                    const inchatDesktopSlot = googletag.defineSlot(inchatDesktopPath, inchatDesktopSizes, 'div-gpt-ad-divee-inchat-desktop');
+                    const inchatDesktopSlot = googletag.defineSlot(inchatDesktopPath, inchatDesktopSizes, 'div-gpt-ad-1778602654403-0');
                     if (inchatDesktopSlot) {
                         inchatDesktopSlot.defineSizeMapping(inchatDesktopMapping);
                         inchatDesktopSlot.addService(googletag.pubads());
@@ -1382,7 +1382,7 @@
                         console.error('[Divee] Failed to define in-chat desktop slot');
                     }
 
-                    const inchatMobileSlot = googletag.defineSlot(inchatMobilePath, inchatMobileSizes, 'div-gpt-ad-divee-inchat-mobile');
+                    const inchatMobileSlot = googletag.defineSlot(inchatMobilePath, inchatMobileSizes, 'div-gpt-ad-1778602533404-0');
                     if (inchatMobileSlot) {
                         inchatMobileSlot.defineSizeMapping(inchatMobileMapping);
                         inchatMobileSlot.addService(googletag.pubads());
@@ -1398,7 +1398,7 @@
                     console.info('[Divee:lightbox-inchat] Slots defined:', {
                         desktop: {
                             adUnitPath: inchatDesktopPath,
-                            divId: 'div-gpt-ad-divee-inchat-desktop',
+                            divId: 'div-gpt-ad-1778602654403-0',
                             slotDefined: !!inchatDesktopSlot,
                             sizesByBreakpoint: {
                                 '≥1024px': inchatDesktopSizes,
@@ -1410,7 +1410,7 @@
                         },
                         mobile: {
                             adUnitPath: inchatMobilePath,
-                            divId: 'div-gpt-ad-divee-inchat-mobile',
+                            divId: 'div-gpt-ad-1778602533404-0',
                             slotDefined: !!inchatMobileSlot,
                             sizesByBreakpoint: {
                                 '<768px': inchatMobileSizes,
@@ -2162,8 +2162,8 @@
                     container.classList.add('divee-lightbox-strip-filled');
                 } else {
                     inchatEl.innerHTML = `
-                        <div id="div-gpt-ad-divee-inchat-desktop" class="divee-ad-inchat-desktop"></div>
-                        <div id="div-gpt-ad-divee-inchat-mobile" class="divee-ad-inchat-mobile"></div>
+                        <div id="div-gpt-ad-1778602654403-0" class="divee-ad-inchat-desktop"></div>
+                        <div id="div-gpt-ad-1778602533404-0" class="divee-ad-inchat-mobile"></div>
                     `;
                 }
                 document.body.appendChild(inchatEl);
@@ -2762,9 +2762,9 @@
                     // detects viewport visibility and fetches the creative.
                     if (self.config.displayMode === 'lightbox') {
                         if (isDesktop) {
-                            googletag.display('div-gpt-ad-divee-inchat-desktop');
+                            googletag.display('div-gpt-ad-1778602654403-0');
                         } else {
-                            googletag.display('div-gpt-ad-divee-inchat-mobile');
+                            googletag.display('div-gpt-ad-1778602533404-0');
                         }
                         self.log('ads', '✓ Lightbox in-chat ad slot displayed');
                     }
@@ -2774,8 +2774,8 @@
                         const allDiveeSlotIds = [
                             'div-gpt-ad-1770993606680-0',
                             'div-gpt-ad-1770993160534-0',
-                            'div-gpt-ad-divee-inchat-desktop',
-                            'div-gpt-ad-divee-inchat-mobile',
+                            'div-gpt-ad-1778602654403-0',
+                            'div-gpt-ad-1778602533404-0',
                         ];
                         const collapsedSlots = googletag.pubads().getSlots().filter(slot => {
                             return allDiveeSlotIds.includes(slot.getSlotElementId());
@@ -2791,10 +2791,10 @@
                     const diveeAdSlotIds = [
                         'div-gpt-ad-1770993606680-0',
                         'div-gpt-ad-1770993160534-0',
-                        'div-gpt-ad-divee-inchat-desktop',
-                        'div-gpt-ad-divee-inchat-mobile',
+                        'div-gpt-ad-1778602654403-0',
+                        'div-gpt-ad-1778602533404-0',
                     ];
-                    const inchatSlotIds = ['div-gpt-ad-divee-inchat-desktop', 'div-gpt-ad-divee-inchat-mobile'];
+                    const inchatSlotIds = ['div-gpt-ad-1778602654403-0', 'div-gpt-ad-1778602533404-0'];
 
                     googletag.pubads().addEventListener('slotRenderEnded', function (event) {
                         const slotId = event.slot.getSlotElementId();
@@ -3407,8 +3407,8 @@
         _refreshLightboxInchatSlot() {
             if (!window.googletag || !window.googletag.cmd) return;
             const slotId = window.innerWidth >= 768
-                ? 'div-gpt-ad-divee-inchat-desktop'
-                : 'div-gpt-ad-divee-inchat-mobile';
+                ? 'div-gpt-ad-1778602654403-0'
+                : 'div-gpt-ad-1778602533404-0';
             const self = this;
             googletag.cmd.push(function () {
                 const slot = googletag.pubads().getSlots().find(s => s.getSlotElementId() === slotId);
