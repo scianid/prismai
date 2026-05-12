@@ -1590,6 +1590,13 @@
             if (this.shouldRenderCollapsedBubble()) {
                 this.primeCollapsedBubble();
             }
+
+            // If the widget is already expanded with the empty state showing
+            // (anchoredOpen mode), upgrade the generic empty-state chips to
+            // cached AI suggestions when available.
+            if (this.state.isExpanded && this.state.messages.length === 0) {
+                this.primeEmptyStateChips().catch((err) => this.reportError(err, 'empty_state_chips'));
+            }
         }
 
         _removeRenderedWidget() {
@@ -2334,7 +2341,15 @@
                 </div>
                 <p class="divee-welcome-title">${this.escapeHtml(this.t('welcomeTitle', 'How can I help you?'))}</p>
                 <p class="divee-welcome-subtitle">${this.escapeHtml(this.t('welcomeSubtitle', 'Ask me anything about this article'))}</p>
+                <div class="divee-empty-state-suggestions" role="group" aria-label="Suggested questions"></div>
             `;
+
+            // Populate immediately with localized generic questions so the
+            // empty state never reads as blank. If cached AI suggestions arrive
+            // later via primeEmptyStateChips, they swap in.
+            const slot = container.querySelector('.divee-empty-state-suggestions');
+            this._renderEmptyStateChips(slot, this._getGenericSuggestions(), { isGeneric: true });
+
             return container;
         }
 
@@ -3615,6 +3630,71 @@
             ];
         }
 
+        // Chip rendered inside the empty-state slot. The widget is already
+        // expanded here, so click skips expand() and asks the question
+        // directly — addMessage clears the empty-state container as a side
+        // effect, so the chips disappear naturally with it.
+        _createEmptyStateChip(item, { isGeneric = false } = {}) {
+            const text = typeof item === 'string' ? item : item.question;
+            const id = typeof item === 'string' ? null : item.id;
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'divee-empty-state-chip';
+            if (id) chip.dataset.questionId = id;
+            chip.dataset.questionText = text;
+            if (isGeneric) chip.dataset.generic = 'true';
+            chip.innerHTML = `
+                <span class="divee-empty-state-chip-text"></span>
+                <span class="divee-empty-state-chip-send" aria-hidden="true">&#10148;</span>
+            `;
+            chip.querySelector('.divee-empty-state-chip-text').textContent = text;
+            const source = isGeneric ? 'suggestion-empty-generic' : 'suggestion-empty';
+            chip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.askQuestion(text, source, id);
+            });
+            return chip;
+        }
+
+        _renderEmptyStateChips(slot, items, { isGeneric = false } = {}) {
+            if (!slot) return;
+            slot.innerHTML = '';
+            if (!items || items.length === 0) return;
+            items.slice(0, 5).forEach((item) => {
+                slot.appendChild(this._createEmptyStateChip(item, { isGeneric }));
+            });
+        }
+
+        // Upgrade the generic chips rendered synchronously in createEmptyState
+        // with cached AI suggestions when available. Cache-only GET — never
+        // POSTs to generate fresh suggestions, since the empty state may be
+        // shown on many low-engagement opens.
+        async primeEmptyStateChips() {
+            if (this.config.widgetMode === 'knowledgebase') return;
+            if (!this.state.isExpanded) return;
+            const slot = this.elements.expandedView?.querySelector('.divee-empty-state .divee-empty-state-suggestions');
+            if (!slot) return;
+
+            let cached = this.state.suggestions;
+            if (!cached || cached.length === 0) {
+                const url = (typeof window !== 'undefined' && window.location && window.location.href) || '';
+                if (!url) return;
+                try {
+                    cached = await this.fetchCachedSuggestions(url);
+                } catch (_) { /* non-fatal — generic chips remain */ }
+            }
+
+            // Re-resolve after the await — empty state may have been removed by
+            // the user asking a question in the meantime.
+            const liveSlot = this.elements.expandedView?.querySelector('.divee-empty-state .divee-empty-state-suggestions');
+            if (!liveSlot) return;
+            if (!cached || cached.length === 0) return;
+
+            this.state.suggestions = cached;
+            this._renderEmptyStateChips(liveSlot, cached, { isGeneric: false });
+        }
+
         async primeCollapsedBubble({ collapsedViewEl } = {}) {
             // Re-check gates in case suppression was toggled in another tab.
             this.checkSuggestionsSuppression();
@@ -3947,10 +4027,16 @@
             }
 
             // Track question event for session tracking
-            const isSuggestion = type === 'suggestion' || type === 'suggestion-closed' || type === 'suggestion-generic';
+            const isSuggestion = type === 'suggestion'
+                || type === 'suggestion-closed'
+                || type === 'suggestion-generic'
+                || type === 'suggestion-empty'
+                || type === 'suggestion-empty-generic';
             const eventPayload = { question_type: type };
             if (type === 'suggestion-closed') eventPayload.source = 'closed_bubble';
             if (type === 'suggestion-generic') eventPayload.source = 'closed_bubble_generic';
+            if (type === 'suggestion-empty') eventPayload.source = 'empty_state';
+            if (type === 'suggestion-empty-generic') eventPayload.source = 'empty_state_generic';
             this.trackEvent(isSuggestion ? 'suggestion_question_asked' : 'custom_question_asked', eventPayload);
 
             // Close suggestions overlay so user can see the chat

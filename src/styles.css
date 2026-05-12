@@ -1175,6 +1175,96 @@
   margin: 0 !important;
 }
 
+.divee-empty-state-suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.divee-empty-state-suggestions:empty {
+  display: none;
+}
+
+.divee-empty-state-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 14px;
+  background: var(--divee-surface-alt);
+  border: 0;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--divee-text);
+  font-family: inherit;
+  cursor: pointer;
+  max-width: 100%;
+  text-align: left;
+  line-height: 1.2;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 3px 8px rgba(0, 0, 0, 0.07);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  animation: divee-fade-in 0.3s ease;
+}
+
+.divee-empty-state-chip:hover {
+  background: var(--divee-surface-hover);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.07),
+    0 5px 12px rgba(0, 0, 0, 0.09);
+}
+
+.divee-empty-state-chip:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--divee-color-secondary) 60%, transparent);
+  outline-offset: 2px;
+}
+
+.divee-empty-state-chip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.divee-empty-state-chip-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #6b7280;
+  color: white;
+  font-size: 11px;
+  line-height: 1;
+  flex-shrink: 0;
+  text-indent: 2px;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.divee-empty-state-chip:hover .divee-empty-state-chip-send {
+  transform: translateX(1px);
+  background: #4b5563;
+}
+
+.divee-widget[dir="rtl"] .divee-empty-state-chip {
+  text-align: right;
+  direction: rtl;
+}
+
+.divee-widget[dir="rtl"] .divee-empty-state-chip-send {
+  transform: scaleX(-1);
+}
+
+.divee-widget[dir="rtl"] .divee-empty-state-chip:hover .divee-empty-state-chip-send {
+  transform: scaleX(-1) translateX(-1px);
+}
+
 .divee-message {
   display: flex;
   flex-direction: column;
@@ -3585,14 +3675,31 @@
     height: 15px;
   }
 
-  /* Chat keeps the desktop visible height so the bubble area doesn't
-     feel compressed on mobile. Use min-height + flex to let it grow on
-     taller phones, but never shrink below the desktop baseline. */
+  /* Chat keeps a tall visible area on mobile but ~10% shorter than the
+     desktop baseline to fit smaller viewports without dominating the page.
+     Use min-height + flex to let it grow on taller phones. */
   .divee-widget .divee-chat {
     height: auto !important;
-    min-height: 460px !important;
+    min-height: 414px !important;
     flex: 1 !important;
     padding: 12px 10px 12px 8px !important;
+  }
+
+  /* Match the panel cap to the reduced chat min-height so the overall
+     open height drops ~10% on mobile (720 → 648). Anchored only —
+     floating/sidebar/lightbox have their own mobile sizing. */
+  .divee-widget:not(.divee-widget-floating):not(.divee-widget-sidebar):not(.divee-widget-cubic):not(.divee-widget-lightbox)[data-state="expanded"] .divee-expanded,
+  .divee-widget:not(.divee-widget-floating):not(.divee-widget-sidebar):not(.divee-widget-cubic):not(.divee-widget-lightbox) .divee-expanded {
+    max-height: 648px !important;
+  }
+
+  /* And keep the chat-area reduction scoped the same way — only the
+     anchored standard mode trims its chat min-height. Floating/sidebar/
+     lightbox keep their own internal layouts. */
+  .divee-widget-floating .divee-chat,
+  .divee-widget-sidebar .divee-chat,
+  .divee-widget-lightbox .divee-chat {
+    min-height: 460px !important;
   }
 
   /* Tighter side padding around input area */
