@@ -2679,11 +2679,16 @@
   height: 36px !important;
 }
 
-/* Sparkle icon stays solid white regardless of the publisher's
-   highlight_color — otherwise brand-dark colors (e.g. shmua.com's
-   #32373c / #000000) render the icon invisible on the dark circle. */
+/* Sparkle icon contrasts with the circle's --divee-surface background:
+   dark icon on the light circle (light theme), white icon on the dark
+   circle (dark theme). Hardcoded so brand-dark highlight_color values
+   (e.g. shmua.com's #32373c / #000000) can't render the icon invisible. */
 .divee-fab-sparkle .divee-fab-star-stop-start,
 .divee-fab-sparkle .divee-fab-star-stop-end {
+  stop-color: #0f172a;
+}
+.divee-floating-ask-ai.divee-dark .divee-fab-sparkle .divee-fab-star-stop-start,
+.divee-floating-ask-ai.divee-dark .divee-fab-sparkle .divee-fab-star-stop-end {
   stop-color: #ffffff;
 }
 
