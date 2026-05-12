@@ -1390,6 +1390,39 @@
                         console.error('[Divee] Failed to define in-chat mobile slot');
                     }
 
+                    // Unconditional summary so the user can verify what GAM
+                    // was asked for without enabling ?diveeDebug=true. One
+                    // line at init — low noise, high signal for ad-setup
+                    // debugging ("did the slot define? what sizes? which
+                    // breakpoint matches my viewport?").
+                    console.info('[Divee:lightbox-inchat] Slots defined:', {
+                        desktop: {
+                            adUnitPath: inchatDesktopPath,
+                            divId: 'div-gpt-ad-divee-inchat-desktop',
+                            slotDefined: !!inchatDesktopSlot,
+                            sizesByBreakpoint: {
+                                '≥1024px': inchatDesktopSizes,
+                                '768-1023px': inchatDesktopSizes768,
+                                '<768px': '[] (mobile slot takes over)',
+                            },
+                            containerWidthAtInit: containerWidth,
+                            heightFilter: '≤125px',
+                        },
+                        mobile: {
+                            adUnitPath: inchatMobilePath,
+                            divId: 'div-gpt-ad-divee-inchat-mobile',
+                            slotDefined: !!inchatMobileSlot,
+                            sizesByBreakpoint: {
+                                '<768px': inchatMobileSizes,
+                                '≥768px': '[] (desktop slot takes over)',
+                            },
+                            containerWidthAtInit: containerWidth,
+                            heightFilter: '≤125px',
+                        },
+                        viewport: { width: window.innerWidth, height: window.innerHeight },
+                        activeSlot: window.innerWidth >= 768 ? 'desktop' : 'mobile',
+                    });
+
                     self.log('ads', '✓ Lightbox in-chat ad slots defined', { inchatDesktopSizes, inchatMobileSizes });
                 }
 
@@ -2769,6 +2802,19 @@
                         const adElement = document.getElementById(slotId);
                         const isInchat = inchatSlotIds.includes(slotId);
 
+                        if (isInchat) {
+                            console.info('[Divee:lightbox-inchat] slotRenderEnded', {
+                                slotId,
+                                adUnitPath: event.slot.getAdUnitPath(),
+                                isEmpty: event.isEmpty,
+                                size: event.size,
+                                advertiserId: event.advertiserId,
+                                creativeId: event.creativeId,
+                                lineItemId: event.lineItemId,
+                                campaignId: event.campaignId,
+                            });
+                        }
+
                         // For in-chat slots the outer container is the light-DOM
                         // .divee-lightbox-inchat-ad div on body. For collapsed-state
                         // slots it's the article-sibling .divee-ad-container-shared.
@@ -3353,10 +3399,11 @@
             });
         }
 
-        // Force GPT to refetch the in-chat slot. Called on every modal reopen
-        // so a previously empty slot gets a fresh chance to fill. The
-        // resulting `slotRenderEnded` updates the strip's expanded/collapsed
-        // state via the existing handler.
+        // Force GPT to refetch the in-chat slot. Called on every modal open
+        // so the slot gets a fresh chance regardless of lazy-load (the strip
+        // starts at 0 height, which lazy-load would skip). The resulting
+        // `slotRenderEnded` updates the strip's expanded/collapsed state via
+        // the existing handler.
         _refreshLightboxInchatSlot() {
             if (!window.googletag || !window.googletag.cmd) return;
             const slotId = window.innerWidth >= 768
@@ -3366,8 +3413,17 @@
             googletag.cmd.push(function () {
                 const slot = googletag.pubads().getSlots().find(s => s.getSlotElementId() === slotId);
                 if (slot) {
+                    const sizes = typeof slot.getSizes === 'function' ? slot.getSizes(window.innerWidth, window.innerHeight) : 'getSizes unavailable';
+                    console.info('[Divee:lightbox-inchat] Refreshing slot', {
+                        slotId,
+                        adUnitPath: slot.getAdUnitPath(),
+                        sizesForCurrentViewport: sizes,
+                        viewport: { width: window.innerWidth, height: window.innerHeight },
+                    });
                     googletag.pubads().refresh([slot]);
                     self.log('ads', '✓ Forced refresh of lightbox in-chat slot:', slotId);
+                } else {
+                    console.warn('[Divee:lightbox-inchat] refresh: slot not found in GPT registry', { slotId });
                 }
             });
         }
