@@ -4355,10 +4355,10 @@
   padding-bottom: 8px !important;
 }
 
-/* Sponsored strip — reserved zone for the in-chat ad (light-DOM iframe is
-   positioned over it by JS). Min-height matches the ad's max-height (125px)
-   so the layout doesn't jump when the ad fills. When no ad fills, the
-   "Sponsored" label is visible underneath as a quiet placeholder. */
+/* Sponsored strip — reserved layout zone for the in-chat ad. The actual
+   ad iframe (in light DOM) is positioned over this by JS. No background or
+   border chrome and no margins — the strip spans the full modal width so
+   ads sit as close to the edges as their own dimensions allow. */
 .divee-lightbox-sponsored-strip {
   flex: 0 0 auto;
   display: flex;
@@ -4366,19 +4366,12 @@
   justify-content: center;
   min-height: 125px;
   max-height: 125px;
-  margin: 8px 20px 0 20px;
-  background: var(--divee-surface-muted);
-  border: 1px dashed var(--divee-border);
-  border-radius: 12px;
+  margin: 0;
   box-sizing: border-box;
 }
 
 .divee-lightbox-sponsored-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--divee-text-subtle);
+  display: none;
 }
 
 /* Light-DOM in-chat ad container — appended to <body> so GPT can find its
@@ -4438,11 +4431,11 @@
 /* Suggestions popover sits above the sponsored strip, not over it.
    The popover is `position: absolute; bottom: 100%` on .divee-input-container
    — by default that anchors flush to the top of the input row, which would
-   cover the strip. Bump margin-bottom by the strip's height (125px) + its
-   top-gap (8px), keeping the original 12px gap above. The strip is only
-   rendered in lightbox mode so other modes are unaffected. */
+   cover the strip. Bump margin-bottom by the strip's height (125px) plus
+   the original 12px gap. The strip is only rendered in lightbox mode so
+   other modes are unaffected. */
 .divee-widget-lightbox .divee-suggestions-input {
-  margin-bottom: 145px !important;
+  margin-bottom: 137px !important;
 }
 
 /* Mobile: full-screen takeover, edge-to-edge, no rounded corners. Selectors
@@ -4472,13 +4465,13 @@
   .divee-lightbox-sponsored-strip {
     min-height: 110px;
     max-height: 125px;
-    margin: 8px 12px 0 12px;
+    margin: 0;
   }
 
   /* Strip is slightly shorter on mobile (110px) since mobile creatives top
      out smaller; the popover offset shrinks to match. */
   .divee-widget-lightbox .divee-suggestions-input {
-    margin-bottom: 130px !important;
+    margin-bottom: 122px !important;
   }
 
   .divee-widget-lightbox .divee-header,
