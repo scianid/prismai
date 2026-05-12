@@ -4358,16 +4358,27 @@
 /* Sponsored strip — reserved layout zone for the in-chat ad. The actual
    ad iframe (in light DOM) is positioned over this by JS. No background or
    border chrome and no margins — the strip spans the full modal width so
-   ads sit as close to the edges as their own dimensions allow. */
+   ads sit as close to the edges as their own dimensions allow.
+   Height is driven by --divee-strip-h so the slotRenderEnded handler can
+   collapse the strip to 0 when the in-chat slot has no fill. */
+.divee-widget-lightbox {
+  --divee-strip-h: 125px;
+}
+
+.divee-widget-lightbox.divee-lightbox-strip-empty {
+  --divee-strip-h: 0px;
+}
+
 .divee-lightbox-sponsored-strip {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 125px;
-  max-height: 125px;
+  min-height: var(--divee-strip-h);
+  max-height: var(--divee-strip-h);
   margin: 0;
   box-sizing: border-box;
+  transition: min-height 180ms ease, max-height 180ms ease;
 }
 
 .divee-lightbox-sponsored-label {
@@ -4431,11 +4442,11 @@
 /* Suggestions popover sits above the sponsored strip, not over it.
    The popover is `position: absolute; bottom: 100%` on .divee-input-container
    — by default that anchors flush to the top of the input row, which would
-   cover the strip. Bump margin-bottom by the strip's height (125px) plus
-   the original 12px gap. The strip is only rendered in lightbox mode so
-   other modes are unaffected. */
+   cover the strip. Offset by the strip's current height (var) plus the
+   original 12px gap so the popover shifts down automatically when the strip
+   collapses to 0 on an empty fill. */
 .divee-widget-lightbox .divee-suggestions-input {
-  margin-bottom: 137px !important;
+  margin-bottom: calc(var(--divee-strip-h) + 12px) !important;
 }
 
 /* Mobile: full-screen takeover, edge-to-edge, no rounded corners. Selectors
@@ -4462,16 +4473,16 @@
     transform: translateY(0);
   }
 
-  .divee-lightbox-sponsored-strip {
-    min-height: 110px;
-    max-height: 125px;
-    margin: 0;
+  /* Mobile creatives top out smaller — shrink the reserved height to match. */
+  .divee-widget-lightbox {
+    --divee-strip-h: 110px;
+  }
+  .divee-widget-lightbox.divee-lightbox-strip-empty {
+    --divee-strip-h: 0px;
   }
 
-  /* Strip is slightly shorter on mobile (110px) since mobile creatives top
-     out smaller; the popover offset shrinks to match. */
-  .divee-widget-lightbox .divee-suggestions-input {
-    margin-bottom: 122px !important;
+  .divee-lightbox-sponsored-strip {
+    margin: 0;
   }
 
   .divee-widget-lightbox .divee-header,

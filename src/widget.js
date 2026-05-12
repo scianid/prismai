@@ -2775,9 +2775,16 @@
                         if (event.isEmpty) {
                             if (adElement) adElement.style.display = 'none';
                             if (adOuterContainer && !isInchat) adOuterContainer.style.display = 'none';
-                            // For in-chat: leave the container in place; the
-                            // shadow-DOM strip's "Sponsored" placeholder shows
-                            // through underneath when nothing fills.
+                            // In-chat: collapse the shadow-DOM strip to 0
+                            // height (via CSS var on the widget container)
+                            // so we don't leave a 125px gap when nothing fills.
+                            // Re-run the light-DOM positioner after the DOM
+                            // settles so the container collapses with it.
+                            if (isInchat) {
+                                const widgetEl = self.elements.container;
+                                if (widgetEl) widgetEl.classList.add('divee-lightbox-strip-empty');
+                                requestAnimationFrame(() => self._positionLightboxInchatAd());
+                            }
                             self.log('ads', 'Slot empty, hiding container:', slotId);
                             self.trackEvent('ad_unfilled', {
                                 ad_unit: slotId,
@@ -2793,6 +2800,14 @@
                             // Setting inline `display: block` here would
                             // leak past collapse and leave the ad on screen.
                             if (adOuterContainer && !isInchat) adOuterContainer.style.display = 'block';
+                            // In-chat: make sure the strip is at full height
+                            // (in case a previous render had collapsed it),
+                            // then re-position the light-DOM container.
+                            if (isInchat) {
+                                const widgetEl = self.elements.container;
+                                if (widgetEl) widgetEl.classList.remove('divee-lightbox-strip-empty');
+                                requestAnimationFrame(() => self._positionLightboxInchatAd());
+                            }
                             self.log('ads', 'Slot filled, showing container:', slotId);
                             self.trackEvent('ad_impression', {
                                 ad_unit: slotId,
@@ -3165,6 +3180,10 @@
                     // and fetch the creative. Position runs after the open
                     // animation kicks in so the strip's rect is final.
                     if (this.elements.lightboxInchatAdContainer) {
+                        // Reset the strip's collapsed state so a previously
+                        // empty fill doesn't keep the strip at 0 height on
+                        // reopen — the slot gets a fresh chance to fill.
+                        this.elements.container.classList.remove('divee-lightbox-strip-empty');
                         this.elements.lightboxInchatAdContainer.classList.add('divee-lightbox-inchat-ad-visible');
                         this._positionLightboxInchatAd();
                         if (!this._lightboxRepositionHandler) {
