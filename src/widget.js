@@ -1353,16 +1353,16 @@
                 }
 
                 // Lightbox in-chat ad slots — only defined when displayMode is
-                // lightbox. Restricted to creative heights ≤ 125px so the ad
+                // lightbox. Restricted to creative heights ≤ 260px so the ad
                 // fits the modal's sponsored strip without overflowing the
                 // layout. Width is inherited from the existing size pool
                 // (already filtered to the container width above).
                 if (self.config.displayMode === 'lightbox') {
                     const inchatDesktopPath = `/${accountId},${adTagId}/Divee/desktop_Inline`;
                     const inchatMobilePath = `/${accountId},${adTagId}/Divee/Divee_mobile_Inline`;
-                    const inchatDesktopSizes = desktopSizes.filter(s => s[1] <= 125);
-                    const inchatDesktopSizes768 = desktopSizes768.filter(s => s[1] <= 125);
-                    const inchatMobileSizes = mobileSizes.filter(s => s[1] <= 125);
+                    const inchatDesktopSizes = desktopSizes.filter(s => s[1] <= 260);
+                    const inchatDesktopSizes768 = desktopSizes768.filter(s => s[1] <= 260);
+                    const inchatMobileSizes = mobileSizes.filter(s => s[1] <= 260);
 
                     const inchatDesktopMapping = googletag.sizeMapping()
                         .addSize([1024, 0], inchatDesktopSizes)
@@ -1406,7 +1406,7 @@
                                 '<768px': '[] (mobile slot takes over)',
                             },
                             containerWidthAtInit: containerWidth,
-                            heightFilter: '≤125px',
+                            heightFilter: '≤260px',
                         },
                         mobile: {
                             adUnitPath: inchatMobilePath,
@@ -1417,7 +1417,7 @@
                                 '≥768px': '[] (desktop slot takes over)',
                             },
                             containerWidthAtInit: containerWidth,
-                            heightFilter: '≤125px',
+                            heightFilter: '≤260px',
                         },
                         viewport: { width: window.innerWidth, height: window.innerHeight },
                         activeSlot: window.innerWidth >= 768 ? 'desktop' : 'mobile',
@@ -3238,7 +3238,7 @@
                     // GPT lazy-load can't fetch (zero-dimension slot) — we
                     // force an explicit refresh on every open, including the
                     // first, to trigger the fetch. slotRenderEnded then flips
-                    // the strip to filled (grows to 125px) or leaves it
+                    // the strip to filled (grows to 260px) or leaves it
                     // collapsed on empty.
                     if (this.elements.lightboxInchatAdContainer) {
                         this.elements.lightboxInchatAdContainer.classList.add('divee-lightbox-inchat-ad-visible');
