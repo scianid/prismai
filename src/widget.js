@@ -1360,9 +1360,24 @@
                 if (self.config.displayMode === 'lightbox') {
                     const inchatDesktopPath = `/${accountId},${adTagId}/Divee/desktop_Inline`;
                     const inchatMobilePath = `/${accountId},${adTagId}/Divee/Divee_mobile_Inline`;
-                    const inchatDesktopSizes = desktopSizes.filter(s => s[1] <= 260);
-                    const inchatDesktopSizes768 = desktopSizes768.filter(s => s[1] <= 260);
-                    const inchatMobileSizes = mobileSizes.filter(s => s[1] <= 260);
+
+                    // Sizes mirror the GAM "Inline" ad units exactly so every
+                    // line item set up there is eligible. Filtering rules:
+                    //   • height ≤ 260px (fits the lightbox sponsored strip)
+                    //   • width ≤ containerWidth (no horizontal overflow)
+                    //   • 'fluid' is always kept (no fixed dimensions)
+                    const inlineUnitSizes = [
+                        [120, 80], [216, 54], [300, 75], [320, 100], [120, 60],
+                        [125, 125], [300, 50], [468, 60], [120, 30], 'fluid',
+                        [460, 60], [216, 36], [300, 250], [220, 90], [234, 60],
+                        [120, 20], [200, 200], [320, 50], [250, 250],
+                    ];
+                    const filterInline = (maxWidth) => inlineUnitSizes.filter(s =>
+                        s === 'fluid' || (s[1] <= 260 && s[0] <= maxWidth)
+                    );
+                    const inchatDesktopSizes = filterInline(containerWidth);
+                    const inchatDesktopSizes768 = filterInline(containerWidth);
+                    const inchatMobileSizes = filterInline(containerWidth);
 
                     const inchatDesktopMapping = googletag.sizeMapping()
                         .addSize([1024, 0], inchatDesktopSizes)
