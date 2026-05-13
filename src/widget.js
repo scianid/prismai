@@ -1379,7 +1379,7 @@
                         inchatDesktopSlot.defineSizeMapping(inchatDesktopMapping);
                         inchatDesktopSlot.addService(googletag.pubads());
                     } else {
-                        console.error('[Divee] Failed to define in-chat desktop slot');
+                        self.log('lightbox-inchat', 'ERROR: Failed to define in-chat desktop slot');
                     }
 
                     const inchatMobileSlot = googletag.defineSlot(inchatMobilePath, inchatMobileSizes, 'div-gpt-ad-1778602533404-0');
@@ -1387,15 +1387,10 @@
                         inchatMobileSlot.defineSizeMapping(inchatMobileMapping);
                         inchatMobileSlot.addService(googletag.pubads());
                     } else {
-                        console.error('[Divee] Failed to define in-chat mobile slot');
+                        self.log('lightbox-inchat', 'ERROR: Failed to define in-chat mobile slot');
                     }
 
-                    // Unconditional summary so the user can verify what GAM
-                    // was asked for without enabling ?diveeDebug=true. One
-                    // line at init — low noise, high signal for ad-setup
-                    // debugging ("did the slot define? what sizes? which
-                    // breakpoint matches my viewport?").
-                    console.info('[Divee:lightbox-inchat] Slots defined:', {
+                    self.log('lightbox-inchat', 'Slots defined:', {
                         desktop: {
                             adUnitPath: inchatDesktopPath,
                             divId: 'div-gpt-ad-1778602654403-0',
@@ -2811,6 +2806,48 @@
                     ];
                     const inchatSlotIds = ['div-gpt-ad-1778602654403-0', 'div-gpt-ad-1778602533404-0'];
 
+                    // Detailed GPT lifecycle logging for in-chat slots.
+                    // Gated behind ?diveeDebug=true&diveeDebugFilter=lightbox-inchat
+                    // (or any filter that includes lightbox-inchat).
+                    googletag.pubads().addEventListener('slotRequested', function (event) {
+                        const slotId = event.slot.getSlotElementId();
+                        if (!inchatSlotIds.includes(slotId)) return;
+                        self.log('lightbox-inchat', 'slotRequested → ad call sent to GAM', {
+                            slotId,
+                            adUnitPath: event.slot.getAdUnitPath(),
+                        });
+                    });
+
+                    googletag.pubads().addEventListener('slotResponseReceived', function (event) {
+                        const slotId = event.slot.getSlotElementId();
+                        if (!inchatSlotIds.includes(slotId)) return;
+                        self.log('lightbox-inchat', 'slotResponseReceived ← GAM responded', {
+                            slotId,
+                            adUnitPath: event.slot.getAdUnitPath(),
+                        });
+                    });
+
+                    googletag.pubads().addEventListener('slotOnload', function (event) {
+                        const slotId = event.slot.getSlotElementId();
+                        if (!inchatSlotIds.includes(slotId)) return;
+                        self.log('lightbox-inchat', 'slotOnload (creative iframe loaded)', { slotId });
+                    });
+
+                    googletag.pubads().addEventListener('impressionViewable', function (event) {
+                        const slotId = event.slot.getSlotElementId();
+                        if (!inchatSlotIds.includes(slotId)) return;
+                        self.log('lightbox-inchat', 'impressionViewable (50% pixels ≥1s)', { slotId });
+                    });
+
+                    googletag.pubads().addEventListener('slotVisibilityChanged', function (event) {
+                        const slotId = event.slot.getSlotElementId();
+                        if (!inchatSlotIds.includes(slotId)) return;
+                        self.log('lightbox-inchat', 'slotVisibilityChanged', {
+                            slotId,
+                            inViewPercentage: event.inViewPercentage,
+                        });
+                    });
+
                     googletag.pubads().addEventListener('slotRenderEnded', function (event) {
                         const slotId = event.slot.getSlotElementId();
                         if (!diveeAdSlotIds.includes(slotId)) return;
@@ -2818,7 +2855,7 @@
                         const isInchat = inchatSlotIds.includes(slotId);
 
                         if (isInchat) {
-                            console.info('[Divee:lightbox-inchat] slotRenderEnded', {
+                            self.log('lightbox-inchat', event.isEmpty ? 'slotRenderEnded — NO FILL' : 'slotRenderEnded — FILLED', {
                                 slotId,
                                 adUnitPath: event.slot.getAdUnitPath(),
                                 isEmpty: event.isEmpty,
@@ -2827,6 +2864,12 @@
                                 creativeId: event.creativeId,
                                 lineItemId: event.lineItemId,
                                 campaignId: event.campaignId,
+                                yieldGroupIds: event.yieldGroupIds,
+                                companyIds: event.companyIds,
+                                labelIds: event.labelIds,
+                                sourceAgnosticCreativeId: event.sourceAgnosticCreativeId,
+                                sourceAgnosticLineItemId: event.sourceAgnosticLineItemId,
+                                slotContentChanged: event.slotContentChanged,
                             });
                         }
 
