@@ -29,14 +29,6 @@
     const DIVEE_NON_RENDER_ENDPOINT = 'https://srv.divee.ai/functions/v1/widget-non-render';
     let diveeNonRenderReported = false;
 
-    // Hard-coded default for the closed-state suggestion carousel. Used when
-    // the per-project experimental override is absent. Admins can flip it on
-    // for individual widgets via project.experimental.animatedSuggestionsOnClosed
-    // (see /config endpoint). Gates both the runtime render path and the
-    // pre-mount skeleton's bubble row so the page reserves no extra height
-    // while disabled.
-    const DIVEE_COLLAPSED_BUBBLE_DEFAULT = false;
-
     // Unload guard: errors thrown by pending fetches during navigation/tab-close
     // surface as `TypeError: Failed to fetch` in most browsers and aren't real
     // bugs — just requests the browser aborted. Suppress reports once the page
@@ -3602,7 +3594,6 @@
         }
 
         shouldRenderCollapsedBubble() {
-            if (!this.experimentalEnabled('animatedSuggestionsOnClosed', DIVEE_COLLAPSED_BUBBLE_DEFAULT)) return false;
             const m = this.config.displayMode;
             if (m === 'floating' || m === 'sidebar' || m === 'cubic') return false;
             if (this.config.widgetMode === 'knowledgebase') return false;
@@ -5193,7 +5184,7 @@
                 <div class="divee-skeleton-line divee-skeleton-line--small"></div>
                 <div class="divee-skeleton-line divee-skeleton-line--medium"></div>
             </div>
-            ${DIVEE_COLLAPSED_BUBBLE_DEFAULT ? '<div class="divee-skeleton-bubble"></div>' : ''}
+            <div class="divee-skeleton-bubble"></div>
             <div class="divee-skeleton-pill"></div>
             <div class="divee-skeleton-tags">
                 <div class="divee-skeleton-chip"></div>

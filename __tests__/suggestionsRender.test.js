@@ -16,13 +16,9 @@ const fs = require('fs');
 
 const widgetJs = fs.readFileSync('./src/widget.js', 'utf8');
 
-// The closed-state suggestion teaser bubble is gated by a per-project
-// experimental flag (`animatedSuggestionsOnClosed`). The bubble test suite
-// below opts in by setting it to true on the widget's serverConfig — see
-// `makeAnchoredWidget`.
 const describeBubble = describe;
 
-function makeWidget({ experimental } = {}) {
+function makeWidget() {
     delete window.__diveeWidgetLoaded;
     eval(widgetJs); // eslint-disable-line no-eval
     const widget = new DiveeWidget({ projectId: 'test-project' }); // eslint-disable-line no-undef
@@ -31,7 +27,7 @@ function makeWidget({ experimental } = {}) {
         ad_tag_id: null,
         client_name: 'Test',
         icon_url: '',
-        experimental: experimental || {}
+        experimental: {}
     };
     widget.createWidget();
     // askQuestion would start a real fetch / streaming flow — stub it for tests.
@@ -153,11 +149,7 @@ describeBubble('collapsed-state suggestion bubble', () => {
     });
 
     function makeAnchoredWidget(opts = {}) {
-        // Opt into the closed-state carousel experimental flag at construction
-        // time so createWidget() pre-reserves the bubble slot. The widget's
-        // hard-coded default is `false`; production projects flip it on via
-        // serverConfig.experimental.animatedSuggestionsOnClosed.
-        const widget = makeWidget({ experimental: { animatedSuggestionsOnClosed: true } });
+        const widget = makeWidget();
         // makeWidget defaulted to anchored. Mutate displayMode if a test needs another mode.
         if (opts.displayMode) widget.config.displayMode = opts.displayMode;
         if (opts.widgetMode) widget.config.widgetMode = opts.widgetMode;
@@ -204,19 +196,6 @@ describeBubble('collapsed-state suggestion bubble', () => {
         expect(chips[1].dataset.questionText).toBe('Second?');
         expect(chips[2].dataset.questionText).toBe('Third?');
         expect(chips[0].querySelector('.divee-collapsed-bubble-chip-text').textContent).toBe('First?');
-    });
-
-    test('experimental flag gates the bubble: false → no render even when everything else passes', () => {
-        const widget = makeAnchoredWidget();
-        // Disable the per-project experimental override.
-        widget.state.serverConfig.experimental = { animatedSuggestionsOnClosed: false };
-        expect(widget.shouldRenderCollapsedBubble()).toBe(false);
-        // Re-enable: gate passes (other gates also pass for an anchored article widget).
-        widget.state.serverConfig.experimental = { animatedSuggestionsOnClosed: true };
-        expect(widget.shouldRenderCollapsedBubble()).toBe(true);
-        // Unset key falls back to the hard-coded default (false).
-        widget.state.serverConfig.experimental = {};
-        expect(widget.shouldRenderCollapsedBubble()).toBe(false);
     });
 
     test('shouldRenderCollapsedBubble returns false in cubic/sidebar/floating/knowledgebase/suppression', () => {
