@@ -263,6 +263,45 @@ Deno.test("config: display_position falls back to 'bottom-right' for unknown val
   assertEquals(body.display_position, "bottom-right");
 });
 
+// The worldcup widget uses all four corners as launcher anchor points, so
+// /config must pass them through unmodified rather than collapsing them to
+// the legacy bottom-only set.
+for (const corner of ["top-left", "top-right", "bottom-left", "bottom-right"]) {
+  Deno.test(`config: display_position '${corner}' passes through unmodified`, async () => {
+    const deps = makeDeps({
+      getProjectById: () => Promise.resolve(fakeProject({ display_position: corner })),
+    });
+    const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.display_position, corner);
+  });
+}
+
+Deno.test("config: response includes widget_type (defaults to 'standard')", async () => {
+  const res = await configHandler(req({ projectId: PROJECT_ID }), makeDeps());
+  const body = await res.json();
+  assertEquals(body.widget_type, "standard");
+});
+
+Deno.test("config: response surfaces widget_type='worldcup' for worldcup projects", async () => {
+  const deps = makeDeps({
+    getProjectById: () => Promise.resolve(fakeProject({ widget_type: "worldcup" })),
+  });
+  const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
+  const body = await res.json();
+  assertEquals(body.widget_type, "worldcup");
+});
+
+Deno.test("config: unknown widget_type falls back to 'standard'", async () => {
+  const deps = makeDeps({
+    getProjectById: () => Promise.resolve(fakeProject({ widget_type: "made-up" as any })),
+  });
+  const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
+  const body = await res.json();
+  assertEquals(body.widget_type, "standard");
+});
+
 Deno.test("config: response includes translations keyed by language_code", async () => {
   // Default fake project has language_code not set → resolver treats
   // missing code as "we don't know", which resolves to English.
