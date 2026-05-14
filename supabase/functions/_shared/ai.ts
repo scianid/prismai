@@ -646,7 +646,7 @@ export async function streamWorldcupAnswer(
     ...messages.filter((m) => m.role !== "system"),
   ];
 
-  const model = AI_PROVIDERS.openai.model;
+  const model = "gpt-5.3-chat-latest";
   console.info("ai: streamWorldcupAnswer", { vectorStoreId, mcpUrl, model });
 
   const rawResponse = await fetch(AI_PROVIDERS.openai.responsesUrl, {
