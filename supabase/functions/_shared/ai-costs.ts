@@ -2,6 +2,8 @@ export type ModelId = string;
 
 export const MODEL_COSTS: Record<string, { input: number; output: number }> = {
   "gpt-5.2": { input: 1.75, output: 14.00 },
+  "gpt-5.3-chat-latest": { input: 1.75, output: 14.00 },
+  "gpt-5.4-mini": { input: 0.75, output: 4.50 },
 };
 
 /**
