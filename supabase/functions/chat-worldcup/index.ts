@@ -112,12 +112,11 @@ export async function chatHandler(
       sensitiveHits = classified.hits;
     }
 
-    if (!projectId || !questionId || !question || !url) {
+    if (!projectId || !questionId || !question) {
       console.error("chat-worldcup: missing fields", {
         hasProjectId: !!projectId,
         hasQuestionId: !!questionId,
         hasQuestion: !!question,
-        hasUrl: !!url,
       });
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
@@ -145,6 +144,24 @@ export async function chatHandler(
 
     // Verify origin
     const requestUrl = getRequestOriginUrl(req);
+
+    // If the client didn't send a `url`, fall back first to the request's
+    // origin header, then to the first entry in the project's configured
+    // allowed_urls. Downstream code (article lookup, siteHost derivation)
+    // needs a non-empty URL string.
+    if (!url) {
+      const allowed = project?.allowed_urls;
+      const fromConfig = Array.isArray(allowed) && allowed.length > 0
+        ? allowed[0]
+        : null;
+      url = requestUrl || fromConfig || "";
+      console.info("chat-worldcup: url missing from payload, using fallback", {
+        projectId,
+        usedRequestOrigin: !!requestUrl,
+        usedConfigFallback: !requestUrl && !!fromConfig,
+        url,
+      });
+    }
 
     if (!isAllowedOriginStrict(requestUrl, project?.allowed_urls)) {
       console.error("chat-worldcup: origin not allowed", {

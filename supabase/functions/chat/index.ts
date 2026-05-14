@@ -132,12 +132,11 @@ export async function chatHandler(
       sensitiveHits = classified.hits;
     }
 
-    if (!projectId || !questionId || !question || !url) {
+    if (!projectId || !questionId || !question) {
       console.error("chat: missing fields", {
         hasProjectId: !!projectId,
         hasQuestionId: !!questionId,
         hasQuestion: !!question,
-        hasUrl: !!url,
       });
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
@@ -165,6 +164,24 @@ export async function chatHandler(
 
     // Verify origin
     const requestUrl = getRequestOriginUrl(req);
+
+    // If the client didn't send a `url`, fall back first to the request's
+    // origin header, then to the first entry in the project's configured
+    // allowed_urls. Downstream code (article lookup, siteHost derivation)
+    // needs a non-empty URL string.
+    if (!url) {
+      const allowed = project?.allowed_urls;
+      const fromConfig = Array.isArray(allowed) && allowed.length > 0
+        ? allowed[0]
+        : null;
+      url = requestUrl || fromConfig || "";
+      console.info("chat: url missing from payload, using fallback", {
+        projectId,
+        usedRequestOrigin: !!requestUrl,
+        usedConfigFallback: !requestUrl && !!fromConfig,
+        url,
+      });
+    }
 
     if (!isAllowedOriginStrict(requestUrl, project?.allowed_urls)) {
       console.error("chat: origin not allowed", {
@@ -483,27 +500,22 @@ export async function chatHandler(
     let customization: AiCustomization | undefined;
     if (aiSettings || isKnowledgebase || siteHost) {
       let ragChunks: string[] | undefined;
-      // Only run the embedding/RAG lookup when the project actually has AI
-      // settings or knowledgebase mode — a siteHost-only customization skips
-      // the extra embedding round-trip.
-      if (aiSettings || isKnowledgebase) {
-        try {
-          const questionEmbedding = await deps.generateEmbedding(question);
-          const matches = await deps.searchSimilarChunks(
-            supabase,
-            projectId,
-            questionEmbedding,
-            3,
-          );
-          if (matches.length > 0) {
-            ragChunks = matches.map((m) => m.content);
-          }
-        } catch (err) {
-          console.error(
-            "chat: RAG lookup failed, proceeding without context",
-            err,
-          );
+      try {
+        const questionEmbedding = await deps.generateEmbedding(question);
+        const matches = await deps.searchSimilarChunks(
+          supabase,
+          projectId,
+          questionEmbedding,
+          3,
+        );
+        if (matches.length > 0) {
+          ragChunks = matches.map((m) => m.content);
         }
+      } catch (err) {
+        console.error(
+          "chat: RAG lookup failed, proceeding without context",
+          err,
+        );
       }
 
       // Knowledgebase mode requires RAG docs — if none found, return static message
