@@ -151,9 +151,7 @@ export async function chatHandler(
     // needs a non-empty URL string.
     if (!url) {
       const allowed = project?.allowed_urls;
-      const fromConfig = Array.isArray(allowed) && allowed.length > 0
-        ? allowed[0]
-        : null;
+      const fromConfig = Array.isArray(allowed) && allowed.length > 0 ? allowed[0] : null;
       url = requestUrl || fromConfig || "";
       console.info("chat-worldcup: url missing from payload, using fallback", {
         projectId,
