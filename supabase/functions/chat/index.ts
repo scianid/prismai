@@ -468,26 +468,42 @@ export async function chatHandler(
 
     const resolvedQuestion = cachedItem?.question || question;
 
-    // Build AI customization only when the project has settings configured
+    // Hostname of the page hosting the widget — drives the publisher-loyalty
+    // block the AI layer appends to every system prompt (no competitor links,
+    // no trash-talking the host site, etc).
+    let siteHost: string | undefined;
+    try {
+      siteHost = new URL(url).hostname || undefined;
+    } catch {
+      siteHost = undefined;
+    }
+
+    // Build AI customization. Always set when we have a siteHost so the
+    // publisher-loyalty block ships even on projects with no aiSettings.
     let customization: AiCustomization | undefined;
-    if (aiSettings || isKnowledgebase) {
+    if (aiSettings || isKnowledgebase || siteHost) {
       let ragChunks: string[] | undefined;
-      try {
-        const questionEmbedding = await deps.generateEmbedding(question);
-        const matches = await deps.searchSimilarChunks(
-          supabase,
-          projectId,
-          questionEmbedding,
-          3,
-        );
-        if (matches.length > 0) {
-          ragChunks = matches.map((m) => m.content);
+      // Only run the embedding/RAG lookup when the project actually has AI
+      // settings or knowledgebase mode — a siteHost-only customization skips
+      // the extra embedding round-trip.
+      if (aiSettings || isKnowledgebase) {
+        try {
+          const questionEmbedding = await deps.generateEmbedding(question);
+          const matches = await deps.searchSimilarChunks(
+            supabase,
+            projectId,
+            questionEmbedding,
+            3,
+          );
+          if (matches.length > 0) {
+            ragChunks = matches.map((m) => m.content);
+          }
+        } catch (err) {
+          console.error(
+            "chat: RAG lookup failed, proceeding without context",
+            err,
+          );
         }
-      } catch (err) {
-        console.error(
-          "chat: RAG lookup failed, proceeding without context",
-          err,
-        );
       }
 
       // Knowledgebase mode requires RAG docs — if none found, return static message
@@ -503,6 +519,7 @@ export async function chatHandler(
         guardrails: aiSettings?.guardrails,
         custom_instructions: aiSettings?.custom_instructions,
         ragChunks,
+        siteHost,
       };
     }
 

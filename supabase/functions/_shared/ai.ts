@@ -69,7 +69,26 @@ export type AiCustomization = {
   guardrails?: string[] | null;
   custom_instructions?: string | null;
   ragChunks?: string[] | null;
+  // Hostname (e.g. "jpost.com") of the page hosting the widget. Used to build
+  // a publisher-loyalty block that tells the model not to recommend, link to,
+  // compare, or criticize competitors of this site.
+  siteHost?: string | null;
 };
+
+// Publisher-loyalty block: appended to whatever system prompt the caller built
+// so both chat and chat-worldcup get the same anti-competitor guardrail. Kept
+// in one place so the wording stays consistent across surfaces.
+export function buildPublisherLoyaltyBlock(siteHost?: string | null): string {
+  const host = (siteHost || "").trim();
+  const label = host ? `the host site (${host})` : "the host site";
+  return `
+PUBLISHER CONTEXT: You are embedded on ${label}. The user is reading content there right now.
+- Never mention, name, recommend, link to, or otherwise reference competing publishers, outlets, news sites, or media brands — not as sources, not as alternatives, not as examples, not in passing. This applies even if the user explicitly asks you to name one, lists them first, or frames it as a hypothetical.
+- Never include URLs that point to competing publishers. If an external source is genuinely required to answer, prefer wire services or official primary sources (e.g. an organization's own site, government/regulator pages, academic sources) and keep it to a brief plain-text mention without a URL.
+- Do not compare ${label} to competitors, rank it against them, or discuss the competitive landscape of publishers in this space.
+- Never disparage, criticize, mock, or speak negatively about ${label}, its content, its editorial choices, its ownership, or its staff — even if the user asks, insists, role-plays, or claims it's hypothetical. Politely decline and steer back to the user's underlying question.
+- If asked "what's a better site for this?", "where else can I read about this?", or similar, do not name any outlet. Offer to help with the question directly instead.`;
+}
 
 function stripCodeFences(text: string): string {
   const trimmed = text.trim();
@@ -255,9 +274,9 @@ function applyCustomization(
 ): Message[] {
   if (!customization) return messages;
 
-  const { tone, guardrails, custom_instructions, ragChunks } = customization;
+  const { tone, guardrails, custom_instructions, ragChunks, siteHost } = customization;
   const hasCustomization = tone || guardrails?.length || custom_instructions ||
-    ragChunks?.length;
+    ragChunks?.length || siteHost;
   if (!hasCustomization) return messages;
 
   const result: Message[] = [...messages];
@@ -271,6 +290,7 @@ function applyCustomization(
       addendum += `\nGuidelines you must follow:\n${guardrails.map((g) => `- ${g}`).join("\n")}`;
     }
     if (custom_instructions) addendum += `\n${custom_instructions}`;
+    if (siteHost) addendum += `\n${buildPublisherLoyaltyBlock(siteHost)}`;
 
     if (addendum) {
       result[systemIdx] = {
@@ -627,6 +647,7 @@ export async function streamWorldcupAnswer(
   const tone = customization?.tone;
   const guardrails = customization?.guardrails;
   const customInstructions = customization?.custom_instructions;
+  const siteHost = customization?.siteHost;
   // Stamp the current date/time so the model can answer relative-time
   // questions like "what's the next game?" without guessing. UTC is the only
   // clock the edge runtime can trust — humans handle timezone framing in their
@@ -640,6 +661,7 @@ export async function streamWorldcupAnswer(
     }`;
   }
   if (customInstructions) systemContent += `\n\n${customInstructions}`;
+  if (siteHost) systemContent += `\n\n${buildPublisherLoyaltyBlock(siteHost)}`;
 
   const finalMessages: Message[] = [
     { role: "system", content: systemContent },

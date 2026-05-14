@@ -299,14 +299,26 @@ export async function chatHandler(
       { role: "user", content: question },
     ];
 
+    // Hostname of the page hosting the widget — drives the publisher-loyalty
+    // block injected by streamWorldcupAnswer (no competitor links, no
+    // bad-mouthing the host site).
+    let siteHost: string | undefined;
+    try {
+      siteHost = new URL(url).hostname || undefined;
+    } catch {
+      siteHost = undefined;
+    }
+
     // Pass tone/guardrails/custom_instructions from project AI settings if
-    // present. RAG chunks are intentionally not used — file_search inside
-    // streamWorldcupAnswer handles the World Cup PDF library.
-    const customization: AiCustomization | undefined = aiSettings
+    // present, plus the host site for the publisher-loyalty block. RAG chunks
+    // are intentionally not used — file_search inside streamWorldcupAnswer
+    // handles the World Cup PDF library.
+    const customization: AiCustomization | undefined = (aiSettings || siteHost)
       ? {
-        tone: aiSettings.tone,
-        guardrails: aiSettings.guardrails,
-        custom_instructions: aiSettings.custom_instructions,
+        tone: aiSettings?.tone,
+        guardrails: aiSettings?.guardrails,
+        custom_instructions: aiSettings?.custom_instructions,
+        siteHost,
       }
       : undefined;
 
