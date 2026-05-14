@@ -3117,6 +3117,15 @@
   background: #4b5563;
 }
 
+.divee-widget[dir="rtl"] .divee-collapsed-bubble-chip-send {
+  transform: scaleX(-1);
+  text-indent: -2px;
+}
+
+.divee-widget[dir="rtl"] .divee-collapsed-bubble-chip:hover .divee-collapsed-bubble-chip-send {
+  transform: scaleX(-1) translateX(-1px);
+}
+
 @keyframes divee-collapsed-bubble-enter {
   0% { opacity: 0; }
   100% { opacity: 1; }
