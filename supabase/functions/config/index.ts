@@ -135,9 +135,10 @@ export async function configHandler(
       // Worldcup widgets accept all 4 corners; standard floating widgets only
       // use bottom-left / bottom-right today. Letting the broader set through
       // for worldcup keeps the /config response shape stable for both.
-      display_position: ["bottom-left", "bottom-right", "top-left", "top-right"].includes(project.display_position)
-        ? project.display_position
-        : "bottom-right",
+      display_position:
+        ["bottom-left", "bottom-right", "top-left", "top-right"].includes(project.display_position)
+          ? project.display_position
+          : "bottom-right",
       anchored_position: ["top", "bottom"].includes(project.display_position)
         ? project.display_position
         : "bottom",
