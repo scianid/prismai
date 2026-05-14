@@ -14,7 +14,7 @@ const AI_PROVIDERS = {
   openai: {
     label: "openai",
     apiKeyEnv: "OPENAI_API_KEY",
-    model: "gpt-5.2",
+    model: "gpt-5.3-chat-latest",
     suggestionsModel: "gpt-5.4-mini",
     url: "https://api.openai.com/v1/chat/completions",
     responsesUrl: "https://api.openai.com/v1/responses",
@@ -668,7 +668,7 @@ export async function streamWorldcupAnswer(
     ...messages.filter((m) => m.role !== "system"),
   ];
 
-  const model = "gpt-5.3-chat-latest";
+  const model = AI_PROVIDERS.openai.model;
   console.info("ai: streamWorldcupAnswer", { vectorStoreId, mcpUrl, model });
 
   const rawResponse = await fetch(AI_PROVIDERS.openai.responsesUrl, {
