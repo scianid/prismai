@@ -3117,6 +3117,10 @@
   background: #4b5563;
 }
 
+.divee-widget[dir="rtl"] .divee-collapsed-bubble-chip {
+  padding: 4px 14px 4px 4px;
+}
+
 .divee-widget[dir="rtl"] .divee-collapsed-bubble-chip-send {
   transform: scaleX(-1);
   text-indent: -2px;
