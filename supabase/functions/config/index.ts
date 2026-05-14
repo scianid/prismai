@@ -132,7 +132,10 @@ export async function configHandler(
         "Ask anything about this article...",
       ],
       display_mode: project.display_mode || "anchored",
-      display_position: ["bottom-left", "bottom-right"].includes(project.display_position)
+      // Worldcup widgets accept all 4 corners; standard floating widgets only
+      // use bottom-left / bottom-right today. Letting the broader set through
+      // for worldcup keeps the /config response shape stable for both.
+      display_position: ["bottom-left", "bottom-right", "top-left", "top-right"].includes(project.display_position)
         ? project.display_position
         : "bottom-right",
       anchored_position: ["top", "bottom"].includes(project.display_position)
@@ -152,6 +155,7 @@ export async function configHandler(
         : [],
       override_mobile_container_selector: project.override_mobile_container_selector || null,
       disclaimer_text: project.disclaimer_text || null,
+      widget_type: project.widget_type === "worldcup" ? "worldcup" : "standard",
       widget_mode: project.widget_mode || "article",
       ui_theme: project.ui_theme === "dark" ? "dark" : "light",
       ask_concent: project.ask_concent === true,
