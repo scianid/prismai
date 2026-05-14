@@ -9,6 +9,51 @@ import { verifyConfigBypassToken } from "../_shared/configBypassToken.ts";
 import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 import { resolveTranslations } from "./translations/index.ts";
 
+// Sanitize the per-project sponsor theme before exposing it to the widget.
+// Whitelists known keys, enforces type + format, drops the rest. Returning a
+// sparse object is fine — the widget only applies fields it recognizes and
+// falls back to divee defaults for the rest.
+const COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
+function sanitizeColor(v: unknown): string | undefined {
+  return (typeof v === "string" && v.length <= 32 && COLOR_RE.test(v)) ? v : undefined;
+}
+function sanitizeHttpsUrl(v: unknown): string | undefined {
+  if (typeof v !== "string" || v.length > 500) return undefined;
+  return /^https:\/\//.test(v) ? v : undefined;
+}
+function sanitizeShortText(v: unknown, max = 80): string | undefined {
+  return (typeof v === "string" && v.length > 0 && v.length <= max) ? v : undefined;
+}
+function sanitizeTheme(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== "object") return null;
+  const t = raw as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+
+  if (t.brand && typeof t.brand === "object") {
+    const b = t.brand as Record<string, unknown>;
+    const brand: Record<string, string> = {};
+    const name = sanitizeShortText(b.name);
+    const logoUrl = sanitizeHttpsUrl(b.logoUrl);
+    const href = sanitizeHttpsUrl(b.href);
+    if (name) brand.name = name;
+    if (logoUrl) brand.logoUrl = logoUrl;
+    if (href) brand.href = href;
+    if (Object.keys(brand).length > 0) out.brand = brand;
+  }
+
+  if (t.colors && typeof t.colors === "object") {
+    const c = t.colors as Record<string, unknown>;
+    const colors: Record<string, string> = {};
+    for (const k of ["accent", "live", "glow", "panelBg", "cardBg", "chatAccent"]) {
+      const v = sanitizeColor(c[k]);
+      if (v) colors[k] = v;
+    }
+    if (Object.keys(colors).length > 0) out.colors = colors;
+  }
+
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 // ─── Dependency injection seam ────────────────────────────────────────────
 // `configHandler` takes a `ConfigDeps` object so unit tests can stub the
 // Supabase DAO calls without touching the network. Production wires the
@@ -168,6 +213,11 @@ export async function configHandler(
       experimental: (project.experimental && typeof project.experimental === "object")
         ? project.experimental
         : {},
+      // Per-project sponsor theme override. null = use divee defaults.
+      // Shape: { brand: { name, logoUrl, href }, colors: { accent, live,
+      // glow, panelBg, cardBg, chatAccent } }. Each field is independently
+      // optional; sanitizeTheme strips malformed entries.
+      theme: sanitizeTheme(project.theme),
       // `language_code` is the canonical ISO 639-1 key for the
       // translation bundle. Rows where it is NULL (unknown language
       // at analyze time) resolve to the English default inside
