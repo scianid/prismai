@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { getRequestOriginUrl, isAllowedOrigin } from "../_shared/origin.ts";
+import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
 import { supabaseClient } from "../_shared/supabaseClient.ts";
 import { getProjectById } from "../_shared/dao/projectDao.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
@@ -89,7 +89,7 @@ export async function analyticsHandler(
     }
 
     const requestUrl = getRequestOriginUrl(req);
-    if (!isAllowedOrigin(requestUrl, project.allowed_urls)) {
+    if (!isAllowedOriginStrict(requestUrl, project.allowed_urls)) {
       console.warn("analytics: origin not allowed", {
         attempted: requestUrl,
         projectId,

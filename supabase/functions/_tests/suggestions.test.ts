@@ -614,10 +614,10 @@ Deno.test("suggestions/GET: origin not in allowed_urls returns 403", async () =>
   assertEquals(res.status, 403);
 });
 
-Deno.test("suggestions/GET: missing Origin/Referer is allowed (lenient — CDN cache-warming)", async () => {
-  // The whole point of the GET branch is to be CDN-cacheable. The CDN
-  // strips Origin on forwarded GETs and warms the cache without a Referer;
-  // both must pass. This contrasts with POST which uses isAllowedOriginStrict.
+Deno.test("suggestions/GET: missing Origin/Referer is rejected (strict)", async () => {
+  // Every widget endpoint now uses isAllowedOriginStrict — a request with
+  // neither Origin nor Referer is a non-browser client and is rejected. A
+  // cold CDN cache simply repopulates from the next real visitor's request.
   const res = await suggestionsHandler(
     getReq(
       `projectId=${encodeURIComponent(PROJECT_ID)}&url=${encodeURIComponent(ARTICLE_URL)}`,
@@ -625,7 +625,7 @@ Deno.test("suggestions/GET: missing Origin/Referer is allowed (lenient — CDN c
     ),
     makeDeps(),
   );
-  assertEquals(res.status, 200);
+  assertEquals(res.status, 403);
 });
 
 // ── Teardown ──────────────────────────────────────────────────────────────

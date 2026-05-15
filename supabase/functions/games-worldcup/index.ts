@@ -4,7 +4,7 @@ import { errorResp, tooManyRequestsResp } from "../_shared/responses.ts";
 import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 import { supabaseClient } from "../_shared/supabaseClient.ts";
 import { getProjectById } from "../_shared/dao/projectDao.ts";
-import { getRequestOriginUrl, isAllowedOrigin } from "../_shared/origin.ts";
+import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 // Pass-through endpoint that returns today's FIFA World Cup 2026 fixtures with
@@ -361,12 +361,14 @@ export async function gamesHandler(req: Request): Promise<Response> {
     const endDate = dateRange[dateRange.length - 1];
 
     // Origin allowlist: same pattern as /config. Origin is stripped by the
-    // CDN, so we fall back to Referer. Requests without either are treated
-    // as infra (CDN cache warm) and let through — see isAllowedOrigin.
+    // CDN, so we fall back to Referer. Requests with neither header are
+    // rejected — a real browser GET always carries one; their absence means
+    // a non-browser client. A cold CDN cache simply repopulates from the
+    // next real visitor's request.
     const supabase = await supabaseClient();
     const project = await getProjectById(projectId, supabase);
     const requestUrl = getRequestOriginUrl(req);
-    if (!isAllowedOrigin(requestUrl, project.allowed_urls)) {
+    if (!isAllowedOriginStrict(requestUrl, project.allowed_urls)) {
       return errorResp("Origin not allowed", 403);
     }
 

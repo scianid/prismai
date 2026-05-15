@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { enforceContentLength, errorResp, successResp } from "../_shared/responses.ts";
 import { supabaseClient } from "../_shared/supabaseClient.ts";
-import { getRequestOriginUrl, isAllowedOrigin } from "../_shared/origin.ts";
+import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
 import {
   getProjectForArticlesAuth,
   getRecentArticlesForProject,
@@ -77,7 +77,7 @@ export async function suggestedArticlesHandler(
     }
 
     const requestUrl = getRequestOriginUrl(req);
-    if (!isAllowedOrigin(requestUrl, project.allowed_urls)) {
+    if (!isAllowedOriginStrict(requestUrl, project.allowed_urls)) {
       console.warn("[Suggested Articles] origin not allowed", {
         attempted: requestUrl,
         allowed: project.allowed_urls,

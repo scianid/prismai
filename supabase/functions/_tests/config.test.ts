@@ -248,9 +248,10 @@ Deno.test("config: happy path returns 200 with public CDN cache headers", async 
   assertEquals(body.widget_mode, "article");
   assertEquals(body.display_position, "bottom-right");
   assertEquals(body.ad_tag_id, "/1234/divee/test");
-  // Origin check passed, but allowed_urls is included in the response so
-  // the widget can apply the same check client-side for defense-in-depth.
-  assertEquals(body.allowed_urls, [ALLOWED_HOST]);
+  // allowed_urls is NOT exposed in the response — it's used only for the
+  // server-side origin check. Consumers that need the allowlist use the
+  // dedicated encrypted /allowed-urls endpoint.
+  assertEquals(body.allowed_urls, undefined);
 });
 
 Deno.test("config: display_position falls back to 'bottom-right' for unknown values", async () => {

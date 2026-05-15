@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
-import { getRequestOriginUrl, isAllowedOrigin } from "../_shared/origin.ts";
+import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { supabaseClient } from "../_shared/supabaseClient.ts";
 import { errorResp, successRespWithCache, tooManyRequestsResp } from "../_shared/responses.ts";
@@ -138,7 +138,7 @@ export async function configHandler(
       }
     }
 
-    if (!isBypassed && !isAllowedOrigin(requestUrl, project.allowed_urls)) {
+    if (!isBypassed && !isAllowedOriginStrict(requestUrl, project.allowed_urls)) {
       console.warn("config: origin not allowed", {
         attempted: requestUrl,
         allowed: project.allowed_urls,
@@ -205,7 +205,6 @@ export async function configHandler(
       widget_mode: project.widget_mode || "article",
       ui_theme: project.ui_theme === "dark" ? "dark" : "light",
       ask_concent: project.ask_concent === true,
-      allowed_urls: project.allowed_urls || [],
       // Per-project experimental feature toggles. Flat { key: boolean } map.
       // The widget reads from this and falls back to its hard-coded default
       // when a key is unset — admins can flip features remotely without

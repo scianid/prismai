@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
-import { getRequestOriginUrl, isAllowedOrigin, isAllowedOriginStrict } from "../_shared/origin.ts";
+import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
 import { generateSuggestions } from "../_shared/ai.ts";
 import { logEvent } from "../_shared/analytics.ts";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -379,7 +379,7 @@ async function handleGetSuggestions(
     // Lenient origin — same as /config. The CDN strips Origin on forwarded
     // GETs and warms the cache without a Referer; both paths must pass.
     const requestUrl = getRequestOriginUrl(req);
-    if (!isAllowedOrigin(requestUrl, project?.allowed_urls)) {
+    if (!isAllowedOriginStrict(requestUrl, project?.allowed_urls)) {
       return errorResp("suggestions: origin not allowed", 403, { suggestions: [] });
     }
 
