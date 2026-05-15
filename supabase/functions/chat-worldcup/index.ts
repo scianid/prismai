@@ -422,7 +422,7 @@ export async function chatHandler(
           session_id,
         );
         if (freeformId) {
-          await deps.updateFreeformAnswer(supabase, freeformId, answer);
+          await deps.updateFreeformAnswer(supabase, freeformId, projectId, answer);
         }
       })
       .catch((err) => {

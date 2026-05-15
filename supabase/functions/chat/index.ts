@@ -244,7 +244,7 @@ export async function chatHandler(
       if (needsImageUpdate) {
         console.log("chat: updating article with image");
         const imageUrl = metadata.og_image || metadata.image_url;
-        await deps.updateArticleImage(article, imageUrl!, supabase);
+        await deps.updateArticleImage(article, imageUrl!, projectId, supabase);
         article.image_url = imageUrl;
       }
     }
@@ -615,6 +615,7 @@ export async function chatHandler(
           await deps.updateCacheAnswer(
             supabase,
             article.unique_id,
+            projectId,
             questionId,
             resolvedQuestion,
             answer,
@@ -630,7 +631,7 @@ export async function chatHandler(
             session_id,
           );
           if (freeformId) {
-            await deps.updateFreeformAnswer(supabase, freeformId, answer);
+            await deps.updateFreeformAnswer(supabase, freeformId, projectId, answer);
           }
         }
       })

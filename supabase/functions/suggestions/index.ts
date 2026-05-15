@@ -340,7 +340,7 @@ export async function suggestionsHandler(
       suggestions,
       created_at: article.cache?.created_at || new Date().toISOString(),
     };
-    await deps.updateArticleCache(article, updatedCache, supabase);
+    await deps.updateArticleCache(article, updatedCache, projectId, supabase);
 
     return successResp({ suggestions });
   } catch (error: any) {

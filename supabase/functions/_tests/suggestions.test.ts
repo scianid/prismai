@@ -284,7 +284,7 @@ Deno.test("suggestions/article: cache MISS runs rate-limit check, calls AI, writ
       aiInputs = { title, content, language };
       return Promise.resolve(fakeAiResult());
     },
-    updateArticleCache: (_article: unknown, cache: unknown, _sb: unknown) => {
+    updateArticleCache: (_article: unknown, cache: unknown, _projectId: unknown, _sb: unknown) => {
       cacheWriteArgs = [cache];
       return Promise.resolve();
     },

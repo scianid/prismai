@@ -112,14 +112,20 @@ export async function getRecentArticlesForProject(
   return data || [];
 }
 
+// `projectId` scopes the lookup to the owning tenant. The service-role
+// client bypasses RLS, so an unscoped `.in("unique_id", …)` would disclose
+// any tenant's articles given their ids — every by-id article DAO op below
+// must carry the project filter.
 export async function getArticlesByIds(
   ids: string[],
+  projectId: string,
   supabase: any,
 ): Promise<any[]> {
   const { data, error } = await supabase
     .from("article")
     .select("unique_id, title, url, image_url, created_at")
-    .in("unique_id", ids);
+    .in("unique_id", ids)
+    .eq("project_id", projectId);
   if (error) throw error;
   return data || [];
 }
@@ -199,30 +205,35 @@ export function extractCachedSuggestions(article: any) {
 export async function updateArticleCache(
   article: any,
   cache: Record<string, any>,
+  projectId: string,
   supabase: any,
 ) {
   await supabase
     .from("article")
     .update({ cache })
-    .eq("unique_id", article.unique_id);
+    .eq("unique_id", article.unique_id)
+    .eq("project_id", projectId);
   console.log("suggestions: cached", { count: cache.suggestions?.length || 0 });
 }
 
 export async function updateArticleImage(
   article: any,
   imageUrl: string,
+  projectId: string,
   supabase: any,
 ) {
   await supabase
     .from("article")
     .update({ image_url: imageUrl })
-    .eq("unique_id", article.unique_id);
+    .eq("unique_id", article.unique_id)
+    .eq("project_id", projectId);
   console.log("article: updated image_url");
 }
 
 export async function updateCacheAnswer(
   supabase: any,
   unique_id: any,
+  projectId: string,
   questionId: string,
   question: string,
   answer: string,
@@ -233,6 +244,7 @@ export async function updateCacheAnswer(
     .from("article")
     .select("cache")
     .eq("unique_id", unique_id)
+    .eq("project_id", projectId)
     .maybeSingle();
 
   if (error) {
@@ -256,5 +268,6 @@ export async function updateCacheAnswer(
   await supabase
     .from("article")
     .update({ cache: { suggestions } })
-    .eq("unique_id", unique_id);
+    .eq("unique_id", unique_id)
+    .eq("project_id", projectId);
 }

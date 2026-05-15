@@ -279,7 +279,7 @@ async function handleRelated(
 
   // Step 5: Fetch article details for top results
   const topIds = ranked.map(([id]) => id);
-  const articleDetails = await deps.getArticlesByIds(topIds, supabase);
+  const articleDetails = await deps.getArticlesByIds(topIds, projectId, supabase);
 
   // Build lookup map
   const detailsMap = new Map<string, any>();

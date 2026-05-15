@@ -45,11 +45,16 @@ export async function insertFreeformQuestion(
 }
 
 /**
- * Update a free-form Q&A record with the answer
+ * Update a free-form Q&A record with the answer.
+ *
+ * `projectId` scopes the update to the owning tenant — the service-role
+ * client bypasses RLS, so a by-`id` update with no project filter would
+ * let a caller overwrite any tenant's Q&A row.
  */
 export async function updateFreeformAnswer(
   supabase: SupabaseClient,
   id: number,
+  projectId: string,
   answer: string,
 ): Promise<boolean> {
   const { error } = await supabase
@@ -58,7 +63,8 @@ export async function updateFreeformAnswer(
       answer: answer,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("project_id", projectId);
 
   if (error) {
     console.error("Error updating freeform answer:", error);
@@ -74,11 +80,13 @@ export async function updateFreeformAnswer(
 export async function getFreeformQasByArticle(
   supabase: SupabaseClient,
   articleUniqueId: string,
+  projectId: string,
 ): Promise<FreeformQa[]> {
   const { data, error } = await supabase
     .from("freeform_qa")
     .select("*")
     .eq("article_unique_id", articleUniqueId)
+    .eq("project_id", projectId)
     .order("created_at", { ascending: false });
 
   if (error) {

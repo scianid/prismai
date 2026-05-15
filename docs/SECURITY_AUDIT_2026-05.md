@@ -21,7 +21,7 @@ review), [SECURITY_REVIEW.md](SECURITY_REVIEW.md),
 
 | Tier | Total | Done | Open |
 |------|-------|------|------|
-| High | 5 | 2 | 3 |
+| High | 5 | 3 | 2 |
 | Medium | 6 | 1 | 5 |
 | Low | 7 | 4 | 3 |
 | Info | 2 | — | — |
@@ -77,16 +77,17 @@ suggested-articles handlers plumb `projectId` through. A by-ID call can no
 longer touch a row outside its tenant.
 **SOC2:** CC6.1 (logical access).
 
-### [ ] H-2 — IDOR: article / freeform-QA DAOs not tenant-scoped
-**Where:** `_shared/dao/articleDao.ts:115` (`getArticlesByIds`), `:199`
-(`updateArticleCache`), `:211` (`updateArticleImage`), `:223`
-(`updateCacheAnswer`); `_shared/dao/freeformQaDao.ts:74`
-(`getFreeformQasByArticle`), `:50` (`updateFreeformAnswer`).
-**What:** by-ID select/update with no `project_id` filter. Cross-tenant
-article disclosure and cache poisoning. Mitigating factor: `unique_id`
-embeds the projectId, but projectId is a public widget attribute.
-**Fix:** add `.eq("project_id", projectId)` to all; plumb `projectId`
-through.
+### [x] H-2 — IDOR: article / freeform-QA DAOs not tenant-scoped
+**Where:** `_shared/dao/articleDao.ts` — `getArticlesByIds`,
+`updateArticleCache`, `updateArticleImage`, `updateCacheAnswer`;
+`_shared/dao/freeformQaDao.ts` — `getFreeformQasByArticle`,
+`updateFreeformAnswer`.
+**What:** by-ID select/update with no `project_id` filter — cross-tenant
+article disclosure and cache poisoning under the RLS-bypassing
+service-role client.
+**Fixed:** every by-ID article/freeform DAO op now takes a `projectId`
+argument and adds `.eq("project_id", projectId)`; the articles, chat,
+chat-worldcup, and suggestions handlers plumb `projectId` through.
 **SOC2:** CC6.1.
 
 ### [ ] H-4 — No hard per-project LLM cost ceiling
