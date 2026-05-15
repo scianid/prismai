@@ -22,7 +22,7 @@ review), [SECURITY_REVIEW.md](SECURITY_REVIEW.md),
 | Tier | Total | Done | Open |
 |------|-------|------|------|
 | High | 5 | 4 | 1 |
-| Medium | 6 | 4 | 2 |
+| Medium | 6 | 6 | 0 |
 | Low | 7 | 7 | 0 |
 | Info | 2 | — | — |
 
@@ -122,21 +122,26 @@ signed short-lived tokens minted by `/config` and required by `/chat`.
 
 ## 🟠 Medium — open
 
-### [ ] M-2 — `games-worldcup` `previewDate` is a public cache-bypassing override
-**Where:** `games-worldcup/index.ts:338-360,410`.
-**What:** `previewDate` lets any caller redefine "today" and sets
-`s-maxage=0`, so iterating it forces unbounded uncached upstream SportsData
-fetches.
-**Fix:** gate `previewDate` behind an env flag or bypass token; never
-expose a cache-busting param to anonymous callers.
+### [x] M-2 — `games-worldcup` `previewDate` is a public cache-bypassing override
+**Where:** `games-worldcup/index.ts`.
+**What:** `previewDate` let any caller redefine "today" and forced
+`s-maxage=0`, so iterating it drove unbounded uncached upstream SportsData
+fetches; `date` was an arbitrary-date override too.
+**Fixed:** the `date` and `previewDate` URL params were removed entirely —
+the endpoint always serves matches starting today (UTC). No
+caller-controlled date means no cache-bypass surface. The response is now
+unconditionally live-cached (`s-maxage=15`).
 **SOC2:** A1.1.
 
-### [ ] M-3 — `games-worldcup` uncached BoxScore fan-out
-**Where:** `games-worldcup/index.ts:269`.
-**What:** `fetchDay` issues one uncached BoxScore fetch per in-progress
-match; a single allowed request fans out to dozens of paid upstream calls.
-**Fix:** cache BoxScore per `GameId` with a short TTL; cap `days` on the
-live path.
+### [x] M-3 — `games-worldcup` uncached BoxScore fan-out
+**Where:** `games-worldcup/index.ts`.
+**What:** `fetchDay` issued one uncached `BoxScore/{GameId}` fetch per
+in-progress/final match — a full matchday under polling load multiplied
+into heavy paid SportsData traffic.
+**Fixed:** `getBoxScoreGoals` adds an in-isolate per-`GameId` cache —
+Final matches cached for the isolate's lifetime (goals immutable),
+in-progress on a 15s TTL matching the response's live window — plus
+single-flight to collapse concurrent fetches for the same game.
 **SOC2:** A1.1.
 
 ### [x] M-4 — `chat` stores unvalidated `metadata.og_image` / `image_url`

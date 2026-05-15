@@ -231,10 +231,6 @@ function todayIsoUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function isValidIsoDate(s: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
-}
-
 function addDaysIso(iso: string, n: number): string {
   return new Date(new Date(iso + "T00:00:00Z").getTime() + n * 86_400_000)
     .toISOString().slice(0, 10);
@@ -248,6 +244,56 @@ const MAX_RANGE_DAYS = 7;
 function shouldFetchGoals(g: SDGame): boolean {
   return g.Status === "InProgress" || g.Status === "Final" ||
     g.Status === "F/SO" || g.Status === "F/OT";
+}
+
+// True once a match has reached a terminal status — its goal list is then
+// immutable and can be cached indefinitely (within the isolate's lifetime).
+function isFinalStatus(g: SDGame): boolean {
+  return g.Status === "Final" || g.Status === "F/SO" || g.Status === "F/OT";
+}
+
+// M-3: BoxScore goals cache. Without this, a request fans out one upstream
+// `BoxScore/{GameId}` call per in-progress/final match — and on a full
+// matchday, with the games endpoint polled every few seconds by every
+// visitor's widget, that multiplies into a heavy paid SportsData load. A
+// Final match's goals never change (cached for the isolate's lifetime); an
+// InProgress match's are re-fetched on a short TTL that matches the
+// response's own 15s live cache window. Single-flight collapses concurrent
+// fetches for the same GameId.
+const BOXSCORE_TTL_MS = 15 * 1000;
+interface BoxEntry {
+  goals: SDGoal[];
+  fetchedAt: number;
+  final: boolean;
+}
+const boxScoreCache = new Map<number, BoxEntry>();
+const boxScoreInflight = new Map<number, Promise<SDGoal[]>>();
+
+function getBoxScoreGoals(gameId: number, final: boolean): Promise<SDGoal[]> {
+  const cached = boxScoreCache.get(gameId);
+  if (cached && (cached.final || Date.now() - cached.fetchedAt < BOXSCORE_TTL_MS)) {
+    return Promise.resolve(cached.goals);
+  }
+  const pending = boxScoreInflight.get(gameId);
+  if (pending) return pending;
+
+  const p = (async () => {
+    try {
+      const box = await sdFetch<SDBoxScore>("stats", `BoxScore/${gameId}`);
+      const goals = box.Goals ?? [];
+      boxScoreCache.set(gameId, { goals, fetchedAt: Date.now(), final });
+      return goals;
+    } catch {
+      // 404 here means the box score isn't published yet; show the match
+      // without goals rather than failing the batch. Not cached — a retry
+      // should pick it up once SportsData publishes it.
+      return [] as SDGoal[];
+    } finally {
+      boxScoreInflight.delete(gameId);
+    }
+  })();
+  boxScoreInflight.set(gameId, p);
+  return p;
 }
 
 // Fetches a single day from SportsData and shapes it into the response slice
@@ -269,11 +315,7 @@ async function fetchDay(
   const goalFetches = await Promise.all(
     dayGames.map((g) =>
       shouldFetchGoals(g)
-        ? sdFetch<SDBoxScore>("stats", `BoxScore/${g.GameId}`)
-          .then((box) => box.Goals ?? [])
-          // 404 here means the box score isn't published yet; just show
-          // the match without goals rather than failing the whole batch.
-          .catch(() => [] as SDGoal[])
+        ? getBoxScoreGoals(g.GameId, isFinalStatus(g))
         : Promise.resolve([] as SDGoal[])
     ),
   );
@@ -330,24 +372,11 @@ export async function gamesHandler(req: Request): Promise<Response> {
       return errorResp("Missing projectId", 400);
     }
 
-    // `previewDate` is a dev-time override that pretends "today" is some other
-    // date — useful before the WC starts, so we can render real Scheduled
-    // fixtures from June onward against today's UI. When set, it wins over
-    // the widget's `date` param (the widget always passes today UTC) and
-    // also drives the past/future cache decision below.
-    const previewDateParam = url.searchParams.get("previewDate");
-    if (previewDateParam && !isValidIsoDate(previewDateParam)) {
-      return errorResp("Invalid 'previewDate' (expected YYYY-MM-DD)", 400);
-    }
-
-    const dateParam = url.searchParams.get("date");
-    const realToday = todayIsoUtc();
-    const today = previewDateParam ?? realToday;
-    const startDate = previewDateParam ?? dateParam ?? realToday;
-
-    if (!isValidIsoDate(startDate)) {
-      return errorResp("Invalid 'date' (expected YYYY-MM-DD)", 400);
-    }
+    // M-2: the endpoint always serves matches starting "today" (UTC). The
+    // `date` and `previewDate` URL overrides were removed — with no
+    // caller-controlled date there is no cache-bypass / arbitrary-date
+    // surface for an anonymous caller to abuse.
+    const startDate = todayIsoUtc();
 
     const daysParam = url.searchParams.get("days");
     const dayCount = daysParam ? parseInt(daysParam, 10) : 1;
@@ -403,14 +432,10 @@ export async function gamesHandler(req: Request): Promise<Response> {
       dateRange.map((d) => fetchDay(d, schedule, names)),
     );
 
-    // Cache headers: if any day in the range is "today or future", treat the
-    // whole response as live (15s s-maxage). Pure-past ranges are immutable
-    // and can be cached aggressively. Preview-mode responses bypass the CDN
-    // entirely so two devs scrubbing different dates don't poison each
-    // other's cache entry.
-    const allPast = dateRange.every((d) => d < today);
-    const sMaxAge = previewDateParam ? 0 : (allPast ? 3600 : 15);
-    const maxAge = previewDateParam ? 0 : (allPast ? 300 : 5);
+    // The range always starts today, so the response is always live —
+    // short CDN TTL to pick up in-progress score changes.
+    const sMaxAge = 15;
+    const maxAge = 5;
 
     return new Response(
       JSON.stringify({
