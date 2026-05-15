@@ -63,7 +63,7 @@ export function scrubUrl(
 
   // Redact JWT-shaped tokens anywhere in the string first — this also
   // covers path segments, which the query-param logic below never reaches.
-  let working = s.replace(JWT_RE, "[redacted]");
+  const working = s.replace(JWT_RE, "[redacted]");
   let mutated = working !== s;
 
   if (working.indexOf("?") < 0 && working.indexOf("#") < 0) {
