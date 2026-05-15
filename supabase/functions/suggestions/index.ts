@@ -24,6 +24,7 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { generateEmbedding } from "../_shared/embeddingService.ts";
 import { searchSimilarChunks } from "../_shared/dao/ragDocumentDao.ts";
 import { captureException, serveWithSentry } from "../_shared/sentry.ts";
+import { hashForLog } from "../_shared/logSafe.ts";
 
 // ─── Dependency injection seam ────────────────────────────────────────────
 // `suggestionsHandler` accepts a `SuggestionsDeps` object so unit tests can
@@ -105,13 +106,16 @@ export async function suggestionsHandler(
   try {
     let { projectId, title, content, url, visitor_id, session_id, metadata } = await req.json();
 
+    // L-3: visitor_id is linkable PII — hash it for logs (same as chat);
+    // session_id is reduced to a presence flag. Neither lands in plaintext
+    // in log retention.
     console.log("suggestions: body parsed", {
       projectId,
       url,
       titleLen: title?.length,
       contentLen: content?.length,
-      visitor_id,
-      session_id,
+      visitorHash: await hashForLog(visitor_id, projectId),
+      hasSessionId: !!session_id,
       hasMetadata: !!metadata,
     });
 
@@ -139,7 +143,7 @@ export async function suggestionsHandler(
       found: !!project,
       widget_mode: project?.widget_mode,
       language: project?.language,
-      allowed_urls: project?.allowed_urls,
+      allowedUrlCount: project?.allowed_urls?.length ?? 0,
     });
     const isKnowledgebase = project?.widget_mode === "knowledgebase";
 
@@ -158,14 +162,14 @@ export async function suggestionsHandler(
     const requestUrl = getRequestOriginUrl(req);
     console.log("suggestions: origin check", {
       requestUrl,
-      allowed_urls: project?.allowed_urls,
+      allowedUrlCount: project?.allowed_urls?.length ?? 0,
       projectId,
     });
 
     if (!isAllowedOriginStrict(requestUrl, project?.allowed_urls)) {
       console.warn("suggestions: origin not allowed", {
         attempted: requestUrl,
-        allowed: project?.allowed_urls,
+        allowedUrlCount: project?.allowed_urls?.length ?? 0,
         projectId,
       });
       return errorResp("suggestions: origin not allowed", 403, {
@@ -347,7 +351,7 @@ export async function suggestionsHandler(
     console.error("suggestions: unhandled error", error);
     console.error("Error:", error);
     captureException(error, { handler: "suggestions" });
-    return errorResp(error.message, 500);
+    return errorResp("suggestions: internal error", 500);
   }
 }
 
@@ -394,7 +398,7 @@ async function handleGetSuggestions(
   } catch (error: any) {
     console.error("suggestions: GET unhandled error", error);
     captureException(error, { handler: "suggestions", tags: { phase: "get" } });
-    return errorResp(error.message, 500);
+    return errorResp("suggestions: internal error", 500);
   }
 }
 

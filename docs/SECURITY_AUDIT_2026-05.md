@@ -23,7 +23,7 @@ review), [SECURITY_REVIEW.md](SECURITY_REVIEW.md),
 |------|-------|------|------|
 | High | 5 | 4 | 1 |
 | Medium | 6 | 4 | 2 |
-| Low | 7 | 4 | 3 |
+| Low | 7 | 3 | 4 |
 | Info | 2 | — | — |
 
 ---
@@ -183,18 +183,25 @@ traces are stored verbatim and `console.log`-ed (log injection).
 **Fix:** add an IP-keyed rate limit; newline-strip before logging.
 **SOC2:** A1.1.
 
-### [ ] L-2 — `suggestions` reflects raw `error.message` to clients
-**Where:** `suggestions/index.ts:350,397`.
-**What:** raw exception text returned to the client — possible internal
-info leak; other endpoints return a generic message.
-**Fix:** return a generic error; log detail server-side only.
+### [x] L-2 — `suggestions` passed `error.message` to `errorResp`
+**Where:** `suggestions/index.ts`.
+**Reassessed:** not a client-facing leak — `errorResp`'s first arg is
+logged server-side only (`console.error(message)`); the client receives
+`body` (default `{}`). The original finding (raw exception text returned
+to the client) was a misread.
+**Fixed anyway** for consistency: both catch blocks now pass a generic
+`"suggestions: internal error"` string; the real detail is already
+captured by the preceding `console.error` + `captureException`.
 **SOC2:** CC6.1.
 
-### [ ] L-3 — `suggestions` logs raw `visitor_id` and `allowed_urls`
-**Where:** `suggestions/index.ts:67-79`.
-**What:** PII / config in logs; `chat` correctly hashes the visitor,
-`suggestions` does not.
-**Fix:** hash `visitor_id` via `logSafe`; drop `allowed_urls` from logs.
+### [x] L-3 — `suggestions` logs raw `visitor_id` and `allowed_urls`
+**Where:** `suggestions/index.ts`.
+**What:** PII / config in logs; `chat` hashes the visitor, `suggestions`
+did not.
+**Fixed:** the "body parsed" log now records `visitorHash` (via
+`hashForLog`) and a `hasSessionId` flag instead of raw ids; the three
+project/origin log sites record `allowedUrlCount` instead of the raw
+`allowed_urls` array.
 **SOC2:** CC6.1 / privacy.
 
 ### [ ] L-4 — `chat` IDs unvalidated (type / length)
