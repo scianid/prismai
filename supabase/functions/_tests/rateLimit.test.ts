@@ -149,6 +149,27 @@ Deno.test("rateLimit: DB error log uses the hashed key", async () => {
   );
 });
 
+Deno.test("rateLimit: M-6 — chat fails CLOSED on a DB error", async () => {
+  // The first (project) check errors. chat is in FAIL_CLOSED, so the
+  // limiter must report `limited: true` rather than waving the request
+  // through while it is blind.
+  const stub = makeSupabaseRpcStub([new Error("db down")]);
+  const { result } = await withCapturedConsole(async () => {
+    return await checkRateLimit(stub, "chat", VISITOR_ID, PROJECT_ID, CLIENT_IP);
+  });
+  assertEquals(result.limited, true);
+});
+
+Deno.test("rateLimit: M-6 — config fails OPEN on a DB error", async () => {
+  // config is a cheap endpoint, not in FAIL_CLOSED: a transient DB error
+  // must not block it.
+  const stub = makeSupabaseRpcStub([new Error("db down")]);
+  const { result } = await withCapturedConsole(async () => {
+    return await checkRateLimit(stub, "config", null, PROJECT_ID, CLIENT_IP);
+  });
+  assertEquals(result.limited, false);
+});
+
 Deno.test("rateLimit: project-only check (no visitor, no ip) still logs without PII concerns", async () => {
   const stub = makeSupabaseRpcStub([99999]); // project limit blown, before any other check fires
   const { result, captured } = await withCapturedConsole(async () => {

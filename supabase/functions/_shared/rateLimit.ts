@@ -64,14 +64,28 @@ const LIMITS: Record<
 };
 
 /**
+ * M-6: endpoints whose backing work is expensive enough (paid LLM calls)
+ * that a rate-limit check we cannot complete must fail CLOSED — shedding
+ * load is better than letting an attacker run an unbounded bill while the
+ * limiter is blind. Cheap endpoints stay fail-open so a transient DB blip
+ * doesn't take them down. A DB outage costs the expensive paths a brief
+ * 429 (retryAfter < 60s); the cheap paths keep serving.
+ */
+const FAIL_CLOSED: ReadonlySet<RateLimitEndpoint> = new Set([
+  "chat",
+  "suggestions",
+]);
+
+/**
  * Check and increment both the visitor-level and project-level rate limit
  * counters for the given endpoint in a single 1-minute window.
  *
  * Returns `{ limited: true, retryAfterSeconds }` if either limit is exceeded,
  * or `{ limited: false }` to allow the request through.
  *
- * Errors from the DB are logged and silently ignored (fail-open) to avoid
- * blocking legitimate traffic due to a transient DB issue.
+ * On a DB error the behavior depends on the endpoint (see FAIL_CLOSED):
+ * expensive LLM endpoints fail closed (treated as limited), cheap
+ * endpoints fail open so a transient DB issue doesn't block them.
  */
 export async function checkRateLimit(
   supabase: SupabaseClient,
@@ -119,6 +133,8 @@ export async function checkRateLimit(
     });
   }
 
+  const failClosed = FAIL_CLOSED.has(endpoint);
+
   for (const { key, logKey, limit } of checks) {
     try {
       const { data, error } = await supabase.rpc("increment_rate_limit", {
@@ -128,7 +144,11 @@ export async function checkRateLimit(
 
       if (error) {
         console.error(`rateLimit: db error for key=${logKey}`, error);
-        continue; // fail-open on DB errors
+        if (failClosed) {
+          console.warn(`rateLimit: failing closed for ${endpoint} after DB error`);
+          return { limited: true, retryAfterSeconds };
+        }
+        continue; // fail-open for cheap endpoints
       }
 
       const count: number = data ?? 0;
@@ -141,7 +161,11 @@ export async function checkRateLimit(
       }
     } catch (err) {
       console.error(`rateLimit: unexpected error for key=${logKey}`, err);
-      // fail-open
+      if (failClosed) {
+        console.warn(`rateLimit: failing closed for ${endpoint} after error`);
+        return { limited: true, retryAfterSeconds };
+      }
+      // fail-open for cheap endpoints
     }
   }
 

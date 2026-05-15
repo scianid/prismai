@@ -22,7 +22,7 @@ review), [SECURITY_REVIEW.md](SECURITY_REVIEW.md),
 | Tier | Total | Done | Open |
 |------|-------|------|------|
 | High | 5 | 4 | 1 |
-| Medium | 6 | 2 | 4 |
+| Medium | 6 | 4 | 2 |
 | Low | 7 | 4 | 3 |
 | Info | 2 | — | — |
 
@@ -149,22 +149,27 @@ anything else collapses to `undefined`, so both the insert and the
 update-image path skip it. Covers every downstream consumer in one place.
 **SOC2:** CC6.1.
 
-### [ ] M-5 — `analytics` forwards client-supplied IP/origin raw
-**Where:** `analytics/index.ts:133-140`.
-**What:** `cf-connecting-ip` and `origin` are forwarded raw to the upstream
-analytics proxy, letting a client poison geo/IP enrichment downstream.
-**Fix:** re-derive `cf-connecting-ip` from the edge's trusted header only;
-do not forward a client-supplied `origin`.
+### [x] M-5 — `analytics` forwards client-supplied origin raw
+**Where:** `analytics/index.ts`.
+**What:** the client-supplied `origin` header was forwarded raw to the
+upstream analytics proxy, letting a caller poison its geo/origin
+enrichment. (`cf-connecting-ip` is set by Cloudflare at the edge —
+trusted — and is kept.)
+**Fixed:** the `origin` header is no longer forwarded; the scrubbed,
+origin-checked `referer` already carries the legitimate host.
 **SOC2:** CC7.2 (monitoring integrity).
 
-### [ ] M-6 — Rate limiter fails open
-**Where:** `_shared/rateLimit.ts:129-145`.
-**What:** every DB-error path `continue`s / fails open, so an attacker who
-induces DB errors disables rate limiting entirely — removing the only LLM
-cost cap (compounds H-4). Keys also embed freely-rotatable `visitorId` and
-spoofable IP headers.
-**Fix:** fail-closed (or degraded-limit) on repeated DB errors for the
-expensive `/chat` path; derive IP only from the trusted CDN header.
+### [x] M-6 — Rate limiter fails open
+**Where:** `_shared/rateLimit.ts`.
+**What:** every DB-error path failed open, so an attacker who induced DB
+errors could disable rate limiting entirely.
+**Fixed:** a `FAIL_CLOSED` set (`chat`, `suggestions` — the paid LLM
+paths) now makes a DB error on the rate-limit check return
+`limited: true` instead of waving the request through. Cheap endpoints
+(`config`, `articles`, `analytics`, `games`) stay fail-open so a
+transient DB blip doesn't take them down.
+**Residual:** keys still embed a freely-rotatable `visitorId`; the
+project ceiling + H-4 token budget are the real backstops.
 **SOC2:** A1.1.
 
 ---
