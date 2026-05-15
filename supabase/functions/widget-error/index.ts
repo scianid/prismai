@@ -4,6 +4,8 @@ import { enforceContentLength } from "../_shared/responses.ts";
 import { serveWithSentry } from "../_shared/sentry.ts";
 import { captureWidgetException } from "../_shared/sentryWidget.ts";
 import { detectBrowser } from "../_shared/userAgent.ts";
+import { supabaseClient } from "../_shared/supabaseClient.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 // Fire-and-forget error reporting from the browser widget.
 // The widget runs on third-party publisher sites where we cannot ship the
@@ -44,6 +46,26 @@ export async function widgetErrorHandler(req: Request): Promise<Response> {
   // leaves room for long stack traces while still protecting memory.
   const oversize = enforceContentLength(req, 8192);
   if (oversize) return oversize;
+
+  // L-1: IP rate limit. This endpoint is unauthenticated and forwards to
+  // Sentry; without a cap a flood could burn the Sentry quota. On limit,
+  // return the usual silent 204 so the contract (always 204) holds. Wrapped
+  // in try/catch — rate limiting must never break error reporting.
+  try {
+    const supabase = await supabaseClient();
+    const limit = await checkRateLimit(
+      supabase,
+      "widget-error",
+      null,
+      "widget-error",
+      req.headers.get("cf-connecting-ip"),
+    );
+    if (limit.limited) {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
+  } catch (_) {
+    // fail-open: never let rate limiting break error reporting
+  }
 
   try {
     let body: WidgetErrorPayload;

@@ -45,7 +45,7 @@ const PUBLIC_ALLOWLIST: Record<string, string> = {
   // lookup per report and would silently drop errors from mis-configured
   // projects — the opposite of what an error-reporting endpoint should do.
   "widget-error":
-    "Write-only Sentry proxy; no DB access, no response data, 8KB body cap, Sentry rate-limits inbound events.",
+    "Write-only Sentry proxy; no response data, 8KB body cap, IP rate-limited (L-1), Sentry rate-limits inbound events.",
   // allowed-urls is public by design: a high-traffic, CDN-cached lookup of a
   // project's allowed_urls for the secondary analytics service. An origin
   // check is impossible (the caller is a server, not a browser) and

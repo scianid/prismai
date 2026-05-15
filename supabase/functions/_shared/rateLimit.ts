@@ -24,7 +24,8 @@ export type RateLimitEndpoint =
   | "config"
   | "articles"
   | "analytics"
-  | "games";
+  | "games"
+  | "widget-error";
 
 /**
  * Limits by endpoint and key type. Visitor and IP limits apply only when
@@ -61,6 +62,11 @@ const LIMITS: Record<
   articles: { visitor: 0, ip: 150, project: 300 },
   analytics: { visitor: 60, ip: 500, project: 1000 },
   games: { visitor: 0, ip: 300, project: 60 },
+  // widget-error has no project identity (the payload's project_id is
+  // untrusted), so callers pass a fixed key — `project` is then a global
+  // per-minute ceiling on Sentry-forwarding volume and `ip` caps a single
+  // flooding client.
+  "widget-error": { visitor: 0, ip: 120, project: 6000 },
 };
 
 /**

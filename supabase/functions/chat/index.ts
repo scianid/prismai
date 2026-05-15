@@ -121,6 +121,15 @@ export async function chatHandler(
     }
     if (question) question = sanitizeContent(question.substring(0, 200)).trim();
 
+    // L-4: visitor_id / session_id / questionId are client-supplied. Coerce
+    // each to a bounded string so a non-string (e.g. an array) or an
+    // oversized value cannot poison DB rows or rate-limit keys.
+    const boundedId = (v: unknown): string | undefined =>
+      (typeof v === "string" && v.length > 0 && v.length <= 128) ? v : undefined;
+    visitor_id = boundedId(visitor_id);
+    session_id = boundedId(session_id);
+    questionId = boundedId(questionId);
+
     // M-4: og_image / image_url in `metadata` are publisher-supplied and get
     // stored on the article row, then later rendered by the widget as an
     // <img src>. Allow only https:// URLs — a non-https / javascript: / data:

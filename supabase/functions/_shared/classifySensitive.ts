@@ -212,6 +212,10 @@ export function classifySensitive(
     return { text, hits: [] };
   }
 
+  // L-6: enforce the documented ≤200-char contract here too, so the ReDoS
+  // bound does not rely solely on every caller remembering to clamp first.
+  if (text.length > 200) text = text.slice(0, 200);
+
   const hits: Art9Category[] = [];
   let result = text;
 

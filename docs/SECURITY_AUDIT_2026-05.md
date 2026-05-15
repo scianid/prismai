@@ -23,7 +23,7 @@ review), [SECURITY_REVIEW.md](SECURITY_REVIEW.md),
 |------|-------|------|------|
 | High | 5 | 4 | 1 |
 | Medium | 6 | 4 | 2 |
-| Low | 7 | 3 | 4 |
+| Low | 7 | 7 | 0 |
 | Info | 2 | — | — |
 
 ---
@@ -176,11 +176,16 @@ project ceiling + H-4 token budget are the real backstops.
 
 ## 🟡 Low — open
 
-### [ ] L-1 — `widget-error` has no rate limit or origin check
+### [x] L-1 — `widget-error` has no rate limit
 **Where:** `widget-error/index.ts`.
-**What:** anonymous internet can flood the Sentry quota; client stack
-traces are stored verbatim and `console.log`-ed (log injection).
-**Fix:** add an IP-keyed rate limit; newline-strip before logging.
+**What:** anonymous internet could flood the Sentry quota.
+**Fixed:** an IP-keyed rate limit (`widget-error` endpoint in
+`rateLimit.ts`: 120/IP, 6000 global per minute) now runs after the body
+cap; on limit the endpoint returns its usual silent 204. Fails open — a
+DB error must never break error reporting.
+**Note:** the "log injection" half of the original finding was a
+non-issue — the log line is `JSON.stringify`-encoded, so newlines are
+escaped, not injected.
 **SOC2:** A1.1.
 
 ### [x] L-2 — `suggestions` passed `error.message` to `errorResp`
@@ -204,29 +209,35 @@ project/origin log sites record `allowedUrlCount` instead of the raw
 `allowed_urls` array.
 **SOC2:** CC6.1 / privacy.
 
-### [ ] L-4 — `chat` IDs unvalidated (type / length)
-**Where:** `chat/index.ts:113`.
-**What:** `visitor_id` / `session_id` / `questionId` accepted without a
-`typeof`/length check; a 200KB `visitor_id` becomes a 200KB rate-limit key.
-**Fix:** `typeof === "string"` + length caps on all IDs.
+### [x] L-4 — `chat` IDs unvalidated (type / length)
+**Where:** `chat/index.ts`.
+**What:** `visitor_id` / `session_id` / `questionId` were accepted without
+a `typeof`/length check; a non-string or huge value flowed into DB rows
+and rate-limit keys.
+**Fixed:** a `boundedId` helper coerces each to `undefined` unless it is a
+non-empty string ≤128 chars.
 **SOC2:** CC6.1.
 
 ### [-] L-5 — `enforceContentLength` trusts `Content-Length`
 `responses.ts:56` — advisory only; post-read truncation mitigates. Won't
 fix — accepted, documented in the function's own comment.
 
-### [ ] L-6 — `classifySensitive` relies on caller length-clamping
-**Where:** `_shared/classifySensitive.ts:86`.
-**What:** `HEALTH_RE` backtracking is bounded only if input is ≤200 chars,
-which the function does not enforce itself.
-**Fix:** add a defensive `text.slice(0, 200)` inside `classifySensitive`.
+### [x] L-6 — `classifySensitive` relies on caller length-clamping
+**Where:** `_shared/classifySensitive.ts`.
+**What:** the regex ReDoS bound depended on every caller clamping input to
+≤200 chars first.
+**Fixed:** `classifySensitive` now slices `text` to 200 chars itself —
+the documented contract is enforced at the function, not just upstream.
 **SOC2:** A1.1.
 
-### [ ] L-7 — `scrubUrlParams` misses path-segment tokens
-**Where:** `_shared/scrubUrlParams.ts:74-85`.
-**What:** only top-level query keys are scrubbed; tokens in path segments
-or nested `redirect_uri=` URLs reach analytics/Sentry.
-**Fix:** add a path-pattern pass for JWT-shaped strings.
+### [x] L-7 — `scrubUrlParams` misses path-segment tokens
+**Where:** `_shared/scrubUrlParams.ts`.
+**What:** only top-level query keys were scrubbed; a JWT in a path segment
+(`/reset/eyJ...`) or a nested URL reached analytics/Sentry untouched — a
+path-only URL never even reached the param logic.
+**Fixed:** `scrubUrl` now redacts JWT-shaped tokens anywhere in the string
+first (regex anchored on the `eyJ` header prefix — near-zero false
+positive), then runs the existing query-param logic.
 **SOC2:** CC6.1 / privacy.
 
 ---
