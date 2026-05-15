@@ -46,6 +46,14 @@ const PUBLIC_ALLOWLIST: Record<string, string> = {
   // projects — the opposite of what an error-reporting endpoint should do.
   "widget-error":
     "Write-only Sentry proxy; no DB access, no response data, 8KB body cap, Sentry rate-limits inbound events.",
+  // allowed-urls is public by design: a high-traffic, CDN-cached lookup of a
+  // project's allowed_urls for the secondary analytics service. An origin
+  // check is impossible (the caller is a server, not a browser) and
+  // unnecessary — the response payload is AES-256-GCM encrypted, so only
+  // holders of ALLOWLIST_ENC_KEY can read it. Returns only allowed_urls
+  // (encrypted); unknown projects yield an encrypted empty array.
+  "allowed-urls":
+    "Public CDN-cached endpoint; response payload is AES-256-GCM encrypted (allowlistCipher.ts), confidentiality enforced by the key, not by origin.",
 };
 
 interface Failure {
