@@ -5,7 +5,6 @@ import { supabaseClient } from "../_shared/supabaseClient.ts";
 import { errorResp, successRespWithCache, tooManyRequestsResp } from "../_shared/responses.ts";
 import { getProjectById, getProjectConfigById } from "../_shared/dao/projectDao.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
-import { verifyConfigBypassToken } from "../_shared/configBypassToken.ts";
 import { captureException, serveWithSentry } from "../_shared/sentry.ts";
 import { resolveTranslations } from "./translations/index.ts";
 
@@ -64,7 +63,6 @@ export interface ConfigDeps {
   getProjectById: typeof getProjectById;
   getProjectConfigById: typeof getProjectConfigById;
   checkRateLimit: typeof checkRateLimit;
-  verifyConfigBypassToken: typeof verifyConfigBypassToken;
 }
 
 export const realConfigDeps: ConfigDeps = {
@@ -72,7 +70,6 @@ export const realConfigDeps: ConfigDeps = {
   getProjectById,
   getProjectConfigById,
   checkRateLimit,
-  verifyConfigBypassToken,
 };
 
 export async function configHandler(
@@ -105,40 +102,7 @@ export async function configHandler(
 
     const requestUrl = getRequestOriginUrl(req);
 
-    // SECURITY_AUDIT_TODO item 7: the bypass is now a short-lived
-    // HMAC-signed token carrying an operator identifier and explicit
-    // expiry — not a static shared secret. See
-    // _shared/configBypassToken.ts for the rationale.
-    //
-    // The bypass token is accepted from either the `bypass_token` query
-    // param (for quick curl use) or the `x-config-bypass-token` header
-    // (for tooling that prefers headers). Both must pass the same
-    // verification; we pick whichever is supplied.
-    const bypassToken = url.searchParams.get("bypass_token") ??
-      req.headers.get("x-config-bypass-token");
-
-    let isBypassed = false;
-    if (bypassToken) {
-      const verified = await deps.verifyConfigBypassToken(bypassToken);
-      if (verified) {
-        isBypassed = true;
-        // Attribution log. `operator` is an allowlisted ASCII identifier,
-        // and the raw token is never logged — incident response can
-        // still correlate by operator + timestamp.
-        console.warn("config: bypass token accepted", {
-          operator: verified.operator,
-          expiresMs: verified.expiresMs,
-          projectId,
-        });
-      } else {
-        console.warn("config: bypass token rejected", {
-          tokenPrefix: bypassToken.substring(0, 8) + "...",
-          projectId,
-        });
-      }
-    }
-
-    if (!isBypassed && !isAllowedOriginStrict(requestUrl, project.allowed_urls)) {
+    if (!isAllowedOriginStrict(requestUrl, project.allowed_urls)) {
       console.warn("config: origin not allowed", {
         attempted: requestUrl,
         allowed: project.allowed_urls,
