@@ -121,6 +121,20 @@ export async function chatHandler(
     }
     if (question) question = sanitizeContent(question.substring(0, 200)).trim();
 
+    // M-4: og_image / image_url in `metadata` are publisher-supplied and get
+    // stored on the article row, then later rendered by the widget as an
+    // <img src>. Allow only https:// URLs — a non-https / javascript: / data:
+    // value collapses to undefined so the downstream `||` chain skips it.
+    if (metadata && typeof metadata === "object") {
+      const httpsOnly = (v: unknown): string | undefined =>
+        (typeof v === "string" && v.length <= 500 && /^https:\/\//i.test(v)) ? v : undefined;
+      metadata = {
+        ...metadata,
+        og_image: httpsOnly(metadata.og_image),
+        image_url: httpsOnly(metadata.image_url),
+      };
+    }
+
     // Server-side Art. 9 classifier — backstop for the client-side regex
     // layer in the widget. Runs ONLY on user-typed `question` (article title
     // and content are publisher-supplied and out of scope for Art. 9).

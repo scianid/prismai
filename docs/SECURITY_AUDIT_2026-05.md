@@ -22,7 +22,7 @@ review), [SECURITY_REVIEW.md](SECURITY_REVIEW.md),
 | Tier | Total | Done | Open |
 |------|-------|------|------|
 | High | 5 | 4 | 1 |
-| Medium | 6 | 1 | 5 |
+| Medium | 6 | 2 | 4 |
 | Low | 7 | 4 | 3 |
 | Info | 2 | — | — |
 
@@ -139,12 +139,14 @@ match; a single allowed request fans out to dozens of paid upstream calls.
 live path.
 **SOC2:** A1.1.
 
-### [ ] M-4 — `chat` stores unvalidated `metadata.og_image` / `image_url`
-**Where:** `chat/index.ts:246-247`.
-**What:** publisher-supplied image URLs are stored via `updateArticleImage`
+### [x] M-4 — `chat` stores unvalidated `metadata.og_image` / `image_url`
+**Where:** `chat/index.ts`.
+**What:** publisher-supplied image URLs were stored on the article row
 with no scheme check, then later rendered by the widget as `<img src>`.
-**Fix:** validate as `https://` URLs — reuse `sanitizeHttpsUrl` from
-`config/index.ts`.
+**Fixed:** `metadata.og_image` and `metadata.image_url` are sanitized
+right after request parse — only `https://` URLs (≤500 chars) survive;
+anything else collapses to `undefined`, so both the insert and the
+update-image path skip it. Covers every downstream consumer in one place.
 **SOC2:** CC6.1.
 
 ### [ ] M-5 — `analytics` forwards client-supplied IP/origin raw
