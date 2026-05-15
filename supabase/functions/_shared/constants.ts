@@ -13,7 +13,7 @@ export function getDailyTokenBudget(): number {
   // @ts-ignore: Deno global is unavailable to the editor TS server
   const raw = Deno.env.get("DAILY_TOKEN_BUDGET_PER_PROJECT");
   const parsed = raw ? parseInt(raw, 10) : NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 20_000_000;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 23_064_830;
 }
 
 /**

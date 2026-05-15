@@ -100,7 +100,7 @@ sustained spend.
 over budget → `429 Daily usage limit reached`. The ceiling reads the
 `token_usage_daily` view for today's total and compares against
 `getDailyTokenBudget()` — tunable per environment via the
-`DAILY_TOKEN_BUDGET_PER_PROJECT` env var (default 20M tokens/day). The
+`DAILY_TOKEN_BUDGET_PER_PROJECT` env var (default ~23M tokens/day). The
 check fails open on a DB error (availability over a worst-case missed
 ceiling).
 **Follow-up:** consider a per-project override column and spend-spike
