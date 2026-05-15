@@ -136,10 +136,18 @@ export async function analyticsHandler(
     const referer = req.headers.get("referer");
     if (referer) forwardHeaders["referer"] = scrubUrl(referer);
 
-    // M-5: do not forward the client-supplied `origin` header. It is
-    // attacker-controlled and forwarding it raw lets a caller poison the
-    // upstream analytics service's geo/origin enrichment. The (scrubbed)
-    // `referer` already carries the legitimate, origin-checked host.
+    // M-5: never forward the raw client-supplied `origin` header — it is
+    // attacker-controlled. Instead forward the *validated* origin: requestUrl
+    // already passed isAllowedOriginStrict() above, so its origin is a
+    // known-good host that the upstream service can safely use for
+    // geo/origin enrichment.
+    if (requestUrl) {
+      try {
+        forwardHeaders["origin"] = new URL(requestUrl).origin;
+      } catch {
+        // requestUrl was not a parseable URL — skip rather than forward junk.
+      }
+    }
 
     const scrubbedBody = JSON.stringify(scrubValue(body));
 
