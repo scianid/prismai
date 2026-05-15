@@ -4622,7 +4622,7 @@
                 articles.forEach(article => {
                     const card = document.createElement('a');
                     card.className = 'divee-tag-popup-article';
-                    card.href = article.url;
+                    card.href = /^https?:\/\//i.test(article.url) ? article.url : '#';
                     card.target = '_blank';
                     card.rel = 'noopener noreferrer';
 
