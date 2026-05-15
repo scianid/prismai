@@ -21,7 +21,7 @@ review), [SECURITY_REVIEW.md](SECURITY_REVIEW.md),
 
 | Tier | Total | Done | Open |
 |------|-------|------|------|
-| High | 5 | 3 | 2 |
+| High | 5 | 4 | 1 |
 | Medium | 6 | 1 | 5 |
 | Low | 7 | 4 | 3 |
 | Info | 2 | — | — |
@@ -90,14 +90,21 @@ argument and adds `.eq("project_id", projectId)`; the articles, chat,
 chat-worldcup, and suggestions handlers plumb `projectId` through.
 **SOC2:** CC6.1.
 
-### [ ] H-4 — No hard per-project LLM cost ceiling
-**Where:** `chat/index.ts:153`, `chat-worldcup/index.ts:133`.
-**What:** an attacker with a `projectId` and a forged `Referer` drives paid
-OpenAI calls billed to that tenant. The rate limit (500/project/min) caps
-*rate* but not sustained spend — ~720k calls/day indefinitely.
-**Fix:** enforce a hard daily/monthly token budget per project before
-`streamAnswer`; the `tokenUsageDao` data already exists to drive it. Alert
-on spend spikes.
+### [x] H-4 — No hard per-project LLM cost ceiling
+**Where:** `chat/index.ts`, `chat-worldcup/index.ts`.
+**What:** an attacker with a `projectId` and a forged `Referer` could drive
+paid LLM calls billed to that tenant. The rate limit caps *rate* but not
+sustained spend.
+**Fixed:** both chat handlers now call `isOverDailyTokenBudget` (in
+`tokenUsageDao.ts`) after the rate-limit check and before `streamAnswer`;
+over budget → `429 Daily usage limit reached`. The ceiling reads the
+`token_usage_daily` view for today's total and compares against
+`getDailyTokenBudget()` — tunable per environment via the
+`DAILY_TOKEN_BUDGET_PER_PROJECT` env var (default 20M tokens/day). The
+check fails open on a DB error (availability over a worst-case missed
+ceiling).
+**Follow-up:** consider a per-project override column and spend-spike
+alerting.
 **SOC2:** A1.1 (availability / capacity).
 
 ### [ ] H-5 — Origin allowlist is forgeable (design limitation)

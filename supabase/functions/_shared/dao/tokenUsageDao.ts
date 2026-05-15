@@ -1,4 +1,5 @@
 import { computeCostUsd } from "../ai-costs.ts";
+import { getDailyTokenBudget } from "../constants.ts";
 
 export type TokenUsageData = {
   projectId: string;
@@ -65,6 +66,45 @@ export async function insertTokenUsage(
     console.error("tokenUsageDao: unexpected error", error);
     return false;
   }
+}
+
+/**
+ * Sum of all tokens a project has consumed today (UTC). Reads the
+ * token_usage_daily view, which is grouped by DATE(created_at). Returns 0
+ * on a missing row (no usage yet today) or a query error — the caller
+ * (isOverDailyTokenBudget) therefore fails open, trading a worst-case
+ * missed ceiling on a DB blip for not blocking all chat traffic.
+ */
+export async function getTodayTokenTotal(
+  supabase: any,
+  projectId: string,
+): Promise<number> {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+  const { data, error } = await supabase
+    .from("token_usage_daily")
+    .select("total_tokens")
+    .eq("project_id", projectId)
+    .eq("usage_date", today)
+    .maybeSingle();
+
+  if (error) {
+    console.error("tokenUsageDao: today-total query error", error);
+    return 0;
+  }
+  return Number((data as { total_tokens?: number } | null)?.total_tokens ?? 0);
+}
+
+/**
+ * H-4: true when a project has hit its hard daily token ceiling. Callers
+ * gate the LLM call on this so a sustained attack against a known
+ * projectId cannot run an unbounded bill on a tenant.
+ */
+export async function isOverDailyTokenBudget(
+  supabase: any,
+  projectId: string,
+): Promise<boolean> {
+  const used = await getTodayTokenTotal(supabase, projectId);
+  return used >= getDailyTokenBudget();
 }
 
 /**

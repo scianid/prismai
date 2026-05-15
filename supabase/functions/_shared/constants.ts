@@ -2,6 +2,21 @@ export const MAX_TITLE_LENGTH = 1000;
 export const MAX_CONTENT_LENGTH = 200000;
 
 /**
+ * H-4: hard per-project daily token ceiling. The rate limiter caps request
+ * *rate*; this caps total spend, so a sustained attack against a known
+ * projectId cannot run an unbounded LLM bill on a tenant. Tunable per
+ * environment via the DAILY_TOKEN_BUDGET_PER_PROJECT env var without a
+ * deploy; the default is generous for a single legitimate publisher but
+ * far below what a 500-req/min abuse run would consume.
+ */
+export function getDailyTokenBudget(): number {
+  // @ts-ignore: Deno global is unavailable to the editor TS server
+  const raw = Deno.env.get("DAILY_TOKEN_BUDGET_PER_PROJECT");
+  const parsed = raw ? parseInt(raw, 10) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 20_000_000;
+}
+
+/**
  * Strip HTML/script content, normalize Unicode, and clean control characters
  * from user-supplied text before it is stored in the database or injected
  * into an AI prompt. Primary mitigation against stored prompt injection

@@ -21,7 +21,7 @@ import {
   type ConversationMessage,
   getOrCreateConversation,
 } from "../_shared/dao/conversationDao.ts";
-import { insertTokenUsage } from "../_shared/dao/tokenUsageDao.ts";
+import { insertTokenUsage, isOverDailyTokenBudget } from "../_shared/dao/tokenUsageDao.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getProjectAiSettings } from "../_shared/dao/projectAiSettingsDao.ts";
 import { captureException, serveWithSentry } from "../_shared/sentry.ts";
@@ -44,6 +44,7 @@ export interface ChatDeps {
   insertFreeformQuestion: typeof insertFreeformQuestion;
   updateFreeformAnswer: typeof updateFreeformAnswer;
   insertTokenUsage: typeof insertTokenUsage;
+  isOverDailyTokenBudget: typeof isOverDailyTokenBudget;
   logEvent: typeof logEvent;
   streamAnswer: typeof streamWorldcupAnswer;
   readStreamAndCollectAnswer: typeof readStreamAndCollectAnswer;
@@ -62,6 +63,7 @@ export const realChatDeps: ChatDeps = {
   insertFreeformQuestion,
   updateFreeformAnswer,
   insertTokenUsage,
+  isOverDailyTokenBudget,
   logEvent,
   streamAnswer: streamWorldcupAnswer,
   readStreamAndCollectAnswer,
@@ -190,6 +192,24 @@ export async function chatHandler(
             ...corsHeaders,
             "Content-Type": "application/json",
             "Retry-After": String(rateLimit.retryAfterSeconds),
+          },
+        },
+      );
+    }
+
+    // H-4: hard per-project daily token ceiling. The rate limit above caps
+    // request *rate*; this caps total spend, so a sustained attack against
+    // a known projectId cannot run an unbounded LLM bill on a tenant.
+    if (await deps.isOverDailyTokenBudget(supabase, projectId)) {
+      console.warn("chat-worldcup: project over daily token budget", { projectId });
+      return new Response(
+        JSON.stringify({ error: "Daily usage limit reached", retryAfter: 3600 }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": "3600",
           },
         },
       );

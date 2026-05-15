@@ -136,6 +136,7 @@ function makeDeps(overrides: Record<string, unknown> = {}): any {
     insertFreeformQuestion: () => Promise.resolve(null),
     updateFreeformAnswer: () => Promise.resolve(undefined),
     insertTokenUsage: () => Promise.resolve(undefined),
+    isOverDailyTokenBudget: () => Promise.resolve(false),
     logEvent: () => {},
     streamAnswer: () =>
       Promise.resolve({
@@ -255,6 +256,17 @@ Deno.test("chat: rate-limited caller receives 429 with Retry-After header", asyn
   const body = await res.json();
   assertEquals(body.error, "Too many requests");
   assertEquals(body.retryAfter, 42);
+});
+
+Deno.test("chat: project over daily token budget returns 429 (H-4)", async () => {
+  const deps = makeDeps({
+    isOverDailyTokenBudget: () => Promise.resolve(true),
+  });
+  const res = await chatHandler(req(validBody()), deps);
+  assertEquals(res.status, 429);
+  assertEquals(res.headers.get("Retry-After"), "3600");
+  const body = await res.json();
+  assertEquals(body.error, "Daily usage limit reached");
 });
 
 Deno.test("chat: conversation at 200-message limit returns 429", async () => {
