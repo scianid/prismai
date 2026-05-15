@@ -293,7 +293,7 @@ Deno.test("suggested-articles: with conversationId — reads index, picks at tha
     getSuggestionIndex: () => Promise.resolve(5),
     getRecentArticlesForProject: () =>
       Promise.resolve([fakeArticle("a"), fakeArticle("b"), fakeArticle("c"), fakeArticle("d")]),
-    updateSuggestionIndex: (_sb: unknown, _id: string, next: number) => {
+    updateSuggestionIndex: (_sb: unknown, _id: string, _projectId: string, next: number) => {
       writtenIndex = next;
       return Promise.resolve();
     },

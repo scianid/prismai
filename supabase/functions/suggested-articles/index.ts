@@ -89,7 +89,7 @@ export async function suggestedArticlesHandler(
     // Get round-robin counter from conversation (just for tracking rotation)
     let suggestionIndex = 0;
     if (conversationId) {
-      const idx = await deps.getSuggestionIndex(supabase, conversationId);
+      const idx = await deps.getSuggestionIndex(supabase, conversationId, projectId);
       if (idx !== null) suggestionIndex = idx;
     }
 
@@ -122,7 +122,7 @@ export async function suggestedArticlesHandler(
 
     // Update round-robin counter in conversation (for next suggestion rotation)
     if (conversationId) {
-      await deps.updateSuggestionIndex(supabase, conversationId, suggestionIndex + 1);
+      await deps.updateSuggestionIndex(supabase, conversationId, projectId, suggestionIndex + 1);
     }
 
     // Return suggestion

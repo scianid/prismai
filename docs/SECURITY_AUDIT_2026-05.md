@@ -21,7 +21,7 @@ review), [SECURITY_REVIEW.md](SECURITY_REVIEW.md),
 
 | Tier | Total | Done | Open |
 |------|-------|------|------|
-| High | 5 | 1 | 4 |
+| High | 5 | 2 | 3 |
 | Medium | 6 | 1 | 5 |
 | Low | 7 | 4 | 3 |
 | Info | 2 | — | — |
@@ -63,19 +63,18 @@ consumers now use the dedicated encrypted `/allowed-urls` endpoint
 
 ## 🔴 High — open
 
-### [ ] H-1 — IDOR: conversation DAOs trust caller-supplied conversation IDs
-**Where:** `_shared/dao/conversationDao.ts:122` (`getConversationById`),
-`:200` (`getSuggestionIndex`), `:218` (`updateSuggestionIndex`), `:232`
-(`deleteConversation`), `:89` (`appendMessagesToConversation`).
+### [x] H-1 — IDOR: conversation DAOs trust caller-supplied conversation IDs
+**Where:** `_shared/dao/conversationDao.ts` — `getConversationById`,
+`getSuggestionIndex`, `updateSuggestionIndex`, `deleteConversation`,
+`appendMessagesToConversation`.
 **What:** these query/mutate `conversations` solely by `.eq("id", …)` with
-no `project_id` / `visitor_id` scope. The service-role client bypasses RLS,
-so a guessed or leaked conversation UUID lets an attacker read another
-visitor's full chat transcript, append messages, or delete the
-conversation. `X-Conversation-Id` is reflected to the client, so IDs leak
-by design.
-**Fix:** add `.eq("project_id", projectId)` (and `visitor_id` where known)
-to every by-ID conversation query/update/delete; plumb `projectId` through
-the calling handlers.
+no `project_id` scope. The service-role client bypasses RLS, so a guessed
+or leaked conversation UUID let a caller read another visitor's chat
+transcript, append messages, or delete the conversation.
+**Fixed:** every by-ID conversation DAO now takes a `projectId` argument
+and adds `.eq("project_id", projectId)`; the chat, chat-worldcup, and
+suggested-articles handlers plumb `projectId` through. A by-ID call can no
+longer touch a row outside its tenant.
 **SOC2:** CC6.1 (logical access).
 
 ### [ ] H-2 — IDOR: article / freeform-QA DAOs not tenant-scoped

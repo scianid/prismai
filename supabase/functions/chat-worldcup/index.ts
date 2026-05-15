@@ -403,6 +403,7 @@ export async function chatHandler(
         await deps.appendMessagesToConversation(
           supabase,
           conversation.id,
+          projectId,
           userMessage,
           assistantMessage,
           messages,

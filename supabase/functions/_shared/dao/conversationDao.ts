@@ -84,11 +84,17 @@ export async function getOrCreateConversation(
 }
 
 /**
- * Append messages to conversation (user + assistant)
+ * Append messages to conversation (user + assistant).
+ *
+ * `projectId` scopes the update to the owning tenant. The service-role
+ * client bypasses RLS, so a by-`id` update with no tenant filter would let
+ * a caller mutate any conversation given its UUID — every by-ID operation
+ * in this module must carry the project filter.
  */
 export async function appendMessagesToConversation(
   supabase: SupabaseClient,
   conversationId: string,
+  projectId: string,
   userMessage: ConversationMessage,
   assistantMessage: ConversationMessage,
   existingMessages: ConversationMessage[],
@@ -106,7 +112,8 @@ export async function appendMessagesToConversation(
       message_count: updatedMessages.length,
       total_chars: newTotalChars,
     })
-    .eq("id", conversationId);
+    .eq("id", conversationId)
+    .eq("project_id", projectId);
 
   if (error) {
     console.error("conversationDao: failed to append messages", error);
@@ -117,16 +124,18 @@ export async function appendMessagesToConversation(
 }
 
 /**
- * Get conversation by ID
+ * Get conversation by ID, scoped to its owning project.
  */
 export async function getConversationById(
   supabase: SupabaseClient,
   conversationId: string,
+  projectId: string,
 ): Promise<ConversationRecord | null> {
   const { data, error } = await supabase
     .from("conversations")
     .select("*")
     .eq("id", conversationId)
+    .eq("project_id", projectId)
     .single();
 
   if (error || !data) {
@@ -200,11 +209,13 @@ export async function listConversationsByVisitor(
 export async function getSuggestionIndex(
   supabase: SupabaseClient,
   conversationId: string,
+  projectId: string,
 ): Promise<number | null> {
   const { data } = await supabase
     .from("conversations")
     .select("suggestion_index")
     .eq("id", conversationId)
+    .eq("project_id", projectId)
     .single();
   if (!data) return null;
   return (data as { suggestion_index: number | null }).suggestion_index ?? 0;
@@ -218,25 +229,29 @@ export async function getSuggestionIndex(
 export async function updateSuggestionIndex(
   supabase: SupabaseClient,
   conversationId: string,
+  projectId: string,
   nextIndex: number,
 ): Promise<void> {
   await supabase
     .from("conversations")
     .update({ suggestion_index: nextIndex })
-    .eq("id", conversationId);
+    .eq("id", conversationId)
+    .eq("project_id", projectId);
 }
 
 /**
- * Delete conversation
+ * Delete conversation, scoped to its owning project.
  */
 export async function deleteConversation(
   supabase: SupabaseClient,
   conversationId: string,
+  projectId: string,
 ): Promise<boolean> {
   const { error } = await supabase
     .from("conversations")
     .delete()
-    .eq("id", conversationId);
+    .eq("id", conversationId)
+    .eq("project_id", projectId);
 
   if (error) {
     console.error("conversationDao: failed to delete conversation", error);

@@ -598,6 +598,7 @@ export async function chatHandler(
         const success = await deps.appendMessagesToConversation(
           supabase,
           conversation.id,
+          projectId,
           userMessage,
           assistantMessage,
           messages,
