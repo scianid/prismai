@@ -21,7 +21,7 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 // fields. The request body carries only keywords / iabCategories / chat.
 const TEADS_ENDPOINT = "https://mv.outbrain.com/Multivac/api/in-chat-recs";
 const DEFAULT_UA = "Mozilla/5.0 (compatible; DiveeBot/1.0; +https://divee.ai)";
-const TEADS_TIMEOUT_MS = 6000;
+const TEADS_TIMEOUT_MS = 20000;
 
 // Project IDs allowed to fetch ads. Hardcoded for now — add more entries to
 // the array to enable additional projects.
