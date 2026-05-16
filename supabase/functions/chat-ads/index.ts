@@ -11,8 +11,7 @@ import { classifyAdContext } from "../_shared/ai.ts";
 // IMPORTANT: response_version / response_types are QUERY params, not body
 // fields. The request body carries only keywords / iabCategories / chat.
 const TEADS_ENDPOINT = "https://mv.outbrain.com/Multivac/api/in-chat-recs";
-const DEFAULT_UA =
-  "Mozilla/5.0 (compatible; DiveeBot/1.0; +https://divee.ai)";
+const DEFAULT_UA = "Mozilla/5.0 (compatible; DiveeBot/1.0; +https://divee.ai)";
 
 type UrlParam = "portalUrl" | "contentUrl" | "bundleUrl";
 
@@ -76,18 +75,15 @@ function normalizeAds(raw: unknown): NormalizedAd[] {
   if (!results || typeof results !== "object") return ads;
 
   for (const group of Object.values(results as Record<string, unknown>)) {
-    const reportServed =
-      (group as Record<string, unknown>)?.["reportServed"] as string ??
-        null;
+    const reportServed = (group as Record<string, unknown>)?.["reportServed"] as string ??
+      null;
     const documents = (group as Record<string, unknown>)?.["documents"];
     if (!Array.isArray(documents)) continue;
 
     for (const doc of documents) {
       const d = doc as Record<string, unknown>;
       const tracking = (d["doc_tracking"] ?? {}) as Record<string, unknown>;
-      const pixels = Array.isArray(tracking["pixels"])
-        ? (tracking["pixels"] as string[])
-        : [];
+      const pixels = Array.isArray(tracking["pixels"]) ? (tracking["pixels"] as string[]) : [];
       const onViewed = Array.isArray(tracking["on-viewed"])
         ? (tracking["on-viewed"] as string[])
         : [];
@@ -178,10 +174,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!url) {
     return errorResp("Missing 'url'", 400, { error: "Missing 'url'" });
   }
-  const urlType: UrlParam =
-    (body.urlType === "contentUrl" || body.urlType === "bundleUrl")
-      ? body.urlType
-      : "portalUrl";
+  const urlType: UrlParam = (body.urlType === "contentUrl" || body.urlType === "bundleUrl")
+    ? body.urlType
+    : "portalUrl";
   const lang = (typeof body.lang === "string" && body.lang.length === 2)
     ? body.lang.toLowerCase()
     : "en";
@@ -224,9 +219,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     lang,
     widgetJSId: widgetJsId,
     api_consent: typeof body.apiConsent === "string" ? body.apiConsent : "1",
-    display_sizes: typeof body.displaySizes === "string"
-      ? body.displaySizes
-      : "300x250",
+    display_sizes: typeof body.displaySizes === "string" ? body.displaySizes : "300x250",
     response_version: "2.0",
     response_types: responseTypes.join(","),
   });
