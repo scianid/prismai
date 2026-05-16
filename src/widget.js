@@ -192,6 +192,7 @@
                 conversationId: null,
                 aiResponseCount: 0,
                 sponsoredQueue: [],            // Buffered Teads ads, one shown per reply
+                seenAdUrls: new Set(),         // Ad URLs already shown — dedupe across fetches
                 suggestionsSuppressed: false,
                 widgetVisibleTracked: false,   // Track if widget_visible event has been fired
                 adRefreshInterval: null,       // Interval ID for auto-refreshing ads
@@ -4474,7 +4475,10 @@
             const payload = {
                 projectId: this.config.projectId,
                 url: this.stripUrlIdentifiers(this.contentCache.url),
+                title: this.contentCache.title,
                 lang: config.language_code || config.language || 'en',
+                visitor_id: this.state.visitorId,
+                conversationId: this.state.conversationId,
                 messages: this.state.messages
                     .filter(m => m.role === 'user' || m.role === 'assistant')
                     .map(m => ({ role: m.role, content: m.content }))
@@ -4489,8 +4493,16 @@
 
             const data = await response.json().catch(() => null);
             const ads = data && Array.isArray(data.ads) ? data.ads : [];
-            // Keep only ads with something renderable.
-            return ads.filter(a => a && a.headline && a.url);
+            // Keep renderable ads not already shown; remember URLs to dedupe
+            // across refetches.
+            const fresh = [];
+            for (const ad of ads) {
+                if (ad && ad.headline && ad.url && !this.state.seenAdUrls.has(ad.url)) {
+                    this.state.seenAdUrls.add(ad.url);
+                    fresh.push(ad);
+                }
+            }
+            return fresh;
         }
 
         // Teads tracking URLs can carry macros like ${AUCTION_MIN_TO_WIN}.

@@ -20,6 +20,7 @@ export type RateLimitResult =
 
 export type RateLimitEndpoint =
   | "chat"
+  | "chat-ads"
   | "suggestions"
   | "config"
   | "articles"
@@ -57,6 +58,9 @@ const LIMITS: Record<
   Record<"visitor" | "ip" | "project", number>
 > = {
   chat: { visitor: 20, ip: 250, project: 500 },
+  // chat-ads fires ~once per 3 replies; each call can trigger a paid LLM
+  // classification + a Teads request, so budgets mirror /suggestions.
+  "chat-ads": { visitor: 10, ip: 100, project: 200 },
   suggestions: { visitor: 5, ip: 100, project: 200 },
   config: { visitor: 0, ip: 150, project: 300 },
   articles: { visitor: 0, ip: 150, project: 300 },
@@ -79,6 +83,7 @@ const LIMITS: Record<
  */
 const FAIL_CLOSED: ReadonlySet<RateLimitEndpoint> = new Set([
   "chat",
+  "chat-ads",
   "suggestions",
 ]);
 

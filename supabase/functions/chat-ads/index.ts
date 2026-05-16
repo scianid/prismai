@@ -1,10 +1,16 @@
 import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
-import { enforceContentLength, errorResp, successResp } from "../_shared/responses.ts";
+import {
+  enforceContentLength,
+  errorResp,
+  successResp,
+  tooManyRequestsResp,
+} from "../_shared/responses.ts";
 import { classifyAdContext } from "../_shared/ai.ts";
-import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
 import { supabaseClient } from "../_shared/supabaseClient.ts";
 import { getProjectById } from "../_shared/dao/projectDao.ts";
+import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 // ─── Teads In-Chat Recommendation API (V2.0) ──────────────────────────────
 // Conversation-aware sponsored-content endpoint. The widget POSTs the recent
@@ -15,6 +21,18 @@ import { getProjectById } from "../_shared/dao/projectDao.ts";
 // fields. The request body carries only keywords / iabCategories / chat.
 const TEADS_ENDPOINT = "https://mv.outbrain.com/Multivac/api/in-chat-recs";
 const DEFAULT_UA = "Mozilla/5.0 (compatible; DiveeBot/1.0; +https://divee.ai)";
+const TEADS_TIMEOUT_MS = 6000;
+
+// Project IDs allowed to fetch ads. Hardcoded for now — add more entries to
+// the array to enable additional projects.
+const ENABLED_PROJECT_IDS: string[] = [
+  "26853c64-1104-4525-b62c-66367d925b12",
+];
+
+// IAB Content Taxonomy code shape (e.g. IAB1, IAB1-2). Anything the model
+// emits that does not match is dropped before it reaches Teads — an invalid
+// code is a common cause of upstream 500s.
+const IAB_CODE_RE = /^IAB\d+(-\d+)?$/i;
 
 type UrlParam = "portalUrl" | "contentUrl" | "bundleUrl";
 
@@ -27,12 +45,18 @@ interface AdsRequestBody {
   // projectId is required — it gates the per-project allowlist.
   projectId?: string;
   url?: string;
-  // Which URL param to send the page address as. Teads accepts one of three;
-  // `portalUrl` is the verified-working default.
+  // Page/article title — extra topical context for classification.
+  title?: string;
+  // Which URL param to send the page address as. `contentUrl` is correct for
+  // web pages (lets Teads contextualise the actual article).
   urlType?: UrlParam;
-  // Conversation transcript — used to derive IAB categories + keywords + chat
-  // text. Optional: explicit `keywords`/`iabCategories`/`chat` override it.
+  // Conversation transcript — used to derive IAB categories + keywords.
   messages?: ConvMessage[];
+  // Conversation id — caches the classification so we don't re-run the LLM
+  // on every fetch within the same conversation.
+  conversationId?: string;
+  visitor_id?: string;
+  // Explicit overrides — win over classification (used by raw curl tests).
   chat?: string;
   keywords?: string[];
   iabCategories?: string[];
@@ -63,11 +87,18 @@ interface NormalizedAd {
   };
 }
 
-// Project IDs allowed to fetch ads. Hardcoded for now — add more entries to
-// the array to enable additional projects.
-const ENABLED_PROJECT_IDS: string[] = [
-  "26853c64-1104-4525-b62c-66367d925b12",
-];
+// ── Classification cache ────────────────────────────────────────────────
+// Per-conversation, in-isolate cache of the derived IAB/keywords. Avoids a
+// paid LLM call on every fetch within a conversation. Best-effort: an isolate
+// recycle just means one extra classification, never wrong behaviour.
+interface CachedContext {
+  iabCategories: string[];
+  keywords: string[];
+  ts: number;
+}
+const classifyCache = new Map<string, CachedContext>();
+const CLASSIFY_TTL_MS = 5 * 60_000;
+const CLASSIFY_CACHE_MAX = 500;
 
 // The Teads response groups documents under `results` keyed by engine. Field
 // names are not strictly contractual across engines, so normalization stays
@@ -137,6 +168,14 @@ function normalizeAds(raw: unknown): NormalizedAd[] {
   return ads;
 }
 
+// Keep only well-formed IAB codes — guards Teads against hallucinated input.
+function validIabCodes(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .filter((c): c is string => typeof c === "string" && IAB_CODE_RE.test(c.trim()))
+    .map((c) => c.trim());
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -173,71 +212,94 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return successResp({ ads: [], reason: "project_not_enabled" });
   }
 
-  // ── Origin gate ─────────────────────────────────────────────────────────
-  // The project ID is not a secret (it ships in the publisher page's
-  // `data-project-id`), so the allowlist above is not an auth boundary on its
-  // own. Verify the request comes from a browser on one of the project's
-  // configured allowed_urls before spending a paid Teads call. Strict variant:
-  // a real browser POST always sends Origin or Referer, so their absence
-  // means a non-browser client and is rejected.
-  const requestUrl = getRequestOriginUrl(req);
-  let project: { allowed_urls?: string[] } | null = null;
+  const supabase = supabaseClient();
+
+  // ── Origin enforcement ──────────────────────────────────────────────────
+  // The endpoint triggers paid LLM + Teads calls, so it must only serve the
+  // publisher's own pages. projectId is not a secret (it ships in the widget
+  // markup), so the origin host is the real gate.
+  let project: { allowed_urls?: string[] | null } | null = null;
   try {
-    project = await getProjectById(projectId, supabaseClient());
+    project = await getProjectById(projectId, supabase);
   } catch (err) {
     console.error("chat-ads: project lookup failed", err);
-    return errorResp("Project lookup failed", 502, { error: "Project lookup failed" });
   }
-  if (!isAllowedOriginStrict(requestUrl, project?.allowed_urls)) {
-    console.error("chat-ads: origin not allowed", {
-      attempted: requestUrl,
-      allowed: project?.allowed_urls,
-      projectId,
-    });
+  const originUrl = getRequestOriginUrl(req);
+  if (!project || !isAllowedOriginStrict(originUrl, project.allowed_urls)) {
     return errorResp("Origin not allowed", 403, { error: "Origin not allowed" });
   }
+
+  // ── Rate limiting ───────────────────────────────────────────────────────
+  // cf-connecting-ip is set by the edge and cannot be forged by the client,
+  // unlike x-forwarded-for.
+  const clientIp = req.headers.get("cf-connecting-ip");
+  const visitorId = (typeof body.visitor_id === "string" && body.visitor_id.length > 0 &&
+      body.visitor_id.length <= 128)
+    ? body.visitor_id
+    : null;
+  const rl = await checkRateLimit(supabase, "chat-ads", visitorId, projectId, clientIp);
+  if (rl.limited) return tooManyRequestsResp(rl.retryAfterSeconds);
 
   const url = typeof body.url === "string" ? body.url.trim() : "";
   if (!url) {
     return errorResp("Missing 'url'", 400, { error: "Missing 'url'" });
   }
-  const urlType: UrlParam = (body.urlType === "contentUrl" || body.urlType === "bundleUrl")
+  // `contentUrl` is the correct param for web pages — it lets Teads crawl and
+  // contextualise the actual article for relevance.
+  const urlType: UrlParam = (body.urlType === "portalUrl" || body.urlType === "bundleUrl")
     ? body.urlType
-    : "portalUrl";
+    : "contentUrl";
   const lang = (typeof body.lang === "string" && body.lang.length === 2)
     ? body.lang.toLowerCase()
     : "en";
-  const responseTypes = Array.isArray(body.responseTypes) &&
-      body.responseTypes.length > 0
+  const responseTypes = Array.isArray(body.responseTypes) && body.responseTypes.length > 0
     ? body.responseTypes
     : ["BrandDisplay", "embeddings"];
 
   // ── Derive targeting from the conversation ──────────────────────────────
-  // Explicit body fields win (useful for raw curl tests); otherwise classify
-  // the transcript. Classification failure is non-fatal — Teads still serves
-  // on free-text `chat` alone.
+  // Explicit body fields win. Otherwise classify the transcript — cached per
+  // conversation so the LLM runs at most once per CLASSIFY_TTL_MS. Failure is
+  // non-fatal: Teads still serves on keywords alone.
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  let iabCategories = Array.isArray(body.iabCategories) ? body.iabCategories : null;
-  let keywords = Array.isArray(body.keywords) ? body.keywords : null;
-  let chat = typeof body.chat === "string" ? body.chat : null;
+  const title = typeof body.title === "string" ? body.title : null;
+  let iabCategories: string[] | null = Array.isArray(body.iabCategories)
+    ? validIabCodes(body.iabCategories)
+    : null;
+  let keywords: string[] | null = Array.isArray(body.keywords) ? body.keywords : null;
 
   if ((!iabCategories || !keywords) && messages.length > 0) {
-    try {
-      const ctx = await classifyAdContext(messages, lang);
-      if (!iabCategories) iabCategories = ctx.iabCategories;
-      if (!keywords) keywords = ctx.keywords;
-    } catch (err) {
-      console.error("chat-ads: classifyAdContext failed", err);
+    const convId = typeof body.conversationId === "string" ? body.conversationId : "";
+    const cacheKey = convId ? `${projectId}:${convId}` : "";
+    const cached = cacheKey ? classifyCache.get(cacheKey) : undefined;
+
+    if (cached && Date.now() - cached.ts < CLASSIFY_TTL_MS) {
+      iabCategories = iabCategories ?? cached.iabCategories;
+      keywords = keywords ?? cached.keywords;
+    } else {
+      try {
+        const ctx = await classifyAdContext(messages, lang, title);
+        const iab = validIabCodes(ctx.iabCategories);
+        iabCategories = iabCategories ?? iab;
+        keywords = keywords ?? ctx.keywords;
+        if (cacheKey) {
+          classifyCache.set(cacheKey, {
+            iabCategories: iab,
+            keywords: ctx.keywords,
+            ts: Date.now(),
+          });
+          if (classifyCache.size > CLASSIFY_CACHE_MAX) {
+            classifyCache.delete(classifyCache.keys().next().value as string);
+          }
+        }
+      } catch (err) {
+        console.error("chat-ads: classifyAdContext failed", err);
+      }
     }
   }
-  if (chat === null) {
-    // Free-text context = the user's own messages, newest emphasis.
-    chat = messages
-      .filter((m) => m.role === "user")
-      .slice(-6)
-      .map((m) => String(m.content).slice(0, 500))
-      .join(" ");
-  }
+
+  // Privacy: never forward raw user message text to Outbrain. The `chat`
+  // free-text is the LLM-derived keywords (already abstracted, non-PII).
+  const chat = typeof body.chat === "string" ? body.chat : (keywords ?? []).join(" ");
 
   // ── Build the Teads request ─────────────────────────────────────────────
   const params = new URLSearchParams({
@@ -257,29 +319,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const teadsUrl = `${TEADS_ENDPOINT}?${params.toString()}`;
 
-  // X-Forwarded-For must carry the end-user IP — forwarded from the widget
-  // visitor's request.
-  const forwardedFor = req.headers.get("x-forwarded-for") ??
-    req.headers.get("cf-connecting-ip") ?? "";
   const userAgent = req.headers.get("user-agent") ?? DEFAULT_UA;
 
-  // Body carries ONLY targeting signals.
   const teadsBody = {
     keywords: keywords ?? [],
     iabCategories: iabCategories ?? [],
-    chat: chat ?? "",
+    chat,
   };
 
   let raw: unknown;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TEADS_TIMEOUT_MS);
   try {
     const teadsRes = await fetch(teadsUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "User-Agent": userAgent,
-        ...(forwardedFor ? { "X-Forwarded-For": forwardedFor } : {}),
+        // X-Forwarded-For must carry the end-user IP. Use the edge-trusted
+        // cf-connecting-ip, NOT a client-supplied x-forwarded-for (spoofable
+        // → ad fraud / invalid traffic).
+        ...(clientIp ? { "X-Forwarded-For": clientIp } : {}),
       },
       body: JSON.stringify(teadsBody),
+      signal: controller.signal,
     });
 
     const text = await teadsRes.text();
@@ -301,13 +364,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
   } catch (err) {
+    const aborted = err instanceof DOMException && err.name === "AbortError";
     return errorResp(
       `Teads API fetch failed: ${err}`,
-      502,
-      { error: "Failed to reach ad service" },
+      aborted ? 504 : 502,
+      { error: aborted ? "Ad service timed out" : "Failed to reach ad service" },
     );
+  } finally {
+    clearTimeout(timer);
   }
 
-  const ads = normalizeAds(raw).slice(0, 3);
+  // Prefer paid inventory — documents with impression pixels are monetised
+  // sponsored ads; the rest are unpaid organic recommendations.
+  const all = normalizeAds(raw);
+  const paid = all.filter((a) => a.trackers.pixels.length > 0);
+  const ads = (paid.length > 0 ? paid : all).slice(0, 3);
   return successResp({ ads });
 });
