@@ -2,6 +2,9 @@ import "jsr:@supabase/functions-js@2/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { enforceContentLength, errorResp, successResp } from "../_shared/responses.ts";
 import { classifyAdContext } from "../_shared/ai.ts";
+import { getRequestOriginUrl, isAllowedOriginStrict } from "../_shared/origin.ts";
+import { supabaseClient } from "../_shared/supabaseClient.ts";
+import { getProjectById } from "../_shared/dao/projectDao.ts";
 
 // ─── Teads In-Chat Recommendation API (V2.0) ──────────────────────────────
 // Conversation-aware sponsored-content endpoint. The widget POSTs the recent
@@ -168,6 +171,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const projectId = typeof body.projectId === "string" ? body.projectId : "";
   if (!projectId || !ENABLED_PROJECT_IDS.includes(projectId)) {
     return successResp({ ads: [], reason: "project_not_enabled" });
+  }
+
+  // ── Origin gate ─────────────────────────────────────────────────────────
+  // The project ID is not a secret (it ships in the publisher page's
+  // `data-project-id`), so the allowlist above is not an auth boundary on its
+  // own. Verify the request comes from a browser on one of the project's
+  // configured allowed_urls before spending a paid Teads call. Strict variant:
+  // a real browser POST always sends Origin or Referer, so their absence
+  // means a non-browser client and is rejected.
+  const requestUrl = getRequestOriginUrl(req);
+  let project: { allowed_urls?: string[] } | null = null;
+  try {
+    project = await getProjectById(projectId, supabaseClient());
+  } catch (err) {
+    console.error("chat-ads: project lookup failed", err);
+    return errorResp("Project lookup failed", 502, { error: "Project lookup failed" });
+  }
+  if (!isAllowedOriginStrict(requestUrl, project?.allowed_urls)) {
+    console.error("chat-ads: origin not allowed", {
+      attempted: requestUrl,
+      allowed: project?.allowed_urls,
+      projectId,
+    });
+    return errorResp("Origin not allowed", 403, { error: "Origin not allowed" });
   }
 
   const url = typeof body.url === "string" ? body.url.trim() : "";
