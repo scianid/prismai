@@ -12,7 +12,7 @@
  *   - Hallucinated IAB codes are dropped before reaching Teads
  *   - Raw user message text is NEVER forwarded to Teads (PII) — only keywords
  *   - Paid inventory (docs with pixels) is preferred over organic
- *   - Result is capped at 3 ads
+ *   - The whole Teads batch is returned (no server-side cap)
  *   - Teads 500 → 502; non-JSON → 502
  *   - Classification is cached per conversationId (LLM runs once)
  *   - normalizeAds maps the Teads schema + strips 3rd-party HTML
@@ -274,7 +274,7 @@ Deno.test("chat-ads: prefers paid inventory (docs with pixels) over organic", as
   assertEquals(json.ads[0].url, "https://paid.outbrain.com/b");
 });
 
-Deno.test("chat-ads: caps the result at 3 ads", async () => {
+Deno.test("chat-ads: returns the whole Teads batch (no server-side cap)", async () => {
   const docs = Array.from(
     { length: 6 },
     (_, i) => paidDoc({ url: `https://paid.outbrain.com/${i}` }),
@@ -285,7 +285,7 @@ Deno.test("chat-ads: caps the result at 3 ads", async () => {
     deps,
   );
   const json = await res.json();
-  assertEquals(json.ads.length, 3);
+  assertEquals(json.ads.length, 6);
 });
 
 // ── Upstream failure handling ─────────────────────────────────────────────

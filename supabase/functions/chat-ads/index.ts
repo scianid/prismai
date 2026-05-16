@@ -399,10 +399,12 @@ export async function adsHandler(
   }
 
   // Prefer paid inventory — documents with impression pixels are monetised
-  // sponsored ads; the rest are unpaid organic recommendations.
+  // sponsored ads; the rest are unpaid organic recommendations. Return the
+  // whole batch: the widget buffers it and only refetches once every ad has
+  // been shown.
   const all = normalizeAds(raw);
   const paid = all.filter((a) => a.trackers.pixels.length > 0);
-  const ads = (paid.length > 0 ? paid : all).slice(0, 3);
+  const ads = paid.length > 0 ? paid : all;
   return successResp({ ads });
 }
 
