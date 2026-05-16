@@ -100,10 +100,30 @@ const classifyCache = new Map<string, CachedContext>();
 const CLASSIFY_TTL_MS = 5 * 60_000;
 const CLASSIFY_CACHE_MAX = 500;
 
+// ── Dependency-injection seam ───────────────────────────────────────────
+// `adsHandler` takes an `AdsDeps` object so unit tests can stub the project
+// lookup, rate limiter, classifier, and the Teads fetch — no network. Same
+// pattern as chat/suggestions.
+export interface AdsDeps {
+  supabaseClient: typeof supabaseClient;
+  getProjectById: typeof getProjectById;
+  checkRateLimit: typeof checkRateLimit;
+  classifyAdContext: typeof classifyAdContext;
+  fetchTeads: typeof fetch;
+}
+
+export const realAdsDeps: AdsDeps = {
+  supabaseClient,
+  getProjectById,
+  checkRateLimit,
+  classifyAdContext,
+  fetchTeads: (input, init) => fetch(input, init),
+};
+
 // The Teads response groups documents under `results` keyed by engine. Field
 // names are not strictly contractual across engines, so normalization stays
 // defensive — any missing field becomes null rather than throwing.
-function normalizeAds(raw: unknown): NormalizedAd[] {
+export function normalizeAds(raw: unknown): NormalizedAd[] {
   const ads: NormalizedAd[] = [];
   const results = (raw as Record<string, unknown>)?.results;
   if (!results || typeof results !== "object") return ads;
@@ -169,14 +189,17 @@ function normalizeAds(raw: unknown): NormalizedAd[] {
 }
 
 // Keep only well-formed IAB codes — guards Teads against hallucinated input.
-function validIabCodes(input: unknown): string[] {
+export function validIabCodes(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
   return input
     .filter((c): c is string => typeof c === "string" && IAB_CODE_RE.test(c.trim()))
     .map((c) => c.trim());
 }
 
-Deno.serve(async (req: Request): Promise<Response> => {
+export async function adsHandler(
+  req: Request,
+  deps: AdsDeps = realAdsDeps,
+): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -212,7 +235,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return successResp({ ads: [], reason: "project_not_enabled" });
   }
 
-  const supabase = supabaseClient();
+  const supabase = deps.supabaseClient();
 
   // ── Origin enforcement ──────────────────────────────────────────────────
   // The endpoint triggers paid LLM + Teads calls, so it must only serve the
@@ -220,7 +243,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // markup), so the origin host is the real gate.
   let project: { allowed_urls?: string[] | null } | null = null;
   try {
-    project = await getProjectById(projectId, supabase);
+    project = await deps.getProjectById(projectId, supabase);
   } catch (err) {
     console.error("chat-ads: project lookup failed", err);
   }
@@ -237,18 +260,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       body.visitor_id.length <= 128)
     ? body.visitor_id
     : null;
-  const rl = await checkRateLimit(supabase, "chat-ads", visitorId, projectId, clientIp);
+  const rl = await deps.checkRateLimit(supabase, "chat-ads", visitorId, projectId, clientIp);
   if (rl.limited) return tooManyRequestsResp(rl.retryAfterSeconds);
 
   const url = typeof body.url === "string" ? body.url.trim() : "";
   if (!url) {
     return errorResp("Missing 'url'", 400, { error: "Missing 'url'" });
   }
-  // `contentUrl` is the correct param for web pages — it lets Teads crawl and
-  // contextualise the actual article for relevance.
-  const urlType: UrlParam = (body.urlType === "portalUrl" || body.urlType === "bundleUrl")
+  // `portalUrl` is the only URL param the Teads in-chat-recs endpoint accepts
+  // in practice — `contentUrl` returns HTTP 500. Kept overridable in case
+  // that changes upstream.
+  const urlType: UrlParam = (body.urlType === "contentUrl" || body.urlType === "bundleUrl")
     ? body.urlType
-    : "contentUrl";
+    : "portalUrl";
   const lang = (typeof body.lang === "string" && body.lang.length === 2)
     ? body.lang.toLowerCase()
     : "en";
@@ -277,7 +301,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       keywords = keywords ?? cached.keywords;
     } else {
       try {
-        const ctx = await classifyAdContext(messages, lang, title);
+        const ctx = await deps.classifyAdContext(messages, lang, title);
         const iab = validIabCodes(ctx.iabCategories);
         iabCategories = iabCategories ?? iab;
         keywords = keywords ?? ctx.keywords;
@@ -331,7 +355,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TEADS_TIMEOUT_MS);
   try {
-    const teadsRes = await fetch(teadsUrl, {
+    const teadsRes = await deps.fetchTeads(teadsUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -380,4 +404,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const paid = all.filter((a) => a.trackers.pixels.length > 0);
   const ads = (paid.length > 0 ? paid : all).slice(0, 3);
   return successResp({ ads });
-});
+}
+
+Deno.serve((req: Request) => adsHandler(req));

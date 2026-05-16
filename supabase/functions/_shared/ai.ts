@@ -15,7 +15,7 @@ const AI_PROVIDERS = {
     label: "openai",
     apiKeyEnv: "OPENAI_API_KEY",
     model: "gpt-5.3-chat-latest",
-    suggestionsModel: "gpt-5.4-mini",
+    suggestionsModel: "gpt-5.4-nano",
     url: "https://api.openai.com/v1/chat/completions",
     responsesUrl: "https://api.openai.com/v1/responses",
   },
