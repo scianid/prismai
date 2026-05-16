@@ -191,6 +191,7 @@
                 serverConfig: null,
                 conversationId: null,
                 aiResponseCount: 0,
+                sponsoredQueue: [],            // Buffered Teads ads, one shown per reply
                 suggestionsSuppressed: false,
                 widgetVisibleTracked: false,   // Track if widget_visible event has been fired
                 adRefreshInterval: null,       // Interval ID for auto-refreshing ads
@@ -4437,12 +4438,139 @@
             // Increment AI response count and check if we should show a suggestion
             this.state.aiResponseCount++;
             await this.maybeShowSuggestionCard();
+
+            // Fire-and-forget: never let ad fetching block or delay the chat.
+            this.showNextSponsoredAd();
         }
 
         async maybeShowSuggestionCard() {
             // Show suggestion card after every 2nd AI response (#2, #4, #6, #8...)
             if (!this.state.suggestionsSuppressed && this.state.aiResponseCount % 2 === 0) {
                 await this.showSuggestionCard();
+            }
+        }
+
+        // ============================================
+        // SPONSORED CONTENT (Teads in-chat ads)
+        // ============================================
+
+        // Show one sponsored card after every assistant reply. Ads are fetched
+        // in batches (chat-ads caps at 3) and buffered — one drawn per reply;
+        // when the buffer empties the next reply triggers a refetch. The
+        // chat-ads endpoint gates on a per-project allowlist, so an off-list
+        // project just gets an empty list and nothing renders.
+        async showNextSponsoredAd() {
+            try {
+                if (this.state.sponsoredQueue.length === 0) {
+                    this.state.sponsoredQueue = await this.fetchSponsoredAds();
+                }
+                const ad = this.state.sponsoredQueue.shift();
+                if (ad) this.renderSponsoredMessage(ad);
+            } catch (_) { /* ads are best-effort */ }
+        }
+
+        async fetchSponsoredAds() {
+            const config = this.state.serverConfig || this.getDefaultConfig();
+            const payload = {
+                projectId: this.config.projectId,
+                url: this.stripUrlIdentifiers(this.contentCache.url),
+                lang: config.language_code || config.language || 'en',
+                messages: this.state.messages
+                    .filter(m => m.role === 'user' || m.role === 'assistant')
+                    .map(m => ({ role: m.role, content: m.content }))
+            };
+
+            const response = await fetch(`${this.config.nonCacheBaseUrl}/chat-ads`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) return [];
+
+            const data = await response.json().catch(() => null);
+            const ads = data && Array.isArray(data.ads) ? data.ads : [];
+            // Keep only ads with something renderable.
+            return ads.filter(a => a && a.headline && a.url);
+        }
+
+        // Teads tracking URLs can carry macros like ${AUCTION_MIN_TO_WIN}.
+        // We don't run a client-side auction, so per the spec they default to 0.
+        fireAdPixel(rawUrl) {
+            if (!rawUrl || typeof rawUrl !== 'string') return;
+            try {
+                const img = new Image();
+                img.referrerPolicy = 'no-referrer-when-downgrade';
+                img.src = rawUrl.replace(/\$\{[^}]+\}/g, '0');
+            } catch (_) { /* swallow */ }
+        }
+
+        renderSponsoredMessage(ad) {
+            const messagesContainer = this.elements.expandedView?.querySelector('.divee-messages');
+            if (!messagesContainer) return;
+
+            const card = document.createElement('div');
+            card.className = 'divee-message divee-message-sponsored';
+
+            const href = (typeof ad.url === 'string' && /^https?:\/\//i.test(ad.url))
+                ? ad.url : null;
+            const thumb = (typeof ad.thumbnail === 'string' && /^https?:\/\//i.test(ad.thumbnail))
+                ? ad.thumbnail : null;
+            const label = this.t('sponsoredLabel', 'Sponsored');
+            const arrow = `<svg class="divee-sponsored-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>`;
+
+            const inner = `
+                <span class="divee-sponsored-card">
+                    ${thumb ? `<span class="divee-sponsored-media"><img class="divee-sponsored-thumb" src="${this.escapeHtml(thumb)}" alt="" loading="lazy"></span>` : ''}
+                    <span class="divee-sponsored-body">
+                        <span class="divee-sponsored-label">${this.escapeHtml(label)}</span>
+                        <span class="divee-sponsored-headline">${this.escapeHtml(ad.headline || '')}</span>
+                        ${ad.description ? `<span class="divee-sponsored-desc">${this.escapeHtml(ad.description)}</span>` : ''}
+                        <span class="divee-sponsored-foot">
+                            ${ad.source ? `<span class="divee-sponsored-source"><span class="divee-sponsored-source-dot"></span><span class="divee-sponsored-source-name">${this.escapeHtml(ad.source)}</span></span>` : '<span></span>'}
+                            <span class="divee-sponsored-cta">${this.escapeHtml(ad.cta || this.t('sponsoredCta', 'Read More'))}${arrow}</span>
+                        </span>
+                    </span>
+                </span>
+            `;
+
+            if (href) {
+                const a = document.createElement('a');
+                a.href = href;
+                a.target = '_blank';
+                a.rel = 'noopener nofollow sponsored';
+                a.className = 'divee-sponsored-link';
+                a.innerHTML = inner;
+                card.appendChild(a);
+            } else {
+                const wrap = document.createElement('div');
+                wrap.className = 'divee-sponsored-link';
+                wrap.innerHTML = inner;
+                card.appendChild(wrap);
+            }
+
+            messagesContainer.appendChild(card);
+            const chatContainer = this.elements.expandedView.querySelector('.divee-chat');
+            if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // ── Tracking lifecycle ──────────────────────────────────────────
+            // Render-time: serve confirmation + impression pixels.
+            const trackers = ad.trackers || {};
+            this.fireAdPixel(trackers.reportServed);
+            (trackers.pixels || []).forEach(p => this.fireAdPixel(p));
+
+            // Viewability: fire on-viewed pixels only when the card is actually
+            // visible — required for vCPM revenue.
+            const onViewed = Array.isArray(trackers.onViewed) ? trackers.onViewed : [];
+            if (onViewed.length && typeof IntersectionObserver !== 'undefined') {
+                const obs = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            onViewed.forEach(p => this.fireAdPixel(p));
+                            obs.disconnect();
+                        }
+                    });
+                }, { threshold: 0.5 });
+                obs.observe(card);
             }
         }
 

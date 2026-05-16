@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.chat-worldcup]
 verify_jwt = false
 
+[functions.chat-ads]
+verify_jwt = false
+
 [functions.analytics]
 verify_jwt = false
 
