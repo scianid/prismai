@@ -831,6 +831,42 @@
             return '';
         }
 
+        // Returns an http/https URL safe to drop into an href attribute, else ''.
+        safeLinkUrl(rawUrl) {
+            if (!rawUrl) return '';
+            try {
+                const u = new URL(String(rawUrl).trim(), window.location.href);
+                if (u.protocol === 'http:' || u.protocol === 'https:') {
+                    return this.escapeHtml(u.href);
+                }
+            } catch (_) { /* fall through */ }
+            return '';
+        }
+
+        // Returns the "powered by" link markup, or '' to render nothing.
+        //   white_label OFF                    → "powered by divee.ai"
+        //   white_label ON  + white_label_name → "powered by <name>" (links to white_label_url)
+        //   white_label ON  + no name          → '' (no branding at all)
+        poweredByHtml(config) {
+            if (!config || !config.white_label) {
+                return '<a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by <strong>divee.ai</strong></a>';
+            }
+            const name = String(config.white_label_name || '').trim().slice(0, 12);
+            if (!name) return '';
+            const inner = `powered by <strong>${this.escapeHtml(name)}</strong>`;
+            const href = this.safeLinkUrl(config.white_label_url);
+            return href
+                ? `<a class="divee-powered-by" href="${href}" target="_blank" rel="noopener noreferrer">${inner}</a>`
+                : `<span class="divee-powered-by">${inner}</span>`;
+        }
+
+        // Same as poweredByHtml but wrapped in the collapsed-view container,
+        // or '' when there is nothing to show.
+        poweredByCollapsed(config) {
+            const pb = this.poweredByHtml(config);
+            return pb ? `<div class="divee-powered-by-collapsed">${pb}</div>` : '';
+        }
+
         // Look up a translation from serverConfig.translations by key.
         // Falls back to the given English default when not provided.
         t(key, fallback) {
@@ -1863,6 +1899,8 @@
                 highlight_color: ['#68E5FD', '#A389E0'],
                 show_ad: true,
                 white_label: false,
+                white_label_name: null,
+                white_label_url: null,
                 widgetMode: 'article',
                 ui_theme: 'light',
                 input_text_placeholders: [
@@ -2237,17 +2275,13 @@
                             <span class="divee-cubic-online-dot"></span>
                             <span class="divee-cubic-online-label">Online</span>
                         </div>
-                        ${config.white_label ? '' : `<div class="divee-powered-by-collapsed">
-                            <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by <strong>divee.ai</strong></a>
-                        </div>`}
+                        ${this.poweredByCollapsed(config)}
                     </div>
                     <div class="divee-tag-pills divee-tag-pills-collapsed"></div>
                 `;
             } else {
                 view.innerHTML = `
-                    ${config.white_label ? '' : `<div class="divee-powered-by-collapsed">
-                        <a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by <strong>divee.ai</strong></a>
-                    </div>`}
+                    ${this.poweredByCollapsed(config)}
                     <div class="divee-search-container-collapsed">
                         <div class="divee-ai-identity" aria-label="AI">
                             <svg class="divee-ai-identity-sparkle" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -2393,7 +2427,7 @@
                             <span class="divee-title">${this.escapeHtml(config.client_name)}</span>
                             <span class="divee-online-badge"><span class="divee-online-dot" aria-hidden="true"></span>${this.escapeHtml(this.t('onlineLabel', 'Online'))}</span>
                         </div>
-                        ${config.white_label ? '' : '<a class="divee-powered-by" href="https://www.divee.ai" target="_blank" rel="noopener noreferrer">powered by <strong>divee.ai</strong></a>'}
+                        ${this.poweredByHtml(config)}
                         <button class="divee-close" aria-label="Close">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M18 18L12 12M12 12L6 6M12 12L18 6M12 12L6 18"/>

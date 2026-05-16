@@ -53,7 +53,7 @@ export function getProjectConfigById(projectId: string, supabase: any) {
     const { data: projectConfig, error: projectConfigError } = await supabase
       .from("project_config")
       .select(
-        "project_id, ad_tag_id, override_mobile_ad_size, override_desktop_ad_size, white_label",
+        "project_id, ad_tag_id, override_mobile_ad_size, override_desktop_ad_size, white_label, white_label_name, white_label_url",
       )
       .eq("project_id", projectId)
       .single();

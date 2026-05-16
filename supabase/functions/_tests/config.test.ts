@@ -68,6 +68,8 @@ function fakeProjectConfig(overrides: Record<string, unknown> = {}) {
     override_mobile_ad_size: null,
     override_desktop_ad_size: null,
     white_label: false,
+    white_label_name: null,
+    white_label_url: null,
     ...overrides,
   };
 }
@@ -265,6 +267,25 @@ Deno.test("config: missing project_config row returns widget config without ad f
   assertEquals(body.ad_tag_id, undefined);
   assertEquals(body.override_mobile_ad_size, undefined);
   assertEquals(body.white_label, undefined);
+});
+
+Deno.test("config: white-label brand name and url are merged into config", async () => {
+  const deps = makeDeps({
+    getProjectConfigById: () =>
+      Promise.resolve(
+        fakeProjectConfig({
+          white_label: true,
+          white_label_name: "Acme",
+          white_label_url: "https://acme.com",
+        }),
+      ),
+  });
+  const res = await configHandler(req({ projectId: PROJECT_ID }), deps);
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body.white_label, true);
+  assertEquals(body.white_label_name, "Acme");
+  assertEquals(body.white_label_url, "https://acme.com");
 });
 
 // ── Rate limiting (SECURITY_AUDIT_TODO item 2) ───────────────────────────

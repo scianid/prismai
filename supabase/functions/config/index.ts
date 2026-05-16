@@ -194,6 +194,10 @@ export async function configHandler(
         override_desktop_ad_size: projectConfig.override_desktop_ad_size ||
           null,
         white_label: projectConfig.white_label || false,
+        // Optional white-label brand. Only meaningful when white_label is on:
+        // a non-empty name renders "powered by <name>" linking white_label_url.
+        white_label_name: projectConfig.white_label_name || null,
+        white_label_url: projectConfig.white_label_url || null,
       }),
     };
 

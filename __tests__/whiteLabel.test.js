@@ -5,9 +5,10 @@
  * branding based on the white_label flag in server config.
  *
  * Scenarios:
- *  - white_label: false  → branding visible in collapsed + expanded views
- *  - white_label: true   → branding absent in collapsed + expanded views
- *  - white_label absent  → defaults to false (branding visible)
+ *  - white_label: false          → "powered by divee.ai" visible
+ *  - white_label: true, no name  → branding absent
+ *  - white_label: true, name set → "powered by <name>" linking white_label_url
+ *  - white_label absent          → defaults to false (branding visible)
  */
 
 const { describe, test, expect, beforeEach } = require('@jest/globals');
@@ -139,5 +140,89 @@ describe('White Label — expanded view', () => {
     expect(view.querySelector('.divee-close')).not.toBeNull();
     expect(view.querySelector('.divee-title')).not.toBeNull();
     expect(view.querySelector('.divee-title').textContent).toBe('Test Site');
+  });
+});
+
+describe('White Label — custom brand name', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    delete window.__diveeWidgetLoaded;
+  });
+
+  test('white_label ON + name + url → "powered by <name>" link in expanded header', () => {
+    const widget = makeWidget(baseConfig({
+      white_label: true,
+      white_label_name: 'Acme',
+      white_label_url: 'https://acme.com/',
+    }));
+    const view = widget.createExpandedView();
+
+    const poweredBy = view.querySelector('.divee-header .divee-powered-by');
+    expect(poweredBy).not.toBeNull();
+    expect(poweredBy.tagName).toBe('A');
+    expect(poweredBy.textContent).toContain('powered by Acme');
+    expect(poweredBy.textContent).not.toContain('divee.ai');
+    expect(poweredBy.getAttribute('href')).toBe('https://acme.com/');
+  });
+
+  test('white_label ON + name + url → branded link in collapsed view', () => {
+    const widget = makeWidget(baseConfig({
+      white_label: true,
+      white_label_name: 'Acme',
+      white_label_url: 'https://acme.com/',
+    }));
+    const view = widget.createCollapsedView();
+
+    const poweredBy = view.querySelector('.divee-powered-by');
+    expect(poweredBy).not.toBeNull();
+    expect(poweredBy.textContent).toContain('powered by Acme');
+  });
+
+  test('white_label ON + name but no url → renders <span>, no link', () => {
+    const widget = makeWidget(baseConfig({
+      white_label: true,
+      white_label_name: 'Acme',
+    }));
+    const view = widget.createExpandedView();
+
+    const poweredBy = view.querySelector('.divee-header .divee-powered-by');
+    expect(poweredBy).not.toBeNull();
+    expect(poweredBy.tagName).toBe('SPAN');
+    expect(poweredBy.textContent).toContain('powered by Acme');
+  });
+
+  test('white_label ON + empty name → no branding (behaves like plain white label)', () => {
+    const widget = makeWidget(baseConfig({
+      white_label: true,
+      white_label_name: '   ',
+      white_label_url: 'https://acme.com/',
+    }));
+    const view = widget.createExpandedView();
+
+    expect(view.querySelector('.divee-header .divee-powered-by')).toBeNull();
+  });
+
+  test('name longer than 12 chars is truncated', () => {
+    const widget = makeWidget(baseConfig({
+      white_label: true,
+      white_label_name: 'AcmeCorporationInc',
+      white_label_url: 'https://acme.com/',
+    }));
+    const view = widget.createExpandedView();
+
+    const poweredBy = view.querySelector('.divee-header .divee-powered-by');
+    expect(poweredBy.textContent).toContain('powered by AcmeCorpora');
+  });
+
+  test('javascript: url is rejected → renders <span> instead of link', () => {
+    const widget = makeWidget(baseConfig({
+      white_label: true,
+      white_label_name: 'Acme',
+      white_label_url: 'javascript:alert(1)',
+    }));
+    const view = widget.createExpandedView();
+
+    const poweredBy = view.querySelector('.divee-header .divee-powered-by');
+    expect(poweredBy.tagName).toBe('SPAN');
   });
 });
